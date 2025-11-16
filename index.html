@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shirley's AI Writing Coach</title>
 
-    <!-- 這兩個用 UMD，全域會掛在 window 上 -->
+    <!-- diff / csv parser（全域掛在 window） -->
     <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -34,6 +34,17 @@
         .gist-area { background: #e8f5e8; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
         #writing-materials { height: 200px; overflow-y: auto; }
         #printable-drafts { display: none; }
+
+        /* 錯誤高亮 */
+        .err {
+            background: #ffeaa7;
+            border-bottom: 2px solid #d63031;
+            cursor: help;
+        }
+        .err::after {
+            content: "";
+        }
+
         @media print {
             .no-print { display: none; }
             .printable { page-break-after: always; }
@@ -105,34 +116,129 @@
 
     <div id="printable-drafts" class="printable"></div>
 
-    <!-- 主邏輯：ES module + 把需要的函式掛到 window -->
-    <script type="module">
-        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
-
+    <script>
         let currentLevel = 'home';
         let drafts = [];
-        let generator = null;
-        let feedbackGenerator = null;
         let rubricText = '';
-        let modelsReady = false;
-        let modelError = null;
 
-        // Diff library 可能掛在 window.Diff 或 window.JsDiff
-        const DiffLib = window.Diff || window.JsDiff || null;
-
-        async function loadModels() {
-            if (modelsReady || modelError) return;
-            try {
-                generator = await pipeline('text2text-generation', 'Xenova/t5-base-grammar-correction');
-                feedbackGenerator = await pipeline('text-generation', 'Xenova/distilgpt2');
-                modelsReady = true;
-            } catch (err) {
-                // 這裡不再往外丟錯，改用 fallback 模式
-                console.warn('Failed to load local models, will use fallback mode.', err);
-                modelError = err;
-            }
+        // --------- 小工具 ---------
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
+        // LanguageTool API：檢查英文文法/拼字
+        async function checkWithLanguageTool(text) {
+            const params = new URLSearchParams();
+            params.append('text', text);
+            params.append('language', 'en-US');
+            const res = await fetch('https://api.languagetool.org/v2/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            if (!res.ok) {
+                throw new Error('LanguageTool error: ' + res.status);
+            }
+            return await res.json();
+        }
+
+        // 根據 match 建 corrected 版本
+        function buildCorrectedText(text, matches) {
+            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
+            let result = '';
+            let cursor = 0;
+            for (const m of sorted) {
+                const start = m.offset;
+                const end = m.offset + m.length;
+                const replacement = (m.replacements && m.replacements[0])
+                    ? m.replacements[0].value
+                    : text.slice(start, end);
+                result += text.slice(cursor, start) + replacement;
+                cursor = end;
+            }
+            result += text.slice(cursor);
+            return result;
+        }
+
+        // 把原文標出錯誤
+        function buildHighlightedHtml(text, matches) {
+            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
+            let result = '';
+            let cursor = 0;
+            for (const m of sorted) {
+                const start = m.offset;
+                const end = m.offset + m.length;
+                const original = text.slice(start, end);
+                const tipBase = m.message || '';
+                const suggestion = (m.replacements && m.replacements[0])
+                    ? ' → ' + m.replacements[0].value
+                    : '';
+                const tip = escapeHtml(tipBase + suggestion);
+
+                result += escapeHtml(text.slice(cursor, start));
+                result += `<span class="err" title="${tip}">${escapeHtml(original)}</span>`;
+                cursor = end;
+            }
+            result += escapeHtml(text.slice(cursor));
+            return result;
+        }
+
+        // 根據 matches & rubric 組合文字 feedback
+        function buildFeedback(text, matches, topic) {
+            const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+            const avgLen = sentences ? (wordCount / sentences).toFixed(1) : 'N/A';
+
+            const grammarCount = matches.filter(m => m.rule && m.rule.issueType === 'grammar').length;
+            const spellingCount = matches.filter(m => m.rule && m.rule.issueType === 'misspelling').length;
+            const styleCount = matches.filter(m => m.rule && m.rule.issueType === 'style').length;
+
+            let msg = '';
+
+            if (topic) {
+                msg += `Topic: ${topic}\n\n`;
+            }
+
+            msg += `Length & structure:\n`;
+            msg += `- Words: ${wordCount}\n`;
+            msg += `- Sentences: ${sentences}\n`;
+            msg += `- Average words per sentence: ${avgLen}\n\n`;
+
+            msg += `Issues detected:\n`;
+            msg += `- Grammar: ${grammarCount}\n`;
+            msg += `- Spelling: ${spellingCount}\n`;
+            msg += `- Style / phrasing: ${styleCount}\n\n`;
+
+            msg += `Suggestions:\n`;
+            if (grammarCount > 0) {
+                msg += `- Focus on subject–verb agreement and correct verb forms.\n`;
+            }
+            if (spellingCount > 0) {
+                msg += `- Review the highlighted spelling mistakes; add difficult words to your personal word list.\n`;
+            }
+            if (styleCount > 0) {
+                msg += `- Some sentences may be wordy or informal; try to make them more concise and academic.\n`;
+            }
+            msg += `- Read your writing aloud to check if the sentences flow naturally.\n`;
+
+            if (topic) {
+                msg += `- Check that every paragraph clearly supports the topic: "${topic}".\n`;
+            }
+
+            if (rubricText) {
+                msg += `\nRubric reminder (summary):\n`;
+                msg += rubricText.split('\n').slice(0, 5).join('\n');
+            }
+
+            return msg;
+        }
+
+        // 讀 rubric.csv
         async function loadRubric() {
             if (rubricText) return;
             try {
@@ -143,8 +249,9 @@
                     .map(row => `${row.Criterion || 'Criterion'}: ${row.Description || 'N/A'}`)
                     .join('\n');
             } catch (e) {
-                rubricText = 'Default rubric: Check for grammar, clarity, structure, and coherence.';
-                console.warn('Rubric not found, using default.', e);
+                rubricText = 'Criterion: Grammar; Description: Check verb forms, subject–verb agreement, and basic sentence structure.\n' +
+                             'Criterion: Vocabulary; Description: Use appropriate and varied word choices.\n' +
+                             'Criterion: Organization; Description: Use clear topic sentences and logical flow.\n';
             }
         }
 
@@ -159,163 +266,79 @@
             }
         }
 
-        // --- 簡易 fallback 分析（模型跑不起來時使用） ---
-        function basicStats(text) {
-            const words = text.trim().split(/\s+/).filter(Boolean);
-            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const avgLen = sentences.length ? (words.length / sentences.length).toFixed(1) : 'N/A';
-            return { wordCount: words.length, sentenceCount: sentences.length, avgLen };
-        }
-
-        function fallbackFeedback(text, topic = null) {
-            const { wordCount, sentenceCount, avgLen } = basicStats(text);
-
-            let msg = `Local AI model could not be loaded on this device. `;
-            msg += `Here is rubric-based feedback generated by simple analysis instead.\n\n`;
-
-            msg += `Length & structure:\n- Words: ${wordCount}\n- Sentences: ${sentenceCount}\n- Average words per sentence: ${avgLen}\n\n`;
-
-            msg += `Suggestions:\n`;
-            msg += `- Check subjects and verbs in each sentence for agreement.\n`;
-            msg += `- Combine very short sentences to improve flow, and split very long sentences for clarity.\n`;
-            msg += `- Make sure each paragraph has a clear topic sentence and supporting details.\n`;
-
-            if (topic) {
-                msg += `\nRelevance to topic:\n`;
-                msg += `- Re-read the prompt: "${topic}". Highlight the sentences that directly answer this prompt.\n`;
-                msg += `- Add more specific examples and details that show *why* or *how*, not just *what*.\n`;
-            }
-
-            if (rubricText) {
-                msg += `\nRubric reminder (summary):\n`;
-                msg += rubricText.split('\n').slice(0, 5).join('\n');
-                if (rubricText.split('\n').length > 5) {
-                    msg += '\n... (see full rubric in CSV for more details)';
-                }
-            }
-
-            return msg;
-        }
-
-        // ===== 按鈕要用的函式，全部掛到 window =====
-
-        window.enterLevel = function(level) {
+        // --------- UI 切換 ---------
+        function enterLevel(level) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             const target = document.getElementById(level + '-section');
             if (target) target.classList.add('active');
             document.querySelector('.back-btn').classList.add('active');
             currentLevel = level;
             if (level === 'gists') loadWritingMaterials();
-        };
+        }
 
-        window.goHome = function() {
+        function goHome() {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('home-section').classList.add('active');
             document.querySelector('.back-btn').classList.remove('active');
             currentLevel = 'home';
-        };
+        }
 
-        window.analyzeWriting = async function() {
+        // --------- Level 1：一般寫作 ---------
+        async function analyzeWriting() {
             const output = document.getElementById('output');
-            output.innerHTML = '<em>Processing... loading models and analyzing your writing.</em>';
-
             const text = document.getElementById('input-text').value;
+
             if (!text.trim()) {
                 alert('Please enter text.');
-                output.innerHTML = '';
                 return;
             }
 
-            await loadRubric();
-            await loadModels();
+            output.innerHTML = '<em>Checking your writing... (using LanguageTool grammar checker)</em>';
 
-            // 如果模型載入失敗，使用 fallback
-            if (!modelsReady) {
-                const fb = fallbackFeedback(text);
-                output.innerHTML = `
-                    <h3>Corrected Version (same as original):</h3>
-                    <div class="diff"><p>${text.replace(/\n/g, '<br>')}</p></div>
-                    <div class="feedback">
-                        <h3>Feedback (Fallback Mode):</h3>
-                        <pre style="white-space: pre-wrap;">${fb}</pre>
-                    </div>
-                `;
-                document.getElementById('edit-text').value = text;
-                drafts.push({ original: text, corrected: text, feedback: fb });
-                return;
-            }
-
-            // === 有模型時的完整分析 ===
             try {
-                const corrected = await generator('grammar: ' + text, { max_new_tokens: 512 });
+                await loadRubric();
+                const result = await checkWithLanguageTool(text);
+                const matches = result.matches || [];
 
-                const prompt =
-                    `Provide detailed feedback on the following writing based on this rubric:\n` +
-                    `${rubricText}\n\nWriting: ${text}\n\nFeedback:`;
-                const feedback = await feedbackGenerator(prompt, {
-                    max_new_tokens: 150,
-                    do_sample: true
-                });
-
-                let display = corrected[0].generated_text;
-                if (DiffLib) {
-                    const diff = DiffLib.diffWords(text, corrected[0].generated_text);
-                    display = diff
-                        .map(part => {
-                            const className = part.added ? 'ins' : part.removed ? 'del' : '';
-                            return `<span class="${className}">${part.value}</span>`;
-                        })
-                        .join('');
-                }
+                const corrected = buildCorrectedText(text, matches);
+                const highlighted = buildHighlightedHtml(text, matches);
+                const feedbackText = buildFeedback(text, matches, null);
 
                 output.innerHTML = `
                     <h3>Corrected Version:</h3>
-                    <div class="diff">${display}</div>
-                    <style>
-                        .ins { background: #d4fcbc; }
-                        .del { background: #fbb; text-decoration: line-through; }
-                    </style>
+                    <div class="diff">${escapeHtml(corrected).replace(/\n/g, '<br>')}</div>
+                    <h3 style="margin-top:20px;">Original with highlighted issues:</h3>
+                    <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
                     <div class="feedback">
-                        <h3>AI Feedback:</h3>
-                        <p>${feedback[0].generated_text}</p>
+                        <h3>Feedback:</h3>
+                        <pre style="white-space: pre-wrap;">${escapeHtml(feedbackText)}</pre>
                     </div>
                 `;
 
-                document.getElementById('edit-text').value = corrected[0].generated_text;
-                drafts.push({
-                    original: text,
-                    corrected: corrected[0].generated_text,
-                    feedback: feedback[0].generated_text
-                });
+                document.getElementById('edit-text').value = corrected;
+                drafts.push({ original: text, corrected, feedback: feedbackText });
+
             } catch (err) {
                 console.error(err);
-                const fb = fallbackFeedback(text);
-                output.innerHTML = `
-                    <p style="color:red;">Local model failed while running. Switched to fallback feedback.</p>
-                    <div class="feedback">
-                        <h3>Feedback (Fallback Mode):</h3>
-                        <pre style="white-space: pre-wrap;">${fb}</pre>
-                    </div>
-                `;
-                drafts.push({ original: text, corrected: text, feedback: fb });
+                output.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
             }
-        };
+        }
 
-        window.submitEdit = function() {
+        function submitEdit() {
             document.getElementById('input-text').value = document.getElementById('edit-text').value;
-            window.analyzeWriting();
-        };
+            analyzeWriting();
+        }
 
-        window.printDrafts = function() {
+        function printDrafts() {
             const printable = document.getElementById('printable-drafts');
             printable.innerHTML = drafts
                 .map(
                     (draft, i) => `
                 <div class="printable">
                     <h2>Draft ${i + 1}</h2>
-                    <h3>Original:</h3><p>${draft.original}</p>
-                    <h3>Corrected:</h3><p>${draft.corrected}</p>
-                    <h3>Feedback:</h3><p>${draft.feedback}</p>
+                    <h3>Original:</h3><p>${escapeHtml(draft.original).replace(/\n/g, '<br>')}</p>
+                    <h3>Corrected:</h3><p>${escapeHtml(draft.corrected).replace(/\n/g, '<br>')}</p>
+                    <h3>Feedback:</h3><pre style="white-space: pre-wrap;">${escapeHtml(draft.feedback)}</pre>
                 </div>
             `
                 )
@@ -323,84 +346,47 @@
             printable.style.display = 'block';
             window.print();
             printable.style.display = 'none';
-        };
+        }
 
-        window.analyzeTopic = async function() {
+        // --------- Level 2：題目作文 ---------
+        async function analyzeTopic() {
             const output = document.getElementById('topic-output');
-            output.innerHTML = '<em>Processing... loading models and analyzing your essay.</em>';
-
             const topic = document.getElementById('topic-input').value;
             const text = document.getElementById('topic-text').value;
-            if (!text.trim() || !topic.trim()) {
+
+            if (!topic.trim() || !text.trim()) {
                 alert('Please enter topic and text.');
-                output.innerHTML = '';
                 return;
             }
 
-            await loadRubric();
-            await loadModels();
-
-            if (!modelsReady) {
-                const fb = fallbackFeedback(text, topic);
-                output.innerHTML = `
-                    <h3>Corrected Essay (same as original):</h3>
-                    <div class="diff"><p>${text.replace(/\n/g, '<br>')}</p></div>
-                    <div class="feedback">
-                        <h3>Topic-Specific Feedback (Fallback Mode):</h3>
-                        <pre style="white-space: pre-wrap;">${fb}</pre>
-                    </div>
-                `;
-                return;
-            }
+            output.innerHTML = '<em>Checking your essay for this topic...</em>';
 
             try {
-                const corrected = await generator('grammar: ' + text, { max_new_tokens: 512 });
+                await loadRubric();
+                const result = await checkWithLanguageTool(text);
+                const matches = result.matches || [];
 
-                const prompt =
-                    `Topic: ${topic}\nProvide feedback on how well this essay addresses the topic, based on rubric:\n` +
-                    `${rubricText}\n\nEssay: ${text}\n\nFeedback:`;
-                const feedback = await feedbackGenerator(prompt, {
-                    max_new_tokens: 200,
-                    do_sample: true
-                });
-
-                let display = corrected[0].generated_text;
-                if (DiffLib) {
-                    const diff = DiffLib.diffWords(text, corrected[0].generated_text);
-                    display = diff
-                        .map(
-                            part =>
-                                `<span class="${part.added ? 'ins' : part.removed ? 'del' : ''}">${part.value}</span>`
-                        )
-                        .join('');
-                }
+                const corrected = buildCorrectedText(text, matches);
+                const highlighted = buildHighlightedHtml(text, matches);
+                const feedbackText = buildFeedback(text, matches, topic);
 
                 output.innerHTML = `
                     <h3>Corrected Essay:</h3>
-                    <div class="diff">${display}</div>
-                    <style>
-                        .ins { background: #d4fcbc; }
-                        .del { background: #fbb; text-decoration: line-through; }
-                    </style>
+                    <div class="diff">${escapeHtml(corrected).replace(/\n/g, '<br>')}</div>
+                    <h3 style="margin-top:20px;">Original with highlighted issues:</h3>
+                    <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
                     <div class="feedback">
                         <h3>Topic-Specific Feedback:</h3>
-                        <p>${feedback[0].generated_text}</p>
+                        <pre style="white-space: pre-wrap;">${escapeHtml(feedbackText)}</pre>
                     </div>
                 `;
             } catch (err) {
                 console.error(err);
-                const fb = fallbackFeedback(text, topic);
-                output.innerHTML = `
-                    <p style="color:red;">Local model failed while running. Switched to fallback feedback.</p>
-                    <div class="feedback">
-                        <h3>Topic-Specific Feedback (Fallback Mode):</h3>
-                        <pre style="white-space: pre-wrap;">${fb}</pre>
-                    </div>
-                `;
+                output.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
             }
-        };
+        }
 
-        // 檔案上傳（不用掛到 window）
+        // 檔案上傳
         document.getElementById('file-upload').addEventListener('change', e => {
             const file = e.target.files[0];
             if (file) {
@@ -412,7 +398,15 @@
             }
         });
 
-        // 進頁面時先試著載教材
+        // 讓這些函式在 HTML 的 onclick 上可用
+        window.enterLevel = enterLevel;
+        window.goHome = goHome;
+        window.analyzeWriting = analyzeWriting;
+        window.submitEdit = submitEdit;
+        window.printDrafts = printDrafts;
+        window.analyzeTopic = analyzeTopic;
+
+        // 一進頁面試著載教材
         loadWritingMaterials();
     </script>
 </body>
