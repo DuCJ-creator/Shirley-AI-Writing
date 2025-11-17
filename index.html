@@ -319,13 +319,14 @@
         /* Level 2（topic 練習）的顏色 */
         .err-topic { background: #ffd6e0; border-bottom-color: #c0392b; }
 
-        /* Rubric reminder block */
+        /* Rubric reminder block（預設收合，由按鈕開啟） */
         .rubric-reminder {
             background: #fffdf8;
             border-radius: 10px;
             border: 1px dashed var(--accent-soft);
             padding: 10px 12px;
-            margin-bottom: 12px;
+            margin-top: 8px;
+            margin-bottom: 4px;
             font-size: 0.9em;
             max-height: 260px;
             overflow-y: auto;
@@ -336,8 +337,15 @@
             color: var(--accent-dark);
         }
 
-        /* 凍結：Level 1 上半部 (說明 + Rubric + Prompt) */
-        .analysis-header {
+        .rubric-toggle-btn {
+            margin-top: 6px;
+            margin-bottom: 4px;
+            font-size: 0.82em;
+            padding: 6px 14px;
+        }
+
+        /* 凍結：Level 1：prompt + current workspace 整塊 */
+        .analysis-sticky {
             position: sticky;
             top: 60px;
             z-index: 5;
@@ -375,6 +383,24 @@
         .legend-v6 { background: #fff8b3; border-color: #f1c40f; }
         .legend-topic { background: #ffd6e0; border-color: #c0392b; }
 
+        /* 版本標題的小彩色 badge */
+        .version-chip {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.8em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+        .version-chip-v1 { background: #fff4d0; border: 1px solid #d63031; color: #6b2b1e; }
+        .version-chip-v2 { background: #ddffea; border: 1px solid #16a085; color: #10624f; }
+        .version-chip-v3 { background: #e1f0ff; border: 1px solid #2980b9; color: #1c496d; }
+        .version-chip-v4 { background: #fbe3ff; border: 1px solid #8e44ad; color: #5a2c73; }
+        .version-chip-v5 { background: #ffe9d6; border: 1px solid #e67e22; color: #8c3f09; }
+        .version-chip-v6 { background: #fffad1; border: 1px solid #f1c40f; color: #8a6d1e; }
+        .version-chip-ref { background: #e6e6e6; border: 1px solid #aaaaaa; color: #444; }
+
         @media print {
             .no-print { display: none; }
             .printable { page-break-after: always; }
@@ -388,14 +414,14 @@
                 flex-wrap: wrap;
                 justify-content: center;
             }
-            .analysis-header {
+            .analysis-sticky {
                 top: 50px;
             }
         }
         @media (max-width: 600px) {
             .front-buttons { flex-direction: column; align-items: center; }
             body { padding: 16px 12px 40px; }
-            .analysis-header {
+            .analysis-sticky {
                 top: 48px;
             }
         }
@@ -424,73 +450,79 @@
 
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <div class="analysis-header no-print">
-            <h2>Level 1: Writing Analysis / Feedback</h2>
-            <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.<br>
-               <strong>Important:</strong> Your essay must answer the writing prompt and stay on topic.</p>
+        <!-- 凍結區：rubric 按鈕 + prompt + current workspace -->
+        <div class="analysis-sticky no-print">
+            <div class="analysis-header-inner">
+                <h2>Level 1: Writing Analysis / Feedback</h2>
+                <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.<br>
+                   <strong>Important:</strong> Your essay must answer the writing prompt and stay on topic.</p>
 
-            <!-- Rubric reminder (fixed, global) -->
-            <div id="rubric-reminder" class="rubric-reminder">
-                <h3>Rubric Reminder</h3>
-                <p>Loading rubric...</p>
-            </div>
-
-            <!-- 寫作題目 / prompt -->
-            <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
-            <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
-        </div>
-
-        <!-- 三欄版面：左原文、中控件、右檢查後版本 -->
-        <div class="analysis-run no-print">
-            <div class="version-header-inline">
-                <span><strong>Current Draft Workspace</strong></span>
-                <span style="font-size:0.85em;">Use this row for each version. History is kept for printing.</span>
-            </div>
-
-            <!-- Level 1: 顏色 legend -->
-            <div class="version-legend no-print">
-                <span class="version-legend-item">
-                    <span class="legend-color legend-v1"></span> Version 1 highlight style
-                </span>
-                <span class="version-legend-item">
-                    <span class="legend-color legend-v2"></span> Version 2 highlight style
-                </span>
-                <span class="version-legend-item">
-                    <span class="legend-color legend-v3"></span> Version 3 highlight style
-                </span>
-                <span class="version-legend-item">
-                    <span class="legend-color legend-v4"></span> Version 4 highlight style
-                </span>
-                <span class="version-legend-item">
-                    <span class="legend-color legend-v5"></span> Version 5 highlight style
-                </span>
-                <span class="version-legend-item">
-                    <span class="legend-color legend-v6"></span> Version 6 highlight style
-                </span>
-            </div>
-
-            <div class="version-layout">
-                <div class="version-col">
-                    <h3>Original text (or OCR result)</h3>
-                    <textarea id="input-text" placeholder="Paste your writing here, or upload a file / image to extract text..."></textarea>
+                <!-- Rubric toggle -->
+                <button type="button" class="rubric-toggle-btn" onclick="toggleRubric()">
+                    Show / hide rubric reminder
+                </button>
+                <div id="rubric-reminder" class="rubric-reminder" style="display:none;">
+                    <h3>Rubric Reminder (for all drafts)</h3>
+                    <p>Loading rubric...</p>
                 </div>
-                <div class="version-col version-actions">
-                    <div>
-                        <strong style="font-size:0.9em;">Upload a file</strong>
-                        <input
-                            type="file"
-                            id="file-upload-main"
-                            accept=".txt,.pdf,.doc,.docx,image/*"
-                        >
-                        <small>Supports images (OCR), txt, pdf, doc / docx.</small>
+
+                <!-- 寫作題目 / prompt -->
+                <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
+                <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
+            </div>
+
+            <!-- 三欄版面：左原文、中控件、右檢查後版本 -->
+            <div class="analysis-run">
+                <div class="version-header-inline">
+                    <span><strong>Current Draft Workspace</strong></span>
+                    <span style="font-size:0.85em;">Use this row for each version. History is kept for printing.</span>
+                </div>
+
+                <!-- Level 1: 顏色 legend -->
+                <div class="version-legend">
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-v1"></span> Version 1 highlight style
+                    </span>
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-v2"></span> Version 2 highlight style
+                    </span>
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-v3"></span> Version 3 highlight style
+                    </span>
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-v4"></span> Version 4 highlight style
+                    </span>
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-v5"></span> Version 5 highlight style
+                    </span>
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-v6"></span> Version 6 highlight style
+                    </span>
+                </div>
+
+                <div class="version-layout">
+                    <div class="version-col">
+                        <h3>Original text (or OCR result)</h3>
+                        <textarea id="input-text" placeholder="Paste your writing here, or upload a file / image to extract text..."></textarea>
                     </div>
-                    <button onclick="analyzeWriting()">Analyze &amp; Feedback</button>
-                    <!-- 參考範文按鈕：放在 Analyze 下面，第二稿之後啟用 -->
-                    <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
-                </div>
-                <div class="version-col">
-                    <h3>Checked version</h3>
-                    <textarea id="checked-text" placeholder="Corrected version will appear here. You can still edit it manually."></textarea>
+                    <div class="version-col version-actions">
+                        <div>
+                            <strong style="font-size:0.9em;">Upload a file</strong>
+                            <input
+                                type="file"
+                                id="file-upload-main"
+                                accept=".txt,.pdf,.doc,.docx,image/*"
+                            >
+                            <small>Supports images (OCR), txt, pdf, doc / docx.</small>
+                        </div>
+                        <button onclick="analyzeWriting()">Analyze &amp; Feedback</button>
+                        <!-- 參考範文按鈕：放在 Analyze 下面，第二稿之後啟用 -->
+                        <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
+                    </div>
+                    <div class="version-col">
+                        <h3>Checked version</h3>
+                        <textarea id="checked-text" placeholder="Corrected version will appear here. You can still edit it manually."></textarea>
+                    </div>
                 </div>
             </div>
         </div>
@@ -540,7 +572,7 @@
                 </div>
 
                 <!-- Level 2: 顏色 legend（topic 專用） -->
-                <div class="version-legend no-print">
+                <div class="version-legend">
                     <span class="version-legend-item">
                         <span class="legend-color legend-topic"></span> Topic draft highlight style
                     </span>
@@ -1093,6 +1125,16 @@
             }
         }
 
+        function toggleRubric() {
+            const div = document.getElementById('rubric-reminder');
+            if (!div) return;
+            if (div.style.display === 'none' || div.style.display === '') {
+                div.style.display = 'block';
+            } else {
+                div.style.display = 'none';
+            }
+        }
+
         // --------- UI 切換 ---------
         function enterLevel(level) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1281,6 +1323,19 @@
             }
         }
 
+        function buildVersionChip(label) {
+            let cls = 'version-chip';
+            const match = label.match(/Version\s+(\d+)/i);
+            if (match) {
+                const n = parseInt(match[1], 10);
+                const idx = ((n - 1) % 6) + 1;
+                cls += ' version-chip-v' + idx;
+            } else if (/Reference Essay/i.test(label)) {
+                cls += ' version-chip-ref';
+            }
+            return `<span class="${cls}">${escapeHtml(label)}</span>`;
+        }
+
         function renderVersionBlock({ index, label, original, corrected, highlighted, feedback, scores }) {
             const scoreHtml = scores ? `
                 <div class="scores-block">
@@ -1295,9 +1350,11 @@
                 </div>
             ` : '';
 
+            const chipHtml = buildVersionChip(label);
+
             return `
                 <div class="version-header-inline">
-                    <span><strong>${escapeHtml(label)}</strong></span>
+                    <span>${chipHtml}</span>
                     <label class="no-print" style="font-size:0.9em;">
                         <input type="checkbox" class="print-select" data-index="${index}">
                         Select this version for printing
@@ -1504,6 +1561,7 @@
         window.analyzeTopic = analyzeTopic;
         window.generateReferenceEssay = generateReferenceEssay;
         window.useVersionAsCurrent = useVersionAsCurrent;
+        window.toggleRubric = toggleRubric;
 
         // 進頁面先試著載教材與 rubric
         loadWritingMaterials();
