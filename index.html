@@ -344,13 +344,9 @@
             padding: 6px 14px;
         }
 
-        /* 凍結：Level 1：prompt + current workspace 整塊 */
+        /* 原本 sticky 的 class，現在只當一般容器用（取消凍結） */
         .analysis-sticky {
-            position: sticky;
-            top: 60px;
-            z-index: 5;
-            background: var(--bg-card);
-            padding-bottom: 10px;
+            position: static;
         }
 
         /* 版本顏色 legend */
@@ -414,16 +410,10 @@
                 flex-wrap: wrap;
                 justify-content: center;
             }
-            .analysis-sticky {
-                top: 50px;
-            }
         }
         @media (max-width: 600px) {
             .front-buttons { flex-direction: column; align-items: center; }
             body { padding: 16px 12px 40px; }
-            .analysis-sticky {
-                top: 48px;
-            }
         }
     </style>
 </head>
@@ -450,8 +440,8 @@
 
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <!-- 凍結區：rubric 按鈕 + prompt + current workspace -->
-        <div class="analysis-sticky no-print">
+        <!-- 原本 sticky 區：現在只是一般區塊 -->
+        <div class="analysis-sticky">
             <div class="analysis-header-inner">
                 <h2>Level 1: Writing Analysis / Feedback</h2>
                 <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.<br>
@@ -679,6 +669,27 @@
             return result;
         }
 
+        // prompt / topic 關聯度（離題偵測）
+        function computePromptCoverage(text, promptOrTopic) {
+            if (!promptOrTopic) {
+                return { coverage: 1, matchedKeywords: [], totalKeywords: 0 };
+            }
+            const lowerPrompt = promptOrTopic.toLowerCase();
+            const keywordCandidates = lowerPrompt.match(/[a-z]{4,}/g) || [];
+            const uniqueKeywords = Array.from(new Set(keywordCandidates));
+            const lowerText = text.toLowerCase();
+            let matched = 0;
+            const matchedWords = [];
+            uniqueKeywords.forEach(w => {
+                if (lowerText.includes(w)) {
+                    matched++;
+                    matchedWords.push(w);
+                }
+            });
+            const coverage = uniqueKeywords.length ? matched / uniqueKeywords.length : 1;
+            return { coverage, matchedKeywords: matchedWords, totalKeywords: uniqueKeywords.length };
+        }
+
         // highlightClass 例如：'err err-v1' 或 'err err-topic'
         function buildHighlightedHtml(text, matches, highlightClass = 'err') {
             const sorted = [...matches].sort((a, b) => a.offset - b.offset);
@@ -702,28 +713,8 @@
             return result;
         }
 
-        // prompt / topic 關聯度（離題偵測）
-        function computePromptCoverage(text, promptOrTopic) {
-            if (!promptOrTopic) {
-                return { coverage: 1, matchedKeywords: [], totalKeywords: 0 };
-            }
-            const lowerPrompt = promptOrTopic.toLowerCase();
-            const keywordCandidates = lowerPrompt.match(/[a-z]{4,}/g) || [];
-            const uniqueKeywords = Array.from(new Set(keywordCandidates));
-            const lowerText = text.toLowerCase();
-            let matched = 0;
-            const matchedWords = [];
-            uniqueKeywords.forEach(w => {
-                if (lowerText.includes(w)) {
-                    matched++;
-                    matchedWords.push(w);
-                }
-            });
-            const coverage = uniqueKeywords.length ? matched / uniqueKeywords.length : 1;
-            return { coverage, matchedKeywords: matchedWords, totalKeywords: uniqueKeywords.length };
-        }
-
         // --- rubric-based scoring (加入 prompt / topic & 離題考量) ---
+        // options: { topic?, prompt? }
         function calculateScores(text, matches, options = {}) {
             const wordTokens = text.trim().split(/\s+/).filter(Boolean);
             const wordCount = wordTokens.length;
@@ -776,6 +767,7 @@
             else if (cov < 0.3) onTopicScore = 2;
             else if (cov < 0.45) onTopicScore = 3;
             else if (cov < 0.6) onTopicScore = 4;
+            else onTopicScore = 5;
             coherenceScore = Math.min(coherenceScore, onTopicScore);
 
             // Grammar Accuracy
