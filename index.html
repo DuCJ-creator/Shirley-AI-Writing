@@ -9,48 +9,282 @@
     <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
-        .disclaimer { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #856404; }
-        .title { text-align: center; color: #6c5ce7; font-size: 2.5em; margin-bottom: 10px; }
-        .subtitle { text-align: center; color: #a29bfe; font-size: 1.2em; margin-bottom: 20px; }
-        .section { display: none; margin-bottom: 40px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: white; min-height: 60vh; }
-        .section.active { display: block; }
-        .front-page { text-align: center; padding: 40px 20px; background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; border-radius: 8px; margin-bottom: 20px; }
-        .front-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
-        .front-btn { padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: transform 0.2s; }
-        .front-btn:hover { transform: scale(1.05); }
-        .analysis-btn { background: #00b894; color: white; }
-        .gists-btn { background: #fdcb6e; color: #2d3436; }
-        .back-btn { position: fixed; top: 20px; left: 20px; padding: 10px 20px; background: #74b9ff; color: white; border: none; border-radius: 6px; cursor: pointer; z-index: 1000; display: none; }
-        .back-btn.active { display: block; }
-        textarea { width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        #prompt-input { height: 80px; }
-        #input-text, #topic-text { height: 200px; }
-        input[type="file"] { margin-bottom: 10px; }
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
-        button:not(.front-btn):not(.back-btn) { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; background: #74b9ff; color: white; }
-        .output { margin-top: 20px; padding: 15px; border-radius: 4px; }
+    <!-- OCR / PDF / DOCX -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
-        .analysis-run {
-            border: 1px solid #ddd;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
+    <style>
+        :root {
+            --bg-main: #f6efe5;
+            --bg-card: #fbf7f0;
+            --bg-front: #f0e2c9;
+            --accent: #c39a6b;
+            --accent-dark: #8b5e34;
+            --accent-soft: #e2c9a3;
+            --text-main: #4a3b2a;
+            --text-muted: #8a7b6a;
+            --border-soft: #e0d2c3;
+            --error-bg: #ffe9d9;
+            --error-border: #e17055;
+            --info-bg: #e8f4f6;
+            --info-border: #17a2b8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 20px 60px;
+            background: radial-gradient(circle at top, #fdf7ee 0, #f3eadf 40%, #ebdfd1 100%);
+            color: var(--text-main);
+        }
+
+        .title {
+            text-align: center;
+            color: var(--accent-dark);
+            font-size: 2.4em;
+            margin-bottom: 8px;
+            letter-spacing: 0.03em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.05em;
             margin-bottom: 20px;
         }
-        .version-header {
+
+        .disclaimer {
+            background: #fff7ea;
+            border: 1px solid var(--border-soft);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: var(--text-main);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+
+        .section {
+            display: none;
+            margin-bottom: 40px;
+            border: 1px solid var(--border-soft);
+            padding: 20px;
+            border-radius: 16px;
+            background: var(--bg-card);
+            min-height: 60vh;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.03);
+        }
+        .section.active { display: block; }
+
+        .front-page {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f4e0c2, #e3c59a);
+            color: #4e3424;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+        }
+        .front-page h2 {
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+        .front-page p {
+            max-width: 600px;
+            margin: 8px auto 0;
+        }
+
+        .front-buttons {
             display: flex;
-            align-items: center;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        .front-btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 600;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+        }
+        .front-btn:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.16);
+        }
+        .analysis-btn {
+            background: #c39a6b;
+            color: white;
+        }
+        .gists-btn {
+            background: #f3d9a4;
+            color: #4a3422;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            padding: 10px 20px;
+            background: #d5b692;
+            color: #3e2a19;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+        }
+        .back-btn.active { display: inline-flex; align-items: center; gap: 4px; }
+
+        textarea,
+        select {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            background: #fffdf8;
+            color: var(--text-main);
+        }
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(195,154,107,0.18);
+        }
+
+        #prompt-input { height: 80px; }
+        #input-text, #topic-text { height: 200px; }
+        #checked-text, #topic-checked-text { height: 200px; }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
             gap: 10px;
+            align-items: center;
             margin-bottom: 10px;
         }
 
+        button:not(.front-btn):not(.back-btn) {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            background: var(--accent);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        button:not(.front-btn):not(.back-btn):hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+        }
+
+        .output {
+            margin-top: 16px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #fffdf8;
+            border: 1px solid var(--border-soft);
+        }
+
+        .analysis-run {
+            border: 1px solid var(--border-soft);
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .version-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) auto minmax(0, 1.1fr);
+            gap: 14px;
+        }
+
+        .version-col h3 {
+            margin-top: 0;
+            font-size: 0.95em;
+            color: var(--text-muted);
+        }
+
+        .version-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: stretch;
+            justify-content: center;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .version-actions small { display: block; text-align: center; }
+
+        .version-header-inline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: var(--text-muted);
+        }
+
         .diff { margin-top: 10px; }
-        .feedback { background: #d1ecf1; padding: 10px; border-left: 4px solid #17a2b8; margin-top: 10px; }
-        .gist-area { background: #e8f5e8; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+
+        .feedback {
+            background: var(--info-bg);
+            padding: 10px 12px;
+            border-left: 4px solid var(--info-border);
+            margin-top: 14px;
+            border-radius: 8px;
+            font-size: 0.92em;
+        }
+
+        .scores-block {
+            background: #fff9eb;
+            border: 1px solid var(--accent-soft);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            font-size: 0.92em;
+        }
+        .scores-block strong {
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .scores-block ul {
+            padding-left: 18px;
+            margin: 4px 0 6px;
+        }
+
+        .gist-area {
+            background: #fff9ef;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-soft);
+        }
 
         #writing-materials { min-height: 100px; }
+
         .materials-grid {
             display: flex;
             flex-wrap: wrap;
@@ -59,13 +293,11 @@
         .material-card {
             flex: 1 1 260px;
             background: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
             padding: 12px;
         }
-        .material-card h4 {
-            margin-top: 0;
-        }
+        .material-card h4 { margin-top: 0; }
 
         #printable-drafts { display: none; }
 
@@ -80,17 +312,27 @@
             .no-print { display: none; }
             .printable { page-break-after: always; }
         }
+        @media (max-width: 900px) {
+            .version-layout {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .version-actions {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
         @media (max-width: 600px) {
             .front-buttons { flex-direction: column; align-items: center; }
-            .controls { flex-direction: column; align-items: center; }
+            body { padding: 16px 12px 40px; }
         }
     </style>
 </head>
 <body>
-    <button class="back-btn" onclick="goHome()">← Back to Home</button>
+    <button class="back-btn" onclick="goHome()">← <span>Back to Home</span></button>
 
     <h1 class="title">Shirley's AI Writing Coach</h1>
-    <p class="subtitle">Educational practice and entertainment only. Use this tool to enhance your writing skills with AI feedback.</p>
+    <p class="subtitle">Educational practice & entertainment only · Elegant beige edition</p>
 
     <div class="disclaimer">
         <strong>This tool—"Shirley's AI Writing Coach"—is for educational practice and entertainment only.</strong><br>
@@ -110,26 +352,50 @@
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
         <h2>Level 1: Writing Analysis / Feedback</h2>
-        <p>Paste or upload your writing below. The AI will provide grammar corrections and feedback based on a rubric (rubric.csv in your GitHub repo).</p>
+        <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.</p>
 
         <!-- 新增寫作題目 / prompt -->
         <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
         <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
 
-        <textarea id="input-text" placeholder="Paste your writing here..."></textarea>
-        <input type="file" id="file-upload" accept=".txt" style="display: block; margin-bottom: 10px;">
-        <div class="controls no-print">
-            <button onclick="analyzeWriting()">Analyze & Feedback</button>
-            <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
+        <!-- 三欄版面：左原文、中控件、右檢查後版本 -->
+        <div class="analysis-run no-print">
+            <div class="version-header-inline">
+                <span><strong>Current Draft Workspace</strong></span>
+                <span style="font-size:0.85em;">Use this row for each version. History is kept for printing.</span>
+            </div>
+            <div class="version-layout">
+                <div class="version-col">
+                    <h3>Original text (or OCR result)</h3>
+                    <textarea id="input-text" placeholder="Paste your writing here, or upload a file / image to extract text..."></textarea>
+                </div>
+                <div class="version-col version-actions">
+                    <div>
+                        <strong style="font-size:0.9em;">Upload a file</strong>
+                        <input
+                            type="file"
+                            id="file-upload-main"
+                            accept=".txt,.pdf,.doc,.docx,image/*"
+                        >
+                        <small>Supports images (OCR), txt, pdf, doc / docx.</small>
+                    </div>
+                    <button onclick="analyzeWriting()">Analyze &amp; Feedback</button>
+                </div>
+                <div class="version-col">
+                    <h3>Checked version</h3>
+                    <textarea id="checked-text" placeholder="Corrected version will appear here. You can still edit it manually."></textarea>
+                </div>
+            </div>
         </div>
 
-        <!-- 多版本結果一個接一個放這裡 -->
+        <!-- 多版本結果 -->
         <div id="output" class="output"></div>
 
-        <textarea id="edit-text" placeholder="Edit your draft here..."></textarea>
-        <div class="controls no-print">
-            <button onclick="submitEdit()">Submit Edit for Feedback</button>
-            <button onclick="printDrafts()">Print Selected Versions</button>
+        <div class="controls no-print" style="margin-top:16px;">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+                <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
+                <button onclick="printDrafts()">Print selected versions</button>
+            </div>
         </div>
     </section>
 
@@ -145,7 +411,7 @@
 
         <div class="gist-area">
             <h3>2) Practice with a Topic</h3>
-            <!-- 多題寫作題目讓學生選 -->
+
             <label for="topic-select"><strong>Choose a writing topic:</strong></label>
             <select id="topic-select">
                 <option value="">-- Please choose a topic --</option>
@@ -160,10 +426,36 @@
                 (Teachers can edit the topic list in the HTML.)
             </p>
 
-            <textarea id="topic-text" placeholder="Write your essay here..."></textarea>
-            <div class="controls no-print">
-                <button onclick="analyzeTopic()">Submit for Feedback</button>
+            <!-- 同 Level 1 格式與流程：三欄＋檔案上傳 -->
+            <div class="analysis-run no-print">
+                <div class="version-header-inline">
+                    <span><strong>Topic Practice Workspace</strong></span>
+                    <span style="font-size:0.85em;">Same analysis flow as Level 1 (with file upload).</span>
+                </div>
+                <div class="version-layout">
+                    <div class="version-col">
+                        <h3>Original text (or OCR result)</h3>
+                        <textarea id="topic-text" placeholder="Write your essay here, or upload a file / image..."></textarea>
+                    </div>
+                    <div class="version-col version-actions">
+                        <div>
+                            <strong style="font-size:0.9em;">Upload a file</strong>
+                            <input
+                                type="file"
+                                id="file-upload-topic"
+                                accept=".txt,.pdf,.doc,.docx,image/*"
+                            >
+                            <small>Supports images (OCR), txt, pdf, doc / docx.</small>
+                        </div>
+                        <button onclick="analyzeTopic()">Analyze &amp; Feedback</button>
+                    </div>
+                    <div class="version-col">
+                        <h3>Checked version</h3>
+                        <textarea id="topic-checked-text" placeholder="Corrected topic essay will appear here."></textarea>
+                    </div>
+                </div>
             </div>
+
             <div id="topic-output" class="output"></div>
         </div>
     </section>
@@ -172,12 +464,13 @@
 
     <script>
         let currentLevel = 'home';
-        let drafts = [];      // 每個元素：{ original, corrected, highlighted, feedback }
+        let drafts = [];      // 每個元素：{ original, corrected, highlighted, feedback, scores, label }
         let rubricText = '';
         let rubricItems = []; // [{criteria, levels:{1..5}}]
 
+        // ---------- Util ----------
         function escapeHtml(str) {
-            return str
+            return String(str || '')
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -197,6 +490,29 @@
             });
             if (!res.ok) throw new Error('LanguageTool error: ' + res.status);
             return await res.json();
+        }
+
+        // 自訂：句首大寫偵測
+        function findCapitalizationMatches(text) {
+            const matches = [];
+            const regex = /(^|[.!?]\s+)([a-z])/g;
+            let m;
+            while ((m = regex.exec(text)) !== null) {
+                const offset = m.index + m[1].length;
+                const length = 1;
+                const wrongChar = m[2];
+                matches.push({
+                    offset,
+                    length,
+                    replacements: [{ value: wrongChar.toUpperCase() }],
+                    message: 'Sentence should start with a capital letter.',
+                    rule: {
+                        issueType: 'grammar',
+                        description: 'Capitalization at the beginning of a sentence'
+                    }
+                });
+            }
+            return matches;
         }
 
         function buildCorrectedText(text, matches) {
@@ -238,8 +554,105 @@
             return result;
         }
 
+        // --- 簡單 rubric-based scoring ---
+        function calculateScores(text, matches) {
+            const wordTokens = text.trim().split(/\s+/).filter(Boolean);
+            const wordCount = wordTokens.length;
+            const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const sentences = sentencesArr.length || 1;
+            const paragraphs = text.split(/\n{2,}/).filter(p => p.trim().length > 0).length || 1;
+
+            const grammarMatches = matches.filter(m =>
+                m.rule && (m.rule.issueType === 'grammar' || m.rule.issueType === 'misspelling')
+            );
+            const styleMatches = matches.filter(m =>
+                m.rule && m.rule.issueType === 'style'
+            );
+
+            const errorPer100 = wordCount ? (grammarMatches.length / wordCount) * 100 : grammarMatches.length;
+
+            // Structure & Organization
+            let structureScore = 3;
+            if (paragraphs >= 3 && wordCount >= 120) structureScore = 5;
+            else if (paragraphs >= 3 && wordCount >= 80) structureScore = 4;
+            else if (paragraphs === 2 && wordCount >= 60) structureScore = 3;
+            else if (paragraphs === 1 && wordCount >= 40) structureScore = 2;
+            else structureScore = 1;
+
+            // Coherence & Cohesion (linking words)
+            const linkingWords = ['however','therefore','in addition','for example','for instance','on the other hand','because','although','since','as a result'];
+            const lowerText = text.toLowerCase();
+            let linkingCount = 0;
+            linkingWords.forEach(w => {
+                if (lowerText.includes(w)) linkingCount++;
+            });
+            let coherenceScore = 3;
+            if (linkingCount >= 4) coherenceScore = 5;
+            else if (linkingCount >= 2) coherenceScore = 4;
+            else if (linkingCount === 1) coherenceScore = 3;
+            else if (linkingCount === 0 && sentences >= 5) coherenceScore = 2;
+            else coherenceScore = 2;
+
+            // Grammar Accuracy
+            let grammarScore = 3;
+            if (errorPer100 <= 1) grammarScore = 5;
+            else if (errorPer100 <= 3) grammarScore = 4;
+            else if (errorPer100 <= 6) grammarScore = 3;
+            else if (errorPer100 <= 10) grammarScore = 2;
+            else grammarScore = 1;
+
+            // Vocabulary Range & Precision (very basic heuristic)
+            const types = new Set(wordTokens.map(w => w.toLowerCase().replace(/[^a-z']/g, '')));
+            const typeTokenRatio = wordCount ? types.size / wordCount : 0;
+            const simpleWords = ['good','nice','very','really','a lot','many','things','stuff'];
+            let simpleCount = 0;
+            simpleWords.forEach(w => {
+                if (lowerText.includes(w)) simpleCount++;
+            });
+            let vocabScore = 3;
+            if (typeTokenRatio > 0.6 && simpleCount <= 1) vocabScore = 5;
+            else if (typeTokenRatio > 0.45 && simpleCount <= 3) vocabScore = 4;
+            else if (typeTokenRatio > 0.3) vocabScore = 3;
+            else if (typeTokenRatio > 0.2) vocabScore = 2;
+            else vocabScore = 1;
+
+            const total = structureScore + coherenceScore + grammarScore + vocabScore;
+
+            return {
+                structure: {
+                    label: 'Structure & Organization',
+                    score: structureScore,
+                    max: 5,
+                    reason: `Paragraphs: ${paragraphs}; Words: ${wordCount}.`
+                },
+                coherence: {
+                    label: 'Coherence & Cohesion',
+                    score: coherenceScore,
+                    max: 5,
+                    reason: `Linking devices found: ${linkingCount}.`
+                },
+                grammar: {
+                    label: 'Grammar Accuracy',
+                    score: grammarScore,
+                    max: 5,
+                    reason: `Approx. ${grammarMatches.length} grammar/spelling issues (~${errorPer100.toFixed(1)} per 100 words).`
+                },
+                vocabulary: {
+                    label: 'Vocabulary Range & Precision',
+                    score: vocabScore,
+                    max: 5,
+                    reason: `Type-token ratio ≈ ${(typeTokenRatio*100).toFixed(1)}%; simple/common words flagged: ${simpleCount}.`
+                },
+                total: {
+                    label: 'Total',
+                    score: total,
+                    max: 20
+                }
+            };
+        }
+
         // options: { topic?, prompt? }
-        function buildFeedback(text, matches, options = {}) {
+        function buildFeedback(text, matches, options = {}, scores) {
             const topic = options.topic || null;
             const prompt = options.prompt || null;
 
@@ -260,6 +673,20 @@
             }
             if (topic) {
                 msg += `Topic:\n"${topic}"\n\n`;
+            }
+
+            // 顯眼的分數區塊
+            if (scores) {
+                msg += '=== Rubric Scores (out of 5) ===\n';
+                msg += `- ${scores.structure.label}: ${scores.structure.score} / ${scores.structure.max}\n`;
+                msg += `  Reason: ${scores.structure.reason}\n`;
+                msg += `- ${scores.coherence.label}: ${scores.coherence.score} / ${scores.coherence.max}\n`;
+                msg += `  Reason: ${scores.coherence.reason}\n`;
+                msg += `- ${scores.grammar.label}: ${scores.grammar.score} / ${scores.grammar.max}\n`;
+                msg += `  Reason: ${scores.grammar.reason}\n`;
+                msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score} / ${scores.vocabulary.max}\n`;
+                msg += `  Reason: ${scores.vocabulary.reason}\n`;
+                msg += `\n>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
             }
 
             msg += `Length & structure:\n`;
@@ -306,7 +733,6 @@
 
             if (rubricItems.length > 0) {
                 msg += `Rubric reminder (summary):\n`;
-                // 用 bullet points 呈現每個 criterion
                 rubricItems.forEach(item => {
                     const lv1 = item.levels[1] ? `1 pt: ${item.levels[1]}` : '';
                     const lv3 = item.levels[3] ? `3 pts: ${item.levels[3]}` : '';
@@ -319,7 +745,7 @@
             return msg;
         }
 
-        // === 讀取 rubric：對應 Criteria + 1~5 Points 結構 ===
+        // === 讀取 rubric ===
         async function loadRubric() {
             if (rubricText) return;
             try {
@@ -343,7 +769,6 @@
 
                 if (rubricItems.length === 0) throw new Error('Empty rubric after parsing');
 
-                // 轉成文字（給需要用文字顯示的地方）
                 rubricText = rubricItems.map(item => {
                     const lv3 = item.levels[3] ? `3 pts: ${item.levels[3]}` : '';
                     const lv4 = item.levels[4] ? `4 pts: ${item.levels[4]}` : '';
@@ -413,6 +838,76 @@
             btn.style.display = drafts.length >= 2 ? 'inline-block' : 'none';
         }
 
+        // --------- 檔案處理 (OCR / txt / pdf / docx) ---------
+        // pdf.js worker 設定
+        if (window['pdfjsLib']) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        function handleFileInput(file, targetTextareaId) {
+            if (!file) return;
+            const name = file.name.toLowerCase();
+            const textarea = document.getElementById(targetTextareaId);
+            if (!textarea) return;
+
+            if (file.type.startsWith('image/')) {
+                textarea.value = 'Reading text from image (OCR)...';
+                Tesseract.recognize(file, 'eng')
+                    .then(({ data }) => {
+                        textarea.value = data.text || '';
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        textarea.value = '';
+                        alert('Unable to recognize text from this image.');
+                    });
+            } else if (name.endsWith('.txt')) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    textarea.value = ev.target.result;
+                };
+                reader.readAsText(file);
+            } else if (name.endsWith('.pdf')) {
+                textarea.value = 'Extracting text from PDF (first page)...';
+                const reader = new FileReader();
+                reader.onload = async ev => {
+                    try {
+                        const typedArray = new Uint8Array(ev.target.result);
+                        const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+                        const page = await pdf.getPage(1);
+                        const content = await page.getTextContent();
+                        const strings = content.items.map(item => item.str);
+                        textarea.value = strings.join(' ');
+                    } catch (e) {
+                        console.error(e);
+                        textarea.value = '';
+                        alert('Unable to extract text from this PDF in the browser.');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (name.endsWith('.docx')) {
+                textarea.value = 'Extracting text from DOCX...';
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    const arrayBuffer = ev.target.result;
+                    mammoth.extractRawText({ arrayBuffer })
+                        .then(result => {
+                            textarea.value = result.value || '';
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            textarea.value = '';
+                            alert('Unable to extract text from this DOCX in the browser.');
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (name.endsWith('.doc')) {
+                alert('Legacy .doc files are not fully supported in this browser-only version. Please convert to .docx or .pdf first.');
+            } else {
+                alert('Unsupported file type. Please use image / txt / pdf / doc / docx.');
+            }
+        }
+
         // --------- Level 1：一般寫作 ---------
         async function analyzeWriting() {
             const container = document.getElementById('output');
@@ -426,51 +921,103 @@
 
             const tempDiv = document.createElement('div');
             tempDiv.className = 'analysis-run';
-            tempDiv.innerHTML = '<em>Checking your writing... (using grammar checker)</em>';
-            container.appendChild(tempDiv);
+            tempDiv.innerHTML = '<em>Checking your writing... (grammar, capitalization, rubric scores)</em>';
+            container.prepend(tempDiv);
 
             try {
                 await loadRubric();
                 const result = await checkWithLanguageTool(text);
-                const matches = result.matches || [];
+                const matchesLT = result.matches || [];
+                const capMatches = findCapitalizationMatches(text);
+                const allMatches = [...matchesLT, ...capMatches];
 
-                const corrected = buildCorrectedText(text, matches);
-                const highlighted = buildHighlightedHtml(text, matches);
-                const feedbackText = buildFeedback(text, matches, { prompt });
+                const corrected = buildCorrectedText(text, allMatches);
+                const highlighted = buildHighlightedHtml(text, allMatches);
+                const scores = calculateScores(text, allMatches);
+                const feedbackText = buildFeedback(text, allMatches, { prompt }, scores);
 
                 const index = drafts.length; // 版本編號
-                drafts.push({ original: text, corrected, highlighted, feedback: feedbackText });
+                drafts.push({
+                    original: text,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores,
+                    label: `Version ${index + 1}`
+                });
 
-                tempDiv.innerHTML = `
-                    <div class="version-header">
-                        <strong>Version ${index + 1}</strong>
-                        <label class="no-print">
-                            <input type="checkbox" class="print-select" data-index="${index}">
-                            Select this version for printing
-                        </label>
-                    </div>
-                    <h3>Corrected Version:</h3>
-                    <div class="diff">${escapeHtml(corrected).replace(/\n/g, '<br>')}</div>
-                    <h3 style="margin-top:20px;">Original with highlighted issues:</h3>
-                    <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
-                    <div class="feedback">
-                        <h3>Feedback:</h3>
-                        <pre style="white-space: pre-wrap;">${escapeHtml(feedbackText)}</pre>
-                    </div>
-                `;
+                // 將最新版放到右側 workspace 中，可以繼續手動調整
+                document.getElementById('checked-text').value = corrected;
 
-                document.getElementById('edit-text').value = corrected;
+                tempDiv.innerHTML = renderVersionBlock({
+                    index,
+                    label: `Version ${index + 1}`,
+                    original: text,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores
+                });
+
                 updateReferenceButtonVisibility();
-
             } catch (err) {
                 console.error(err);
                 tempDiv.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
             }
         }
 
-        function submitEdit() {
-            document.getElementById('input-text').value = document.getElementById('edit-text').value;
-            analyzeWriting();
+        function renderVersionBlock({ index, label, original, corrected, highlighted, feedback, scores }) {
+            const scoreHtml = scores ? `
+                <div class="scores-block">
+                    <strong>Rubric scores (out of 5)</strong>
+                    <ul>
+                        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+                        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+                        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+                        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
+                    </ul>
+                    <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
+                </div>
+            ` : '';
+
+            return `
+                <div class="version-header-inline">
+                    <span><strong>${escapeHtml(label)}</strong></span>
+                    <label class="no-print" style="font-size:0.9em;">
+                        <input type="checkbox" class="print-select" data-index="${index}">
+                        Select this version for printing
+                    </label>
+                </div>
+                <div class="version-layout">
+                    <div class="version-col">
+                        <h3>Original text</h3>
+                        <textarea>${escapeHtml(original)}</textarea>
+                    </div>
+                    <div class="version-col version-actions">
+                        <small>You can copy this text into the current workspace to create a new version.</small>
+                        <button onclick="useVersionAsCurrent(${index})">Use as current draft</button>
+                    </div>
+                    <div class="version-col">
+                        <h3>Checked version</h3>
+                        <textarea>${escapeHtml(corrected)}</textarea>
+                    </div>
+                </div>
+                ${scoreHtml}
+                <h3 style="margin-top:16px;font-size:0.95em;">Original with highlighted issues:</h3>
+                <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
+                <div class="feedback">
+                    <h3 style="margin-top:0;font-size:1em;">Feedback &amp; suggestions:</h3>
+                    <pre style="white-space: pre-wrap;">${escapeHtml(feedback)}</pre>
+                </div>
+            `;
+        }
+
+        function useVersionAsCurrent(idx) {
+            const draft = drafts[idx];
+            if (!draft) return;
+            document.getElementById('input-text').value = draft.corrected;
+            document.getElementById('checked-text').value = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // 產生參考范文（以最新版本的 corrected 為基礎）
@@ -497,30 +1044,28 @@
                 '- Try to write your OWN final version after reading this reference.\n';
 
             const index = drafts.length;
+            const scores = draft.scores || null;
+
             drafts.push({
                 original: draft.corrected,
                 corrected: referenceText,
                 highlighted: escapeHtml(draft.corrected),
-                feedback: feedbackText
+                feedback: feedbackText,
+                scores,
+                label: `Reference Essay (based on Version ${lastIndex + 1})`
             });
 
-            div.innerHTML = `
-                <div class="version-header">
-                    <strong>Reference Essay (based on Version ${lastIndex + 1})</strong>
-                    <label class="no-print">
-                        <input type="checkbox" class="print-select" data-index="${index}">
-                        Select this version for printing
-                    </label>
-                </div>
-                <h3>Reference Essay:</h3>
-                <div class="diff">${escapeHtml(referenceText).replace(/\n/g, '<br>')}</div>
-                <div class="feedback">
-                    <h3>How to use this reference:</h3>
-                    <pre style="white-space: pre-wrap;">${escapeHtml(feedbackText)}</pre>
-                </div>
-            `;
+            div.innerHTML = renderVersionBlock({
+                index,
+                label: `Reference Essay (based on Version ${lastIndex + 1})`,
+                original: draft.corrected,
+                corrected: referenceText,
+                highlighted: escapeHtml(draft.corrected),
+                feedback: feedbackText,
+                scores
+            });
 
-            container.appendChild(div);
+            container.prepend(div);
         }
 
         // 只印出有勾選的版本
@@ -539,7 +1084,7 @@
 
                 return `
                     <div class="printable">
-                        <h2>Version ${idx + 1}</h2>
+                        <h2>${escapeHtml(draft.label || ('Version ' + (idx + 1)))}</h2>
                         <h3>Corrected / Reference Version:</h3>
                         <p>${escapeHtml(draft.corrected).replace(/\n/g, '<br>')}</p>
                         <h3>Original with highlighted issues:</h3>
@@ -566,18 +1111,38 @@
                 return;
             }
 
-            output.innerHTML = '<em>Checking your essay for this topic...</em>';
+            output.innerHTML = '<em>Checking your essay for this topic (grammar, capitalization, rubric scores)...</em>';
 
             try {
                 await loadRubric();
                 const result = await checkWithLanguageTool(text);
-                const matches = result.matches || [];
+                const matchesLT = result.matches || [];
+                const capMatches = findCapitalizationMatches(text);
+                const allMatches = [...matchesLT, ...capMatches];
 
-                const corrected = buildCorrectedText(text, matches);
-                const highlighted = buildHighlightedHtml(text, matches);
-                const feedbackText = buildFeedback(text, matches, { topic });
+                const corrected = buildCorrectedText(text, allMatches);
+                const highlighted = buildHighlightedHtml(text, allMatches);
+                const scores = calculateScores(text, allMatches);
+                const feedbackText = buildFeedback(text, allMatches, { topic }, scores);
+
+                document.getElementById('topic-checked-text').value = corrected;
+
+                const scoreHtml = `
+                    <div class="scores-block">
+                        <strong>Rubric scores (out of 5)</strong>
+                        <ul>
+                            <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+                            <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+                            <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+                            <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
+                        </ul>
+                        <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
+                    </div>
+                `;
 
                 output.innerHTML = `
+                    <h3>Topic essay: analysis &amp; feedback</h3>
+                    ${scoreHtml}
                     <h3>Corrected Essay:</h3>
                     <div class="diff">${escapeHtml(corrected).replace(/\n/g, '<br>')}</div>
                     <h3 style="margin-top:20px;">Original with highlighted issues:</h3>
@@ -593,26 +1158,24 @@
             }
         }
 
-        // 檔案上傳
-        document.getElementById('file-upload').addEventListener('change', e => {
+        // 檔案上傳綁定
+        document.getElementById('file-upload-main').addEventListener('change', e => {
             const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    document.getElementById('input-text').value = ev.target.result;
-                };
-                reader.readAsText(file);
-            }
+            handleFileInput(file, 'input-text');
+        });
+        document.getElementById('file-upload-topic').addEventListener('change', e => {
+            const file = e.target.files[0];
+            handleFileInput(file, 'topic-text');
         });
 
         // 讓這些函式在 HTML 的 onclick 上可用
         window.enterLevel = enterLevel;
         window.goHome = goHome;
         window.analyzeWriting = analyzeWriting;
-        window.submitEdit = submitEdit;
         window.printDrafts = printDrafts;
         window.analyzeTopic = analyzeTopic;
         window.generateReferenceEssay = generateReferenceEssay;
+        window.useVersionAsCurrent = useVersionAsCurrent;
 
         // 進頁面先試著載教材
         loadWritingMaterials();
