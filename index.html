@@ -301,12 +301,79 @@
 
         #printable-drafts { display: none; }
 
-        /* 錯誤高亮 */
+        /* 錯誤高亮共用基底 */
         .err {
             background: #ffeaa7;
             border-bottom: 2px solid #d63031;
             cursor: help;
         }
+
+        /* 不同版本的顏色（Version 1~6 循環使用） */
+        .err-v1 { background: #ffeaa7; border-bottom-color: #d63031; }
+        .err-v2 { background: #d1ffd6; border-bottom-color: #16a085; }
+        .err-v3 { background: #d6e9ff; border-bottom-color: #2980b9; }
+        .err-v4 { background: #f9d1ff; border-bottom-color: #8e44ad; }
+        .err-v5 { background: #ffe6d1; border-bottom-color: #e67e22; }
+        .err-v6 { background: #fff8b3; border-bottom-color: #f1c40f; }
+
+        /* Level 2（topic 練習）的顏色 */
+        .err-topic { background: #ffd6e0; border-bottom-color: #c0392b; }
+
+        /* Rubric reminder block */
+        .rubric-reminder {
+            background: #fffdf8;
+            border-radius: 10px;
+            border: 1px dashed var(--accent-soft);
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .rubric-reminder h3 {
+            margin: 0 0 6px;
+            font-size: 0.95em;
+            color: var(--accent-dark);
+        }
+
+        /* 凍結：Level 1 上半部 (說明 + Rubric + Prompt) */
+        .analysis-header {
+            position: sticky;
+            top: 60px;
+            z-index: 5;
+            background: var(--bg-card);
+            padding-bottom: 10px;
+        }
+
+        /* 版本顏色 legend */
+        .version-legend {
+            margin: 4px 0 10px;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+        }
+        .version-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 14px;
+            height: 10px;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            vertical-align: middle;
+        }
+        .legend-v1 { background: #ffeaa7; border-color: #d63031; }
+        .legend-v2 { background: #d1ffd6; border-color: #16a085; }
+        .legend-v3 { background: #d6e9ff; border-color: #2980b9; }
+        .legend-v4 { background: #f9d1ff; border-color: #8e44ad; }
+        .legend-v5 { background: #ffe6d1; border-color: #e67e22; }
+        .legend-v6 { background: #fff8b3; border-color: #f1c40f; }
+        .legend-topic { background: #ffd6e0; border-color: #c0392b; }
 
         @media print {
             .no-print { display: none; }
@@ -321,10 +388,16 @@
                 flex-wrap: wrap;
                 justify-content: center;
             }
+            .analysis-header {
+                top: 50px;
+            }
         }
         @media (max-width: 600px) {
             .front-buttons { flex-direction: column; align-items: center; }
             body { padding: 16px 12px 40px; }
+            .analysis-header {
+                top: 48px;
+            }
         }
     </style>
 </head>
@@ -351,12 +424,21 @@
 
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <h2>Level 1: Writing Analysis / Feedback</h2>
-        <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.</p>
+        <div class="analysis-header no-print">
+            <h2>Level 1: Writing Analysis / Feedback</h2>
+            <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.<br>
+               <strong>Important:</strong> Your essay must answer the writing prompt and stay on topic.</p>
 
-        <!-- 新增寫作題目 / prompt -->
-        <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
-        <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
+            <!-- Rubric reminder (fixed, global) -->
+            <div id="rubric-reminder" class="rubric-reminder">
+                <h3>Rubric Reminder</h3>
+                <p>Loading rubric...</p>
+            </div>
+
+            <!-- 寫作題目 / prompt -->
+            <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
+            <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
+        </div>
 
         <!-- 三欄版面：左原文、中控件、右檢查後版本 -->
         <div class="analysis-run no-print">
@@ -364,6 +446,29 @@
                 <span><strong>Current Draft Workspace</strong></span>
                 <span style="font-size:0.85em;">Use this row for each version. History is kept for printing.</span>
             </div>
+
+            <!-- Level 1: 顏色 legend -->
+            <div class="version-legend no-print">
+                <span class="version-legend-item">
+                    <span class="legend-color legend-v1"></span> Version 1 highlight style
+                </span>
+                <span class="version-legend-item">
+                    <span class="legend-color legend-v2"></span> Version 2 highlight style
+                </span>
+                <span class="version-legend-item">
+                    <span class="legend-color legend-v3"></span> Version 3 highlight style
+                </span>
+                <span class="version-legend-item">
+                    <span class="legend-color legend-v4"></span> Version 4 highlight style
+                </span>
+                <span class="version-legend-item">
+                    <span class="legend-color legend-v5"></span> Version 5 highlight style
+                </span>
+                <span class="version-legend-item">
+                    <span class="legend-color legend-v6"></span> Version 6 highlight style
+                </span>
+            </div>
+
             <div class="version-layout">
                 <div class="version-col">
                     <h3>Original text (or OCR result)</h3>
@@ -380,6 +485,8 @@
                         <small>Supports images (OCR), txt, pdf, doc / docx.</small>
                     </div>
                     <button onclick="analyzeWriting()">Analyze &amp; Feedback</button>
+                    <!-- 參考範文按鈕：放在 Analyze 下面，第二稿之後啟用 -->
+                    <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
                 </div>
                 <div class="version-col">
                     <h3>Checked version</h3>
@@ -393,7 +500,6 @@
 
         <div class="controls no-print" style="margin-top:16px;">
             <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
-                <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
                 <button onclick="printDrafts()">Print selected versions</button>
             </div>
         </div>
@@ -432,6 +538,14 @@
                     <span><strong>Topic Practice Workspace</strong></span>
                     <span style="font-size:0.85em;">Same analysis flow as Level 1 (with file upload).</span>
                 </div>
+
+                <!-- Level 2: 顏色 legend（topic 專用） -->
+                <div class="version-legend no-print">
+                    <span class="version-legend-item">
+                        <span class="legend-color legend-topic"></span> Topic draft highlight style
+                    </span>
+                </div>
+
                 <div class="version-layout">
                     <div class="version-col">
                         <h3>Original text (or OCR result)</h3>
@@ -464,9 +578,10 @@
 
     <script>
         let currentLevel = 'home';
-        let drafts = [];      // 每個元素：{ original, corrected, highlighted, feedback, scores, label }
+        let drafts = [];      // 每個元素：{ original, corrected, highlighted, feedback, scores, label, isReference?, meta }
         let rubricText = '';
         let rubricItems = []; // [{criteria, levels:{1..5}}]
+        let realDraftCount = 0; // 只計算真正的草稿版本（不含參考範文）
 
         // ---------- Util ----------
         function escapeHtml(str) {
@@ -532,7 +647,8 @@
             return result;
         }
 
-        function buildHighlightedHtml(text, matches) {
+        // highlightClass 例如：'err err-v1' 或 'err err-topic'
+        function buildHighlightedHtml(text, matches, highlightClass = 'err') {
             const sorted = [...matches].sort((a, b) => a.offset - b.offset);
             let result = '';
             let cursor = 0;
@@ -547,15 +663,36 @@
                 const tip = escapeHtml(tipBase + suggestion);
 
                 result += escapeHtml(text.slice(cursor, start));
-                result += `<span class="err" title="${tip}">${escapeHtml(original)}</span>`;
+                result += `<span class="${highlightClass}" title="${tip}">${escapeHtml(original)}</span>`;
                 cursor = end;
             }
             result += escapeHtml(text.slice(cursor));
             return result;
         }
 
-        // --- 簡單 rubric-based scoring ---
-        function calculateScores(text, matches) {
+        // prompt / topic 關聯度（離題偵測）
+        function computePromptCoverage(text, promptOrTopic) {
+            if (!promptOrTopic) {
+                return { coverage: 1, matchedKeywords: [], totalKeywords: 0 };
+            }
+            const lowerPrompt = promptOrTopic.toLowerCase();
+            const keywordCandidates = lowerPrompt.match(/[a-z]{4,}/g) || [];
+            const uniqueKeywords = Array.from(new Set(keywordCandidates));
+            const lowerText = text.toLowerCase();
+            let matched = 0;
+            const matchedWords = [];
+            uniqueKeywords.forEach(w => {
+                if (lowerText.includes(w)) {
+                    matched++;
+                    matchedWords.push(w);
+                }
+            });
+            const coverage = uniqueKeywords.length ? matched / uniqueKeywords.length : 1;
+            return { coverage, matchedKeywords: matchedWords, totalKeywords: uniqueKeywords.length };
+        }
+
+        // --- rubric-based scoring (加入 prompt / topic & 離題考量) ---
+        function calculateScores(text, matches, options = {}) {
             const wordTokens = text.trim().split(/\s+/).filter(Boolean);
             const wordCount = wordTokens.length;
             const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -565,11 +702,19 @@
             const grammarMatches = matches.filter(m =>
                 m.rule && (m.rule.issueType === 'grammar' || m.rule.issueType === 'misspelling')
             );
+            const spellingMatches = matches.filter(m =>
+                m.rule && m.rule.issueType === 'misspelling'
+            );
             const styleMatches = matches.filter(m =>
                 m.rule && m.rule.issueType === 'style'
             );
 
             const errorPer100 = wordCount ? (grammarMatches.length / wordCount) * 100 : grammarMatches.length;
+
+            // 與 prompt / topic 的關聯度
+            const promptOrTopic = options.prompt || options.topic || '';
+            const coverageInfo = computePromptCoverage(text, promptOrTopic);
+            const cov = coverageInfo.coverage;
 
             // Structure & Organization
             let structureScore = 3;
@@ -579,7 +724,7 @@
             else if (paragraphs === 1 && wordCount >= 40) structureScore = 2;
             else structureScore = 1;
 
-            // Coherence & Cohesion (linking words)
+            // Coherence & Cohesion + On-topic
             const linkingWords = ['however','therefore','in addition','for example','for instance','on the other hand','because','although','since','as a result'];
             const lowerText = text.toLowerCase();
             let linkingCount = 0;
@@ -593,6 +738,14 @@
             else if (linkingCount === 0 && sentences >= 5) coherenceScore = 2;
             else coherenceScore = 2;
 
+            // 依照「是否離題」調整 coherence 分數
+            let onTopicScore = 5;
+            if (cov < 0.15) onTopicScore = 1;
+            else if (cov < 0.3) onTopicScore = 2;
+            else if (cov < 0.45) onTopicScore = 3;
+            else if (cov < 0.6) onTopicScore = 4;
+            coherenceScore = Math.min(coherenceScore, onTopicScore);
+
             // Grammar Accuracy
             let grammarScore = 3;
             if (errorPer100 <= 1) grammarScore = 5;
@@ -601,7 +754,7 @@
             else if (errorPer100 <= 10) grammarScore = 2;
             else grammarScore = 1;
 
-            // Vocabulary Range & Precision (very basic heuristic)
+            // Vocabulary Range & Precision
             const types = new Set(wordTokens.map(w => w.toLowerCase().replace(/[^a-z']/g, '')));
             const typeTokenRatio = wordCount ? types.size / wordCount : 0;
             const simpleWords = ['good','nice','very','really','a lot','many','things','stuff'];
@@ -626,10 +779,10 @@
                     reason: `Paragraphs: ${paragraphs}; Words: ${wordCount}.`
                 },
                 coherence: {
-                    label: 'Coherence & Cohesion',
+                    label: 'Coherence, Cohesion & Relevance',
                     score: coherenceScore,
                     max: 5,
-                    reason: `Linking devices found: ${linkingCount}.`
+                    reason: `Linking devices: ${linkingCount}; on-topic coverage ≈ ${(cov * 100).toFixed(0)}% of key prompt words.`
                 },
                 grammar: {
                     label: 'Grammar Accuracy',
@@ -647,14 +800,29 @@
                     label: 'Total',
                     score: total,
                     max: 20
+                },
+                meta: {
+                    wordCount,
+                    sentences,
+                    paragraphs,
+                    grammarMatchesCount: grammarMatches.length,
+                    spellingMatchesCount: spellingMatches.length,
+                    styleMatchesCount: styleMatches.length,
+                    linkingCount,
+                    onTopicCoverage: cov,
+                    onTopicMatchedKeywords: coverageInfo.matchedKeywords,
+                    onTopicTotalKeywords: coverageInfo.totalKeywords
                 }
             };
         }
 
-        // options: { topic?, prompt? }
+        // options: { topic?, prompt?, mode: 'first' | 'revision', prevScores?, previousVersionLabel? }
         function buildFeedback(text, matches, options = {}, scores) {
             const topic = options.topic || null;
             const prompt = options.prompt || null;
+            const mode = options.mode || 'first';
+            const prevScores = options.prevScores || null;
+            const previousVersionLabel = options.previousVersionLabel || null;
 
             const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
             const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -666,6 +834,8 @@
             const spellingCount = matches.filter(m => m.rule && m.rule.issueType === 'misspelling').length;
             const styleCount = matches.filter(m => m.rule && m.rule.issueType === 'style').length;
 
+            const meta = scores && scores.meta ? scores.meta : null;
+
             let msg = '';
 
             if (prompt) {
@@ -675,71 +845,164 @@
                 msg += `Topic:\n"${topic}"\n\n`;
             }
 
-            // 顯眼的分數區塊
-            if (scores) {
-                msg += '=== Rubric Scores (out of 5) ===\n';
-                msg += `- ${scores.structure.label}: ${scores.structure.score} / ${scores.structure.max}\n`;
-                msg += `  Reason: ${scores.structure.reason}\n`;
-                msg += `- ${scores.coherence.label}: ${scores.coherence.score} / ${scores.coherence.max}\n`;
-                msg += `  Reason: ${scores.coherence.reason}\n`;
-                msg += `- ${scores.grammar.label}: ${scores.grammar.score} / ${scores.grammar.max}\n`;
-                msg += `  Reason: ${scores.grammar.reason}\n`;
-                msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score} / ${scores.vocabulary.max}\n`;
-                msg += `  Reason: ${scores.vocabulary.reason}\n`;
-                msg += `\n>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
-            }
-
-            msg += `Length & structure:\n`;
-            msg += `- Paragraphs: ${paragraphs} (aim for at least 3: introduction, body, conclusion)\n`;
-            msg += `- Words: ${wordCount}\n`;
-            msg += `- Sentences: ${sentences}\n`;
-            msg += `- Average words per sentence: ${avgLen}\n\n`;
-
-            msg += `Issues detected:\n`;
-            msg += `- Grammar: ${grammarCount}\n`;
-            msg += `- Spelling: ${spellingCount}\n`;
-            msg += `- Style / phrasing: ${styleCount}\n\n`;
-
-            // 更具體的文法例子
-            const exampleLines = [];
-            matches.slice(0, 5).forEach(m => {
-                const snippet = text.slice(m.offset, m.offset + m.length);
-                const repl = (m.replacements && m.replacements[0]) ? m.replacements[0].value : null;
-                const rule = m.rule && (m.rule.description || m.rule.issueType || '');
-                if (repl) {
-                    exampleLines.push(`- "${snippet}" → "${repl}" (${rule})`);
-                } else {
-                    exampleLines.push(`- "${snippet}" (${rule})`);
+            if (mode === 'first' || !prevScores) {
+                // ===== 第一次寫作：詳細分析 =====
+                if (scores) {
+                    msg += '=== Rubric Scores (out of 5) ===\n';
+                    msg += `- ${scores.structure.label}: ${scores.structure.score} / ${scores.structure.max}\n`;
+                    msg += `  Reason: ${scores.structure.reason}\n`;
+                    msg += `- ${scores.coherence.label}: ${scores.coherence.score} / ${scores.coherence.max}\n`;
+                    msg += `  Reason: ${scores.coherence.reason}\n`;
+                    msg += `- ${scores.grammar.label}: ${scores.grammar.score} / ${scores.grammar.max}\n`;
+                    msg += `  Reason: ${scores.grammar.reason}\n`;
+                    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score} / ${scores.vocabulary.max}\n`;
+                    msg += `  Reason: ${scores.vocabulary.reason}\n`;
+                    msg += `\n>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
                 }
-            });
-            if (exampleLines.length > 0) {
-                msg += `Example grammar / wording issues:\n`;
-                msg += exampleLines.join('\n') + '\n\n';
-            }
 
-            msg += `Suggestions on structure & logic:\n`;
-            msg += `- Make sure the first paragraph clearly introduces the topic and your main idea.\n`;
-            msg += `- Each body paragraph should focus on ONE main point, supported by examples.\n`;
-            msg += `- Use linking words (for example, however, therefore, in addition) to connect ideas.\n`;
-            msg += `- End with a conclusion that summarizes the main points and reflects on the topic.\n`;
-            if (prompt || topic) {
-                msg += `- Check that every paragraph directly responds to the prompt/topic, not just tells unrelated details.\n`;
-            }
-            msg += '\n';
+                msg += `Length & structure:\n`;
+                msg += `- Paragraphs: ${paragraphs} (aim for at least 3: introduction, body, conclusion)\n`;
+                msg += `- Words: ${wordCount}\n`;
+                msg += `- Sentences: ${sentences}\n`;
+                msg += `- Average words per sentence: ${avgLen}\n\n`;
 
-            msg += `Suggestions on language:\n`;
-            msg += `- Review highlighted grammar and spelling errors and rewrite the sentences.\n`;
-            msg += `- Replace repeated simple words (good, nice, very) with more precise vocabulary when possible.\n\n`;
+                msg += `Issues detected:\n`;
+                msg += `- Grammar: ${grammarCount}\n`;
+                msg += `- Spelling: ${spellingCount}\n`;
+                msg += `- Style / phrasing: ${styleCount}\n\n`;
 
-            if (rubricItems.length > 0) {
-                msg += `Rubric reminder (summary):\n`;
-                rubricItems.forEach(item => {
-                    const lv1 = item.levels[1] ? `1 pt: ${item.levels[1]}` : '';
-                    const lv3 = item.levels[3] ? `3 pts: ${item.levels[3]}` : '';
-                    const lv5 = item.levels[5] ? `5 pts: ${item.levels[5]}` : '';
-                    const parts = [lv1, lv3, lv5].filter(Boolean).join(' | ');
-                    msg += `- ${item.criteria}: ${parts}\n`;
+                if (meta && meta.onTopicTotalKeywords > 0) {
+                    const covPercent = (meta.onTopicCoverage * 100).toFixed(0);
+                    msg += `Relevance to prompt/topic:\n`;
+                    msg += `- About ${covPercent}% of key words/ideas from the prompt appear in your essay.\n`;
+                    if (meta.onTopicCoverage < 0.3) {
+                        msg += `- Your essay seems partly off-topic. Make sure each main paragraph responds directly to the question.\n\n`;
+                    } else {
+                        msg += `- Overall, you are mostly on-topic. Check if any paragraph drifts away from the main task.\n\n`;
+                    }
+                }
+
+                // 具體例句
+                const exampleLines = [];
+                matches.slice(0, 5).forEach(m => {
+                    const snippet = text.slice(m.offset, m.offset + m.length);
+                    const repl = (m.replacements && m.replacements[0]) ? m.replacements[0].value : null;
+                    const rule = m.rule && (m.rule.description || m.rule.issueType || '');
+                    if (repl) {
+                        exampleLines.push(`- "${snippet}" → "${repl}" (${rule})`);
+                    } else {
+                        exampleLines.push(`- "${snippet}" (${rule})`);
+                    }
                 });
+                if (exampleLines.length > 0) {
+                    msg += `Example grammar / wording issues:\n`;
+                    msg += exampleLines.join('\n') + '\n\n';
+                }
+
+                msg += `Suggestions on structure & logic:\n`;
+                msg += `- Make sure the first paragraph clearly introduces the topic and your main idea.\n`;
+                msg += `- Each body paragraph should focus on ONE main point, supported by examples.\n`;
+                msg += `- Use linking words (for example, however, therefore, in addition) to connect ideas.\n`;
+                msg += `- End with a conclusion that summarizes the main points and reflects on the topic.\n`;
+                if (prompt || topic) {
+                    msg += `- Check that every paragraph directly responds to the prompt/topic, not just tells unrelated details.\n`;
+                }
+                msg += '\n';
+
+                msg += `Suggestions on language:\n`;
+                msg += `- Review highlighted grammar and spelling errors and rewrite the sentences.\n`;
+                msg += `- Replace repeated simple words (good, nice, very) with more precise vocabulary when possible.\n\n`;
+            } else {
+                // ===== Revision 版本：精準聚焦「進步 + 還要加強」 =====
+                msg += `=== Targeted Feedback for This Version ===\n`;
+                if (previousVersionLabel) {
+                    msg += `(Compared with ${previousVersionLabel})\n\n`;
+                }
+
+                const dims = ['structure','coherence','grammar','vocabulary'];
+                const prettyNames = {
+                    structure: 'Structure & Organization',
+                    coherence: 'Coherence / Relevance',
+                    grammar: 'Grammar',
+                    vocabulary: 'Vocabulary'
+                };
+                const improvements = [];
+                const regressions = [];
+                const unchanged = [];
+
+                dims.forEach(key => {
+                    const newS = scores[key].score;
+                    const oldS = prevScores[key].score;
+                    if (newS > oldS) {
+                        improvements.push(`${prettyNames[key]}: ${oldS} → ${newS}`);
+                    } else if (newS < oldS) {
+                        regressions.push(`${prettyNames[key]}: ${oldS} → ${newS}`);
+                    } else {
+                        unchanged.push(`${prettyNames[key]}: still at ${newS}`);
+                    }
+                });
+
+                if (improvements.length) {
+                    msg += `Areas of improvement:\n`;
+                    improvements.forEach(line => msg += `- ${line}\n`);
+                    msg += '\n';
+                }
+                if (regressions.length) {
+                    msg += `Areas slightly weaker than last time:\n`;
+                    regressions.forEach(line => msg += `- ${line}\n`);
+                    msg += '\n';
+                }
+
+                const prevMeta = prevScores.meta || null;
+                const metaNow = scores.meta || null;
+                if (metaNow && prevMeta) {
+                    const prevErrors = prevMeta.grammarMatchesCount + prevMeta.spellingMatchesCount;
+                    const nowErrors = metaNow.grammarMatchesCount + metaNow.spellingMatchesCount;
+                    const diff = prevErrors - nowErrors;
+                    msg += `Grammar & spelling progress:\n`;
+                    msg += `- Previous errors: ${prevErrors}\n`;
+                    msg += `- Current errors: ${nowErrors}\n`;
+                    if (diff > 0) {
+                        msg += `→ Nice! You reduced about ${diff} grammar/spelling issues.\n`;
+                    } else if (diff < 0) {
+                        msg += `→ Be careful: there are slightly more issues than the last draft.\n`;
+                    } else {
+                        msg += `→ Number of issues is similar. Focus on correcting the highlighted ones.\n`;
+                    }
+                    msg += '\n';
+
+                    if (metaNow.onTopicTotalKeywords > 0) {
+                        const prevCov = (prevMeta.onTopicCoverage * 100).toFixed(0);
+                        const nowCov = (metaNow.onTopicCoverage * 100).toFixed(0);
+                        msg += `Relevance to prompt/topic:\n`;
+                        msg += `- Previous on-topic coverage: ~${prevCov}% of key prompt words.\n`;
+                        msg += `- Current on-topic coverage: ~${nowCov}%.\n`;
+                        if (metaNow.onTopicCoverage > prevMeta.onTopicCoverage) {
+                            msg += `→ Better connection to the prompt. Keep making each paragraph answer the question.\n`;
+                        } else if (metaNow.onTopicCoverage < prevMeta.onTopicCoverage) {
+                            msg += `→ Some parts may drift away from the prompt. Re-check each paragraph against the question.\n`;
+                        } else {
+                            msg += `→ Similar level of relevance. Make sure new details still support your main point.\n`;
+                        }
+                        msg += '\n';
+                    }
+                }
+
+                const needWork = ['structure','coherence','grammar','vocabulary'].filter(d => scores[d].score < 4);
+                if (needWork.length) {
+                    msg += `Key areas to focus on next:\n`;
+                    needWork.forEach(key => {
+                        const sc = scores[key];
+                        msg += `- ${sc.label}: now ${sc.score}/${sc.max}. ${sc.reason}\n`;
+                    });
+                    msg += '\n';
+                }
+
+                msg += `Short checklist for your next revision:\n`;
+                msg += `- Re-read the writing prompt and underline the key words. Check if each body paragraph matches them.\n`;
+                msg += `- Fix the remaining highlighted grammar and spelling errors.\n`;
+                msg += `- Add 1–2 clear linking words between paragraphs (for example, however, as a result).\n`;
+                msg += `- Replace very simple words with more precise ones where appropriate.\n\n`;
             }
 
             return msg;
@@ -776,6 +1039,14 @@
                     const parts = [lv3, lv4, lv5].filter(Boolean).join(' | ');
                     return `- ${item.criteria}: ${parts}`;
                 }).join('\n');
+
+                const rubricDiv = document.getElementById('rubric-reminder');
+                if (rubricDiv) {
+                    rubricDiv.innerHTML = `
+                        <h3>Rubric Reminder (for all drafts)</h3>
+                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
+                    `;
+                }
             } catch (e) {
                 console.warn('Rubric parse failed, using default.', e);
                 rubricItems = [
@@ -785,6 +1056,13 @@
                     { criteria: 'Vocabulary Range & Precision', levels: { 3: 'Adequate vocabulary with some variety.' } }
                 ];
                 rubricText = rubricItems.map(i => `- ${i.criteria}: ${Object.values(i.levels)[0]}`).join('\n');
+                const rubricDiv = document.getElementById('rubric-reminder');
+                if (rubricDiv) {
+                    rubricDiv.innerHTML = `
+                        <h3>Rubric Reminder (default)</h3>
+                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
+                    `;
+                }
             }
         }
 
@@ -823,6 +1101,7 @@
             document.querySelector('.back-btn').classList.add('active');
             currentLevel = level;
             if (level === 'gists') loadWritingMaterials();
+            if (level === 'analysis') loadRubric();
         }
 
         function goHome() {
@@ -835,7 +1114,8 @@
         function updateReferenceButtonVisibility() {
             const btn = document.getElementById('ref-btn');
             if (!btn) return;
-            btn.style.display = drafts.length >= 2 ? 'inline-block' : 'none';
+            // 只要「實際草稿」版本數 >= 2，就顯示產生參考範文按鈕
+            btn.style.display = realDraftCount >= 2 ? 'inline-block' : 'none';
         }
 
         // --------- 檔案處理 (OCR / txt / pdf / docx) ---------
@@ -908,6 +1188,14 @@
             }
         }
 
+        // 取得最後一個「實際草稿」（排除參考範文）
+        function getLastRealDraft() {
+            for (let i = drafts.length - 1; i >= 0; i--) {
+                if (!drafts[i].isReference) return drafts[i];
+            }
+            return null;
+        }
+
         // --------- Level 1：一般寫作 ---------
         async function analyzeWriting() {
             const container = document.getElementById('output');
@@ -921,7 +1209,7 @@
 
             const tempDiv = document.createElement('div');
             tempDiv.className = 'analysis-run';
-            tempDiv.innerHTML = '<em>Checking your writing... (grammar, capitalization, rubric scores)</em>';
+            tempDiv.innerHTML = '<em>Checking your writing... (grammar, capitalization, relevance to the prompt, rubric scores)</em>';
             container.prepend(tempDiv);
 
             try {
@@ -931,19 +1219,46 @@
                 const capMatches = findCapitalizationMatches(text);
                 const allMatches = [...matchesLT, ...capMatches];
 
-                const corrected = buildCorrectedText(text, allMatches);
-                const highlighted = buildHighlightedHtml(text, allMatches);
-                const scores = calculateScores(text, allMatches);
-                const feedbackText = buildFeedback(text, allMatches, { prompt }, scores);
+                const isFirstRealDraft = !getLastRealDraft();
+                const prevDraft = isFirstRealDraft ? null : getLastRealDraft();
+                const prevScores = prevDraft ? prevDraft.scores : null;
 
-                const index = drafts.length; // 版本編號
+                // 先決定這一稿的版本號（尚未真正 +1 前）
+                const upcomingRealVersion = realDraftCount + 1;
+                // 1~6 顏色循環
+                const colorIndex = ((upcomingRealVersion - 1) % 6) + 1;
+                const highlightClass = `err err-v${colorIndex}`;
+
+                const corrected = buildCorrectedText(text, allMatches);
+                const highlighted = buildHighlightedHtml(text, allMatches, highlightClass);
+                const scores = calculateScores(text, allMatches, { prompt });
+
+                const feedbackText = buildFeedback(
+                    text,
+                    allMatches,
+                    {
+                        prompt,
+                        mode: isFirstRealDraft ? 'first' : 'revision',
+                        prevScores,
+                        previousVersionLabel: prevDraft ? prevDraft.label : null
+                    },
+                    scores
+                );
+
+                // 版本編號只根據「實際草稿」累加
+                realDraftCount += 1;
+                const label = `Version ${realDraftCount}`;
+
+                const index = drafts.length; // 在暫存陣列中的位置
                 drafts.push({
                     original: text,
                     corrected,
                     highlighted,
                     feedback: feedbackText,
                     scores,
-                    label: `Version ${index + 1}`
+                    meta: scores.meta,
+                    label,
+                    isReference: false
                 });
 
                 // 將最新版放到右側 workspace 中，可以繼續手動調整
@@ -951,7 +1266,7 @@
 
                 tempDiv.innerHTML = renderVersionBlock({
                     index,
-                    label: `Version ${index + 1}`,
+                    label,
                     original: text,
                     corrected,
                     highlighted,
@@ -1020,22 +1335,31 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 產生參考范文（以最新版本的 corrected 為基礎）
+        // 產生參考范文（不算進版本編號，且每次覆蓋上一版）
         function generateReferenceEssay() {
-            if (drafts.length < 1) {
+            const lastRealDraft = getLastRealDraft();
+            if (!lastRealDraft) {
                 alert('Please run analysis at least once first.');
                 return;
             }
-            const lastIndex = drafts.length - 1;
-            const draft = drafts[lastIndex];
 
             const container = document.getElementById('output');
+
+            // 1) 移除畫面上舊的 reference essay block
+            Array.from(container.querySelectorAll('.analysis-run[data-ref="true"]'))
+                .forEach(el => el.remove());
+
+            // 2) drafts 陣列裡移除舊的 reference 版本
+            drafts = drafts.filter(d => !d.isReference);
+
+            // 3) 建立新的 reference essay block
             const div = document.createElement('div');
             div.className = 'analysis-run';
+            div.dataset.ref = 'true';
 
             const referenceText =
                 'This is a polished reference version based on your latest corrected draft:\n\n' +
-                draft.corrected;
+                lastRealDraft.corrected;
 
             const feedbackText =
                 'Reference essay notes:\n' +
@@ -1044,28 +1368,32 @@
                 '- Try to write your OWN final version after reading this reference.\n';
 
             const index = drafts.length;
-            const scores = draft.scores || null;
+            const label = `Reference Essay (based on ${lastRealDraft.label})`;
+            const scores = lastRealDraft.scores || null;
 
             drafts.push({
-                original: draft.corrected,
+                original: lastRealDraft.corrected,
                 corrected: referenceText,
-                highlighted: escapeHtml(draft.corrected),
+                highlighted: escapeHtml(lastRealDraft.corrected),
                 feedback: feedbackText,
                 scores,
-                label: `Reference Essay (based on Version ${lastIndex + 1})`
+                meta: scores ? scores.meta : null,
+                label,
+                isReference: true
             });
 
             div.innerHTML = renderVersionBlock({
                 index,
-                label: `Reference Essay (based on Version ${lastIndex + 1})`,
-                original: draft.corrected,
+                label,
+                original: lastRealDraft.corrected,
                 corrected: referenceText,
-                highlighted: escapeHtml(draft.corrected),
+                highlighted: escapeHtml(lastRealDraft.corrected),
                 feedback: feedbackText,
                 scores
             });
 
             container.prepend(div);
+            // 不改 realDraftCount，參考範文不算版本號
         }
 
         // 只印出有勾選的版本
@@ -1111,7 +1439,7 @@
                 return;
             }
 
-            output.innerHTML = '<em>Checking your essay for this topic (grammar, capitalization, rubric scores)...</em>';
+            output.innerHTML = '<em>Checking your essay for this topic (grammar, capitalization, relevance, rubric scores)...</em>';
 
             try {
                 await loadRubric();
@@ -1121,9 +1449,9 @@
                 const allMatches = [...matchesLT, ...capMatches];
 
                 const corrected = buildCorrectedText(text, allMatches);
-                const highlighted = buildHighlightedHtml(text, allMatches);
-                const scores = calculateScores(text, allMatches);
-                const feedbackText = buildFeedback(text, allMatches, { topic }, scores);
+                const highlighted = buildHighlightedHtml(text, allMatches, 'err err-topic');
+                const scores = calculateScores(text, allMatches, { topic });
+                const feedbackText = buildFeedback(text, allMatches, { topic, mode: 'first' }, scores);
 
                 document.getElementById('topic-checked-text').value = corrected;
 
@@ -1177,8 +1505,9 @@
         window.generateReferenceEssay = generateReferenceEssay;
         window.useVersionAsCurrent = useVersionAsCurrent;
 
-        // 進頁面先試著載教材
+        // 進頁面先試著載教材與 rubric
         loadWritingMaterials();
+        loadRubric();
     </script>
 </body>
 </html>
