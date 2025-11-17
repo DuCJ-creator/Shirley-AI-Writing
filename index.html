@@ -408,35 +408,30 @@
             flex: 1 1 auto;
         }
 
-        /* ✅ 列印：只印 report，從 #printable-drafts 開始 */
-        @media print {
-            /* 1. 預設把所有東西隱藏 */
-            body * {
-                visibility: hidden;
-            }
+       /* ✅ 列印：用 class 控制隱藏，支援 iPad Safari */
+@media print {
+    /* 1. 所有標成 no-print / no-print-temp 的元素在列印時都隱藏 */
+    .no-print,
+    .no-print-temp {
+        display: none !important;
+    }
 
-            /* 2. 只顯示報告區塊 */
-            #printable-drafts,
-            #printable-drafts * {
-                visibility: visible;
-            }
+    /* 2. 讓報告本身正常佈局即可（不強制 position:absolute，避免 Safari 異常） */
+    #printable-drafts {
+        display: block;
+        width: 100%;
+        margin: 0;
+        padding: 0 10mm;
+        box-sizing: border-box;
+        background: #ffffff;
+    }
 
-            /* 3. 讓報告從頁面最上方開始排版 */
-            #printable-drafts {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0 10mm;
-                box-sizing: border-box;
-            }
+    /* 3. 每一份版本報告獨立一頁 */
+    .printable {
+        page-break-after: always;
+    }
+}
 
-            /* 每一份版本報告獨立一頁 */
-            .printable {
-                page-break-after: always;
-            }
-        }
 
         @media (max-width: 900px) {
             .version-layout {
