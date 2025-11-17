@@ -172,6 +172,20 @@
             font-size: 13px;
         }
 
+        input[type="text"] {
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            font-size: 13px;
+            background: #fffdf8;
+            width: 100%;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(195,154,107,0.18);
+        }
+
         .controls {
             display: flex;
             flex-direction: column;
@@ -397,6 +411,56 @@
         .version-chip-v6 { background: #fffad1; border: 1px solid #f1c40f; color: #8a6d1e; }
         .version-chip-ref { background: #e6e6e6; border: 1px solid #aaaaaa; color: #444; }
 
+        /* Prompt + 學生資訊 */
+        .prompt-row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            margin-top: 8px;
+            margin-bottom: 10px;
+        }
+        .prompt-main {
+            flex: 2 1 0;
+        }
+        .student-info {
+            flex: 1 1 0;
+            font-size: 0.85em;
+            color: var(--text-muted);
+            background: #fffdf8;
+            border-radius: 10px;
+            border: 1px solid var(--border-soft);
+            padding: 8px 10px;
+        }
+        .student-info-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--accent-dark);
+        }
+        .student-info-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+        .student-info-row label {
+            min-width: 55px;
+        }
+        .student-info-row input {
+            flex: 1 1 auto;
+        }
+
+        /* 列印時的 header 區塊 */
+        .print-header {
+            margin-bottom: 12px;
+        }
+        .print-header h1 {
+            margin: 0 0 4px;
+        }
+        .print-header p {
+            margin: 2px 0;
+            font-size: 0.92em;
+        }
+
         @media print {
             .no-print { display: none; }
             .printable { page-break-after: always; }
@@ -409,6 +473,11 @@
                 flex-direction: row;
                 flex-wrap: wrap;
                 justify-content: center;
+            }
+        }
+        @media (max-width: 800px) {
+            .prompt-row {
+                flex-direction: column;
             }
         }
         @media (max-width: 600px) {
@@ -440,7 +509,6 @@
 
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <!-- 原本 sticky 區：現在只是一般區塊 -->
         <div class="analysis-sticky">
             <div class="analysis-header-inner">
                 <h2>Level 1: Writing Analysis / Feedback</h2>
@@ -456,9 +524,32 @@
                     <p>Loading rubric...</p>
                 </div>
 
-                <!-- 寫作題目 / prompt -->
-                <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
-                <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
+                <!-- Prompt + Student info -->
+                <div class="prompt-row">
+                    <div class="prompt-main">
+                        <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
+                        <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
+                    </div>
+                    <div class="student-info">
+                        <div class="student-info-title">Student Information</div>
+                        <div class="student-info-row">
+                            <label for="student-school">School</label>
+                            <input type="text" id="student-school" placeholder="">
+                        </div>
+                        <div class="student-info-row">
+                            <label for="student-class">Class</label>
+                            <input type="text" id="student-class" placeholder="">
+                        </div>
+                        <div class="student-info-row">
+                            <label for="student-seat">Seat No.</label>
+                            <input type="text" id="student-seat" placeholder="">
+                        </div>
+                        <div class="student-info-row">
+                            <label for="student-name">Name</label>
+                            <input type="text" id="student-name" placeholder="">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 三欄版面：左原文、中控件、右檢查後版本 -->
@@ -548,7 +639,6 @@
                 <option value="Should students use smartphones in the classroom? Give your opinion and reasons.">
                     Should students use smartphones in the classroom? Give your opinion and reasons.
                 </option>
-                <!-- 老師可以直接在這裡增加/修改題目 -->
             </select>
             <p style="margin-top:8px; font-size: 0.9em;">
                 (Teachers can edit the topic list in the HTML.)
@@ -596,13 +686,13 @@
         </div>
     </section>
 
-    <div id="printable-drafts" class="printable"></div>
+    <div id="printable-drafts"></div>
 
     <script>
         let currentLevel = 'home';
-        let drafts = [];      // 每個元素：{ original, corrected, highlighted, feedback, scores, label, isReference?, meta }
+        let drafts = [];      // { original, corrected, highlighted, feedback, scores, label, isReference?, meta }
         let rubricText = '';
-        let rubricItems = []; // [{criteria, levels:{1..5}}]
+        let rubricItems = [];
         let realDraftCount = 0; // 只計算真正的草稿版本（不含參考範文）
 
         // ---------- Util ----------
@@ -1153,7 +1243,6 @@
         }
 
         // --------- 檔案處理 (OCR / txt / pdf / docx) ---------
-        // pdf.js worker 設定
         if (window['pdfjsLib']) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
@@ -1257,9 +1346,7 @@
                 const prevDraft = isFirstRealDraft ? null : getLastRealDraft();
                 const prevScores = prevDraft ? prevDraft.scores : null;
 
-                // 先決定這一稿的版本號（尚未真正 +1 前）
                 const upcomingRealVersion = realDraftCount + 1;
-                // 1~6 顏色循環
                 const colorIndex = ((upcomingRealVersion - 1) % 6) + 1;
                 const highlightClass = `err err-v${colorIndex}`;
 
@@ -1279,11 +1366,10 @@
                     scores
                 );
 
-                // 版本編號只根據「實際草稿」累加
                 realDraftCount += 1;
                 const label = `Version ${realDraftCount}`;
 
-                const index = drafts.length; // 在暫存陣列中的位置
+                const index = drafts.length;
                 drafts.push({
                     original: text,
                     corrected,
@@ -1295,7 +1381,6 @@
                     isReference: false
                 });
 
-                // 將最新版放到右側 workspace 中，可以繼續手動調整
                 document.getElementById('checked-text').value = corrected;
 
                 tempDiv.innerHTML = renderVersionBlock({
@@ -1305,7 +1390,8 @@
                     corrected,
                     highlighted,
                     feedback: feedbackText,
-                    scores
+                    scores,
+                    isReference: false
                 });
 
                 updateReferenceButtonVisibility();
@@ -1328,7 +1414,7 @@
             return `<span class="${cls}">${escapeHtml(label)}</span>`;
         }
 
-        function renderVersionBlock({ index, label, original, corrected, highlighted, feedback, scores }) {
+        function renderVersionBlock({ index, label, original, corrected, highlighted, feedback, scores, isReference }) {
             const scoreHtml = scores ? `
                 <div class="scores-block">
                     <strong>Rubric scores (out of 5)</strong>
@@ -1344,13 +1430,17 @@
 
             const chipHtml = buildVersionChip(label);
 
+            const checkboxHtml = isReference
+                ? ''
+                : `<label class="no-print" style="font-size:0.9em;">
+                        <input type="checkbox" class="print-select" data-index="${index}">
+                        Select this version for printing
+                   </label>`;
+
             return `
                 <div class="version-header-inline">
                     <span>${chipHtml}</span>
-                    <label class="no-print" style="font-size:0.9em;">
-                        <input type="checkbox" class="print-select" data-index="${index}">
-                        Select this version for printing
-                    </label>
+                    ${checkboxHtml}
                 </div>
                 <div class="version-layout">
                     <div class="version-col">
@@ -1438,32 +1528,57 @@
                 corrected: referenceText,
                 highlighted: escapeHtml(lastRealDraft.corrected),
                 feedback: feedbackText,
-                scores
+                scores,
+                isReference: true
             });
 
             container.prepend(div);
-            // 不改 realDraftCount，參考範文不算版本號
         }
 
-        // 只印出有勾選的版本
+        // 只印出有勾選的版本（排除 reference essay），且不印 checked version
         function printDrafts() {
-            const selected = Array.from(document.querySelectorAll('.print-select:checked'));
-            if (selected.length === 0) {
+            const allCheckboxes = Array.from(document.querySelectorAll('.print-select:checked'));
+            if (allCheckboxes.length === 0) {
                 alert('Please select at least one version to print.');
                 return;
             }
 
-            const printable = document.getElementById('printable-drafts');
-            printable.innerHTML = selected.map(checkbox => {
-                const idx = parseInt(checkbox.getAttribute('data-index'), 10);
-                const draft = drafts[idx];
-                if (!draft) return '';
+            // 只保留不是 reference 的版本
+            const selectedDrafts = allCheckboxes
+                .map(cb => {
+                    const idx = parseInt(cb.getAttribute('data-index'), 10);
+                    return drafts[idx];
+                })
+                .filter(d => d && !d.isReference);
 
+            if (selectedDrafts.length === 0) {
+                alert('Reference essays are not included in the report. Please select at least one actual draft version.');
+                return;
+            }
+
+            const school = document.getElementById('student-school')?.value || '';
+            const klass = document.getElementById('student-class')?.value || '';
+            const seat = document.getElementById('student-seat')?.value || '';
+            const name = document.getElementById('student-name')?.value || '';
+
+            const schoolEsc = escapeHtml(school || '________');
+            const classEsc = escapeHtml(klass || '________');
+            const seatEsc = escapeHtml(seat || '________');
+            const nameEsc = escapeHtml(name || '________');
+
+            const headerHtml = `
+                <div class="print-header">
+                    <h1>Shirley's AI Writing Coach</h1>
+                    <p>School: ${schoolEsc} &nbsp;&nbsp; Class: ${classEsc} &nbsp;&nbsp; Seat No.: ${seatEsc} &nbsp;&nbsp; Name: ${nameEsc}</p>
+                    <p><strong><em>A Writing Progress &amp; Product Report Generated Using "Shirley's AI Writing Coach"</em></strong></p>
+                    <p>This tool—"Shirley's AI Writing Coach"—is for educational practice and entertainment only.</p>
+                </div>
+            `;
+
+            const bodyHtml = selectedDrafts.map(draft => {
                 return `
                     <div class="printable">
-                        <h2>${escapeHtml(draft.label || ('Version ' + (idx + 1)))}</h2>
-                        <h3>Corrected / Reference Version:</h3>
-                        <p>${escapeHtml(draft.corrected).replace(/\n/g, '<br>')}</p>
+                        <h2>${escapeHtml(draft.label || '')}</h2>
                         <h3>Original with highlighted issues:</h3>
                         <p>${draft.highlighted.replace(/\n/g, '<br>')}</p>
                         <h3>Feedback:</h3>
@@ -1471,6 +1586,9 @@
                     </div>
                 `;
             }).join('');
+
+            const printable = document.getElementById('printable-drafts');
+            printable.innerHTML = headerHtml + bodyHtml;
 
             printable.style.display = 'block';
             window.print();
