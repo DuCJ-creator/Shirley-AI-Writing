@@ -779,19 +779,19 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                        <button id="gists-prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="gists-next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
 
-                document.getElementById('prev-btn').onclick = () => {
+                document.getElementById('gists-prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('gists-page');
                         render();
                     }
                 };
-                document.getElementById('next-btn').onclick = () => {
+                document.getElementById('gists-next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
                         playFlipSound('gists-page');
@@ -850,19 +850,19 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                        <button id="gsat-prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="gsat-next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
 
-                document.getElementById('prev-btn').onclick = () => {
+                document.getElementById('gsat-prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('gsat-page');
                         render();
                     }
                 };
-                document.getElementById('next-btn').onclick = () => {
+                document.getElementById('gsat-next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
                         playFlipSound('gsat-page');
@@ -963,19 +963,19 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                        <button id="genre-prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="genre-next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
 
-                document.getElementById('prev-btn').onclick = () => {
+                document.getElementById('genre-prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('genre-page');
                         render();
                     }
                 };
-                document.getElementById('next-btn').onclick = () => {
+                document.getElementById('genre-next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
                         playFlipSound('genre-page');
@@ -1010,7 +1010,7 @@
             detectTotalPages();
         }
 
-        // ========== 原始其他函數（略）==========
+        // ========== 原始其他函數（略：暫時空實作）==========
         function toggleRubric() { }
         function analyzeWriting() { alert('Analysis triggered (mock)'); }
         function printDrafts() { }
@@ -1033,6 +1033,10 @@
         window.useVersionAsCurrent = useVersionAsCurrent;
         window.useTopicVersionAsCurrent = useTopicVersionAsCurrent;
         window.printTopicDrafts = printTopicDrafts;
+        window.renderWritingGists = renderWritingGists;
+        window.renderWritingGenres = renderWritingGenres;
+        window.renderGenreImages = renderGenreImages;
+        window.renderGsatPapers = renderGsatPapers;
 
         // Init
         loadWritingMaterials();
