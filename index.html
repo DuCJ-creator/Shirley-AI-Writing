@@ -13,7 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
-        /* ===== 原始 style 完全保留 ===== */
+        /* ===== 所有原有 style 完全保留 ===== */
         :root {
             --bg-main: #f6efe5;
             --bg-card: #fbf7f0;
@@ -646,16 +646,14 @@
     <!-- 📘 Writing Tips 子選單 -->
     <section class="section" id="writing-tips-menu-section">
         <h2>Writing Tips & Guidelines</h2>
-        <div class="gist-area">
-            <div class="materials-grid">
-                <div class="material-card" onclick="enterWritingGists()" style="cursor:pointer;">
-                    <h4>Writing Gists</h4>
-                    <p>9 illustrated pages of core writing tips.</p>
-                </div>
-                <div class="material-card" onclick="enterWritingGenres()" style="cursor:pointer;">
-                    <h4>Writing Genres</h4>
-                    <p>Explore 6 common writing types with examples.</p>
-                </div>
+        <div class="materials-grid">
+            <div class="material-card" onclick="enterWritingGists()" style="cursor:pointer;">
+                <h4>Writing Gists</h4>
+                <p>9 illustrated pages of core writing tips.</p>
+            </div>
+            <div class="material-card" onclick="enterWritingGenres()" style="cursor:pointer;">
+                <h4>Writing Genres</h4>
+                <p>Explore 6 common writing types with examples.</p>
             </div>
         </div>
     </section>
@@ -668,6 +666,26 @@
     <section class="section" id="writing-genres-section">
         <h2>Writing Genres</h2>
         <div id="writing-genres-container"></div>
+    </section>
+    <!-- 🖼️ Genre 圖片瀏覽器 -->
+    <section class="section" id="genre-image-viewer-section">
+        <h2 id="genre-viewer-title">Genre Examples</h2>
+        <div id="genre-viewer-container"></div>
+    </section>
+    <!-- 📘 Model Essays 選單 -->
+    <section class="section" id="model-essays-section">
+        <h2>Model Essays</h2>
+        <div class="materials-grid">
+            <div class="material-card" onclick="enterGsatPapers()" style="cursor:pointer;">
+                <h4>GSAT Past Papers</h4>
+                <p>View past GSAT writing prompts and sample responses.</p>
+            </div>
+        </div>
+    </section>
+    <!-- 📄 GSAT Papers Viewer -->
+    <section class="section" id="gsat-viewer-section">
+        <h2>GSAT Past Papers</h2>
+        <div id="gsat-viewer-container"></div>
     </section>
     <div id="printable-drafts"></div>
     <script>
@@ -695,9 +713,9 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
-        const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+        const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
 
-        // ========== NEW: 更新 loadWritingMaterials ==========
+        // ========== NEW: 更新卡片 ==========
         function loadWritingMaterials() {
             const container = document.getElementById('writing-materials');
             container.innerHTML = `
@@ -706,9 +724,9 @@
                         <h4>Writing Tips & Guidelines</h4>
                         <p>Click to explore writing gists and genres.</p>
                     </div>
-                    <div class="material-card">
-                        <h4>Model Essays (coming soon)</h4>
-                        <p>Teachers can place sample essays here in the future.</p>
+                    <div class="material-card" onclick="enterModelEssays()">
+                        <h4>Model Essays</h4>
+                        <p>Click to browse sample essays and past papers.</p>
                     </div>
                     <div class="material-card">
                         <h4>Idea Bank / Writing Materials (coming soon)</h4>
@@ -718,7 +736,7 @@
             `;
         }
 
-        // ========== NEW: 導航函數 ==========
+        // ========== 導航函數 ==========
         function enterWritingTipsMenu() {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('writing-tips-menu-section').classList.add('active');
@@ -736,8 +754,26 @@
             document.querySelector('.back-btn').classList.add('active');
             renderWritingGenres();
         }
+        function enterModelEssays() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('model-essays-section').classList.add('active');
+            document.querySelector('.back-btn').classList.add('active');
+        }
+        function enterGsatPapers() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('gsat-viewer-section').classList.add('active');
+            document.querySelector('.back-btn').classList.add('active');
+            renderGsatPapers();
+        }
+        function enterGenreViewer(folder, displayName) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('genre-image-viewer-section').classList.add('active');
+            document.querySelector('.back-btn').classList.add('active');
+            document.getElementById('genre-viewer-title').textContent = `${displayName} Examples`;
+            renderGenreImages(folder);
+        }
 
-        // ========== NEW: Writing Gists 翻閱器 ==========
+        // ========== Writing Gists ==========
         function renderWritingGists() {
             const container = document.getElementById('writing-gists-container');
             const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20gists/';
@@ -782,8 +818,8 @@
                     </div>
                 `;
 
-                document.getElementById('prev-btn').onclick = () => flipPage(-1);
-                document.getElementById('next-btn').onclick = () => flipPage(+1);
+                document.getElementById('prev-btn').onclick = () => flipPage(-1, 'gists-page');
+                document.getElementById('next-btn').onclick = () => flipPage(+1, 'gists-page');
 
                 const flipContainer = document.getElementById('gists-flip-container');
                 let startX = 0;
@@ -794,37 +830,98 @@
                     const endX = e.changedTouches[0].clientX;
                     const diff = startX - endX;
                     if (Math.abs(diff) > 60) {
-                        if (diff > 0 && currentPage < totalPages) flipPage(+1);
-                        else if (diff < 0 && currentPage > 1) flipPage(-1);
+                        if (diff > 0 && currentPage < totalPages) {
+                            flipPage(+1, 'gists-page');
+                            currentPage++;
+                        } else if (diff < 0 && currentPage > 1) {
+                            flipPage(-1, 'gists-page');
+                            currentPage--;
+                        }
+                        render();
                     }
                 }, { passive: true });
-
-                function flipPage(direction) {
-                    const pageEl = document.getElementById('gists-page');
-                    if (!pageEl) return;
-
-                    const audio = new Audio(PAGE_TURN_SOUND);
-                    audio.play().catch(e => console.log('Audio play failed:', e));
-
-                    const angle = direction > 0 ? -15 : 15;
-                    pageEl.style.transform = `rotateY(${angle}deg)`;
-                    pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
-
-                    setTimeout(() => {
-                        currentPage += direction;
-                        render();
-                    }, 300);
-                }
             }
 
             render();
         }
 
-        // ========== NEW: Writing Genres 選單 ==========
+        // ========== GSAT Papers ==========
+        function renderGsatPapers() {
+            const container = document.getElementById('gsat-viewer-container');
+            const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/GSAT%20past%20papers/';
+            const totalPages = 11;
+            let currentPage = 1;
+
+            function render() {
+                const prevDisabled = currentPage <= 1;
+                const nextDisabled = currentPage >= totalPages;
+
+                container.innerHTML = `
+                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
+                        Page <strong>${currentPage}</strong> / ${totalPages}
+                    </div>
+                    <div id="gsat-flip-container" style="
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 500px;
+                        padding: 0 10px;
+                    ">
+                        <div id="gsat-page" style="
+                            width: 95%;
+                            max-width: 800px;
+                            background: white;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                            overflow: hidden;
+                            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.3s ease;
+                            transform-style: preserve-3d;
+                        ">
+                            <img src="${baseUrl}${currentPage}.png" 
+                                 alt="GSAT paper ${currentPage}"
+                                 style="width:100%; display:block; background:#faf9f7;"
+                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
+                            >
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                    </div>
+                `;
+
+                document.getElementById('prev-btn').onclick = () => flipPage(-1, 'gsat-page');
+                document.getElementById('next-btn').onclick = () => flipPage(+1, 'gsat-page');
+
+                const flipContainer = document.getElementById('gsat-flip-container');
+                let startX = 0;
+                flipContainer.addEventListener('touchstart', e => {
+                    startX = e.touches[0].clientX;
+                }, { passive: true });
+                flipContainer.addEventListener('touchend', e => {
+                    const endX = e.changedTouches[0].clientX;
+                    const diff = startX - endX;
+                    if (Math.abs(diff) > 60) {
+                        if (diff > 0 && currentPage < totalPages) {
+                            flipPage(+1, 'gsat-page');
+                            currentPage++;
+                        } else if (diff < 0 && currentPage > 1) {
+                            flipPage(-1, 'gsat-page');
+                            currentPage--;
+                        }
+                        render();
+                    }
+                }, { passive: true });
+            }
+
+            render();
+        }
+
+        // ========== Writing Genres ==========
         function renderWritingGenres() {
             const container = document.getElementById('writing-genres-container');
             const genres = [
-                { name: "Diagrams", folder: "diagram" },
+                { name: "Diagrams", folder: "diagrams" },
                 { name: "Argumentative", folder: "argumentative" },
                 { name: "Images", folder: "images" },
                 { name: "Narrative", folder: "narrative" },
@@ -834,20 +931,121 @@
 
             const html = genres.map(g => `
                 <div class="material-card" style="cursor:pointer;" 
-                     onclick="window.open('https://ducj-creator.github.io/Shirley-AI-Writing/writing%20genres/${encodeURIComponent(g.folder)}/', '_blank')">
+                     onclick="enterGenreViewer('${g.folder}', '${g.name}')">
                     <h4>${g.name}</h4>
-                    <p>Examples and tips for ${g.name.toLowerCase()} writing.</p>
+                    <p>Examples for ${g.name.toLowerCase()} writing.</p>
                 </div>
             `).join('');
 
-            container.innerHTML = `
-                <div class="materials-grid">
-                    ${html}
-                </div>
-                <p style="text-align:center; margin-top:20px; font-size:0.9em; color:var(--text-muted);">
-                    Click any genre to open its resource page in a new tab.
-                </p>
-            `;
+            container.innerHTML = `<div class="materials-grid">${html}</div>`;
+        }
+
+        // ========== Genre 圖片瀏覽器 ==========
+        function renderGenreImages(folder) {
+            const container = document.getElementById('genre-viewer-container');
+            const baseUrl = `https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20genres/${folder}/`;
+            const maxPages = 10;
+            let currentPage = 1;
+            let totalPages = 1;
+
+            async function detectTotalPages() {
+                for (let i = 1; i <= maxPages; i++) {
+                    try {
+                        const response = await fetch(`${baseUrl}${i}.png`, { method: 'HEAD' });
+                        if (!response.ok) {
+                            totalPages = i - 1;
+                            break;
+                        }
+                        if (i === maxPages) totalPages = maxPages;
+                    } catch {
+                        totalPages = i - 1;
+                        break;
+                    }
+                }
+                render();
+            }
+
+            function render() {
+                const prevDisabled = currentPage <= 1;
+                const nextDisabled = currentPage >= totalPages;
+
+                container.innerHTML = `
+                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
+                        Page <strong>${currentPage}</strong> / ${totalPages}
+                    </div>
+                    <div id="genre-flip-container" style="
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 500px;
+                        padding: 0 10px;
+                    ">
+                        <div id="genre-page" style="
+                            width: 95%;
+                            max-width: 800px;
+                            background: white;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                            overflow: hidden;
+                            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.3s ease;
+                            transform-style: preserve-3d;
+                        ">
+                            <img src="${baseUrl}${currentPage}.png" 
+                                 alt="${folder} example ${currentPage}"
+                                 style="width:100%; display:block; background:#faf9f7;"
+                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
+                            >
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                    </div>
+                `;
+
+                document.getElementById('prev-btn').onclick = () => flipPage(-1, 'genre-page');
+                document.getElementById('next-btn').onclick = () => flipPage(+1, 'genre-page');
+
+                const flipContainer = document.getElementById('genre-flip-container');
+                let startX = 0;
+                flipContainer.addEventListener('touchstart', e => {
+                    startX = e.touches[0].clientX;
+                }, { passive: true });
+                flipContainer.addEventListener('touchend', e => {
+                    const endX = e.changedTouches[0].clientX;
+                    const diff = startX - endX;
+                    if (Math.abs(diff) > 60) {
+                        if (diff > 0 && currentPage < totalPages) {
+                            flipPage(+1, 'genre-page');
+                            currentPage++;
+                        } else if (diff < 0 && currentPage > 1) {
+                            flipPage(-1, 'genre-page');
+                            currentPage--;
+                        }
+                        render();
+                    }
+                }, { passive: true });
+            }
+
+            detectTotalPages();
+        }
+
+        // ========== 共用翻頁邏輯 ==========
+        function flipPage(direction, pageId) {
+            const pageEl = document.getElementById(pageId);
+            if (!pageEl) return;
+
+            const audio = new Audio(PAGE_TURN_SOUND);
+            audio.play().catch(e => console.log('Audio play failed:', e));
+
+            const angle = direction > 0 ? -15 : 15;
+            pageEl.style.transform = `rotateY(${angle}deg)`;
+            pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
+
+            setTimeout(() => {
+                pageEl.style.transform = '';
+                pageEl.style.boxShadow = '';
+            }, 300);
         }
 
         // ========== 原始其他函數 ==========
@@ -885,10 +1083,12 @@
         window.useTopicVersionAsCurrent = () => {};
         window.printTopicDrafts = () => {};
 
-        // 新增
         window.enterWritingTipsMenu = enterWritingTipsMenu;
         window.enterWritingGists = enterWritingGists;
         window.enterWritingGenres = enterWritingGenres;
+        window.enterModelEssays = enterModelEssays;
+        window.enterGsatPapers = enterGsatPapers;
+        window.enterGenreViewer = enterGenreViewer;
 
         // Init
         loadWritingMaterials();
