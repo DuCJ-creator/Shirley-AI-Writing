@@ -873,46 +873,75 @@
             ]
         };
 
-        // ---------- Level 2 圖片瀏覽功能 ----------
-        function openImageGallery(galleryName, imageCount) {
-            currentGallery = galleryName;
-            totalImages = imageCount;
-            currentImageIndex = 0;
-            updateImageViewer();
-            document.getElementById('image-viewer').classList.add('active');
-        }
+ // ---------- Level 2 圖片瀏覽功能 ----------
+function openImageGallery(galleryName, imageCount) {
+    currentGallery = galleryName;
+    totalImages = imageCount;
+    currentImageIndex = 0;
+    updateImageViewer();
+    document.getElementById('image-viewer').classList.add('active');
+}
 
-        function openGenreSelection() {
-            document.getElementById('genre-modal').style.display = 'flex';
-        }
+function openGenreSelection() {
+    document.getElementById('genre-modal').style.display = 'flex';
+}
 
-        function closeGenreModal() {
-            document.getElementById('genre-modal').style.display = 'none';
-        }
+function closeGenreModal() {
+    document.getElementById('genre-modal').style.display = 'none';
+}
 
-        function openGenreGallery(genre) {
-            closeGenreModal();
-            currentGallery = `writing%20genres/${genre}`;
-            totalImages = 8; // 假設每個genre有8張圖片
-            currentImageIndex = 0;
-            updateImageViewer();
-            document.getElementById('image-viewer').classList.add('active');
-        }
+function openGenreGallery(genre) {
+    closeGenreModal();
+    currentGallery = `writing genres/${genre}`;
+    totalImages = 8; // 假設每個genre有8張圖片
+    currentImageIndex = 0;
+    updateImageViewer();
+    document.getElementById('image-viewer').classList.add('active');
+}
 
-        function updateImageViewer() {
-            const imageUrl = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex + 1}.png`;
-            document.getElementById('viewer-image').src = imageUrl;
-            document.getElementById('image-counter').textContent = `${currentImageIndex + 1} / ${totalImages}`;
-        }
+function updateImageViewer() {
+    // 修正：使用正確的圖片路徑格式
+    const imageUrl = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex + 1}.png`;
+    console.log('Loading image:', imageUrl); // 調試用
+    
+    const viewerImage = document.getElementById('viewer-image');
+    const imageCounter = document.getElementById('image-counter');
+    
+    // 添加加載狀態
+    viewerImage.style.opacity = '0.5';
+    
+    viewerImage.onload = function() {
+        viewerImage.style.opacity = '1';
+    };
+    
+    viewerImage.onerror = function() {
+        console.error('Failed to load image:', imageUrl);
+        viewerImage.alt = '圖片加載失敗';
+        viewerImage.style.opacity = '1';
+    };
+    
+    viewerImage.src = imageUrl;
+    imageCounter.textContent = `${currentImageIndex + 1} / ${totalImages}`;
+}
 
-        function changeImage(direction) {
-            currentImageIndex = (currentImageIndex + direction + totalImages) % totalImages;
-            updateImageViewer();
-        }
+function changeImage(direction) {
+    currentImageIndex = (currentImageIndex + direction + totalImages) % totalImages;
+    updateImageViewer();
+}
 
-        function closeImageViewer() {
-            document.getElementById('image-viewer').classList.remove('active');
-        }
+function closeImageViewer() {
+    document.getElementById('image-viewer').classList.remove('active');
+}
+
+// 鍵盤導航支持
+document.addEventListener('keydown', function(e) {
+    const viewer = document.getElementById('image-viewer');
+    if (viewer.classList.contains('active')) {
+        if (e.key === 'ArrowLeft') changeImage(-1);
+        if (e.key === 'ArrowRight') changeImage(1);
+        if (e.key === 'Escape') closeImageViewer();
+    }
+});
 
         // 鍵盤導航支持
         document.addEventListener('keydown', function(e) {
