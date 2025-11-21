@@ -574,9 +574,134 @@
                 right: -50px;
             }
         }
+        /* 簡單翻頁瀏覽器樣式 */
+.flip-viewer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    touch-action: pan-y;
+}
+
+.flip-viewer.active {
+    display: flex;
+}
+
+.flip-container {
+    width: 90%;
+    height: 90%;
+    max-width: 1000px;
+    max-height: 700px;
+    position: relative;
+    overflow: hidden;
+}
+
+.flip-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    display: none;
+}
+
+.flip-image.active {
+    display: block;
+}
+
+.flip-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.9);
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.flip-nav:hover {
+    background: white;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.flip-nav.prev {
+    left: 20px;
+}
+
+.flip-nav.next {
+    right: 20px;
+}
+
+.flip-counter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 18px;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+.close-flip {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .flip-nav {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+    
+    .flip-nav.prev {
+        left: 10px;
+    }
+    
+    .flip-nav.next {
+        right: 10px;
+    }
+}
     </style>
 </head>
 <body>
+    
+<!-- 簡單翻頁瀏覽器 -->
+<div class="flip-viewer" id="flip-viewer">
+    <button class="close-flip" onclick="closeFlipViewer()">×</button>
+    <div class="flip-container" id="flip-container">
+        <!-- 圖片會通過JavaScript動態添加 -->
+    </div>
+    <button class="flip-nav prev" onclick="changeFlipPage(-1)">‹</button>
+    <button class="flip-nav next" onclick="changeFlipPage(1)">›</button>
+    <div class="flip-counter" id="flip-counter">1 / 1</div>
+</div>
+    
     <button class="back-btn" onclick="goHome()">← <span>Back to Home</span></button>
     <h1 class="title">Shirley's AI Writing Coach</h1>
     <p class="subtitle">Educational Practice & Entertainment only </p>
@@ -587,8 +712,8 @@
     <!-- OCR Disclaimer -->
     <div class="ocr-disclaimer no-print">
         <strong>Disclaimer:</strong><br>
-        Image recognition results are subject to the system's capabilities and the clarity of the input handwriting. In case of errors, please manually input or use alternative tools for assistance.<br>
-        <strong>圖像識別結果會受到系統識別能力及輸入字跡清晰度的限制。如遇識別錯誤，請手動輸入或使用其他工具輔助。</strong>
+        Image recognition results are subject to the system's capabilities and the clarity of the input handwriting. In case of errors, please manually input or use alternative tools for assistance.(Writing prompts in English)<br>
+        <strong>圖像識別結果會受到系統識別能力及輸入字跡清晰度的限制。如遇識別錯誤，請手動輸入或使用其他工具輔助。(寫作提示用英文)</strong>
     </div>
     
     <!-- 圖片瀏覽器 -->
@@ -729,7 +854,7 @@
         <div class="gist-area">
             <h3>1) Writing Tips & Guidelines</h3>
             <div class="materials-grid">
-                <div class="material-card" onclick="openImageGallery('writing%20gists', 9)">
+                <div class="material-card" onclick="openFlipViewer('writing%20gists', 9)">
                     <h4>📝 Shirley's Gists for Writing</h4>
                     <p>Essential writing tips and techniques in 9 illustrated guides</p>
                 </div>
@@ -767,7 +892,7 @@
             <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
                 <h3>Select Writing Genre</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;">
-                    <button class="genre-btn" onclick="openGenreGallery('narrative')">Narrative</button>
+                    <button class="genre-btn" onclick="openGenreFlipViewer('narrative')">Narrative</button>
                     <button class="genre-btn" onclick="openGenreGallery('descriptive')">Descriptive</button>
                     <button class="genre-btn" onclick="openGenreGallery('expository')">Expository</button>
                     <button class="genre-btn" onclick="openGenreGallery('persuasive')">Persuasive</button>
@@ -2230,6 +2355,128 @@ document.addEventListener('keydown', function(e) {
             loadRubric();
             initTopicCategories();
         });
+        // 簡單翻頁瀏覽器變量
+let currentFlipGallery = '';
+let totalFlipImages = 0;
+let currentFlipIndex = 1;
+
+// 打開翻頁瀏覽器
+function openFlipViewer(galleryName, imageCount) {
+    currentFlipGallery = galleryName;
+    totalFlipImages = imageCount;
+    currentFlipIndex = 1;
+    
+    renderFlipImages();
+    updateFlipViewer();
+    document.getElementById('flip-viewer').classList.add('active');
+}
+
+function openGenreFlipViewer(genre) {
+    closeGenreModal();
+    openFlipViewer(`writing genres/${genre}`, 8);
+}
+
+// 渲染所有圖片
+function renderFlipImages() {
+    const container = document.getElementById('flip-container');
+    container.innerHTML = '';
+    
+    for (let i = 1; i <= totalFlipImages; i++) {
+        const img = document.createElement('img');
+        img.className = 'flip-image';
+        img.src = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentFlipGallery}/${i}.png`;
+        img.alt = `第 ${i} 頁`;
+        img.loading = 'lazy';
+        
+        img.onerror = function() {
+            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+        };
+        
+        container.appendChild(img);
+    }
+}
+
+// 更新瀏覽器顯示
+function updateFlipViewer() {
+    const images = document.querySelectorAll('.flip-image');
+    images.forEach((img, index) => {
+        img.classList.remove('active');
+        if (index + 1 === currentFlipIndex) {
+            img.classList.add('active');
+        }
+    });
+    
+    document.getElementById('flip-counter').textContent = 
+        `${currentFlipIndex} / ${totalFlipImages}`;
+}
+
+// 翻頁
+function changeFlipPage(direction) {
+    const newIndex = currentFlipIndex + direction;
+    if (newIndex >= 1 && newIndex <= totalFlipImages) {
+        currentFlipIndex = newIndex;
+        updateFlipViewer();
+    }
+}
+
+// 關閉瀏覽器
+function closeFlipViewer() {
+    document.getElementById('flip-viewer').classList.remove('active');
+}
+
+// 觸控和滑鼠拖動支持
+let startX = 0;
+let startY = 0;
+
+document.getElementById('flip-container').addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+});
+
+document.getElementById('flip-container').addEventListener('touchend', function(e) {
+    if (!startX) return;
+    
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const diffX = startX - endX;
+    const diffY = startY - endY;
+    
+    // 只有水平移動距離大於垂直移動距離時才翻頁
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX > 0) {
+            changeFlipPage(1); // 向左滑動，下一頁
+        } else {
+            changeFlipPage(-1); // 向右滑動，上一頁
+        }
+    }
+    
+    startX = 0;
+    startY = 0;
+});
+
+// 滑鼠點擊翻頁
+document.getElementById('flip-container').addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    
+    if (clickX < width / 3) {
+        changeFlipPage(-1); // 點擊左側，上一頁
+    } else if (clickX > width * 2 / 3) {
+        changeFlipPage(1); // 點擊右側，下一頁
+    }
+    // 點擊中間區域不做任何事
+});
+
+// 鍵盤導航
+document.addEventListener('keydown', function(e) {
+    const viewer = document.getElementById('flip-viewer');
+    if (viewer.classList.contains('active')) {
+        if (e.key === 'ArrowLeft') changeFlipPage(-1);
+        if (e.key === 'ArrowRight') changeFlipPage(1);
+        if (e.key === 'Escape') closeFlipViewer();
+    }
+});
     </script>
 </body>
 </html>
