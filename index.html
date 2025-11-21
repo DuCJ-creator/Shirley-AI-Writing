@@ -711,6 +711,95 @@
         }
         // ========== 音效 ==========
         const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+        
+        // ========== 翻頁共用函數 ==========
+        function createPageViewer(containerId, baseUrl, totalPages, pageType) {
+            let currentPage = 1;
+            
+            function render() {
+                const container = document.getElementById(containerId);
+                const prevDisabled = currentPage <= 1;
+                const nextDisabled = currentPage >= totalPages;
+                
+                container.innerHTML = `
+                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
+                        Page <strong>${currentPage}</strong> / ${totalPages}
+                    </div>
+                    <div id="${pageType}-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
+                        <div id="${pageType}-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
+                            <img src="${baseUrl}${currentPage}.png"
+                                 alt="${pageType} page ${currentPage}"
+                                 style="width:100%; display:block; background:#faf9f7;"
+                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
+                            >
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                    </div>
+                `;
+                
+                // 按鈕事件
+                document.getElementById('prev-btn').onclick = () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        playFlipSound(`${pageType}-page`);
+                        render();
+                    }
+                };
+                
+                document.getElementById('next-btn').onclick = () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        playFlipSound(`${pageType}-page`);
+                        render();
+                    }
+                };
+                
+                // 滑動手勢支援
+                const flipContainer = document.getElementById(`${pageType}-flip-container`);
+                if (flipContainer) {
+                    let startX = 0;
+                    flipContainer.addEventListener('touchstart', e => {
+                        startX = e.touches[0].clientX;
+                    }, { passive: true });
+                    
+                    flipContainer.addEventListener('touchend', e => {
+                        const endX = e.changedTouches[0].clientX;
+                        const diff = startX - endX;
+                        if (Math.abs(diff) > 60) {
+                            if (diff > 0 && currentPage < totalPages) {
+                                currentPage++;
+                                playFlipSound(`${pageType}-page`);
+                                render();
+                            } else if (diff < 0 && currentPage > 1) {
+                                currentPage--;
+                                playFlipSound(`${pageType}-page`);
+                                render();
+                            }
+                        }
+                    }, { passive: true });
+                }
+            }
+            
+            render();
+        }
+
+        function playFlipSound(pageId) {
+            const pageEl = document.getElementById(pageId);
+            if (!pageEl) return;
+            const audio = new Audio(PAGE_TURN_SOUND);
+            audio.play().catch(e => console.log('Audio play failed:', e));
+            const angle = -15;
+            pageEl.style.transform = `rotateY(${angle}deg)`;
+            pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
+            setTimeout(() => {
+                pageEl.style.transform = '';
+                pageEl.style.boxShadow = '';
+            }, 300);
+        }
+
         // ========== 功能函數 ==========
         function loadWritingMaterials() {
             const container = document.getElementById('writing-materials');
@@ -731,157 +820,26 @@
                 </div>
             `;
         }
-        // ========== 翻頁共用 ==========
-        function playFlipSound(pageId) {
-            const pageEl = document.getElementById(pageId);
-            if (!pageEl) return;
-            const audio = new Audio(PAGE_TURN_SOUND);
-            audio.play().catch(e => console.log('Audio play failed:', e));
-            const angle = -15;
-            pageEl.style.transform = `rotateY(${angle}deg)`;
-            pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
-            setTimeout(() => {
-                pageEl.style.transform = '';
-                pageEl.style.boxShadow = '';
-            }, 300);
-        }
+
         // ========== Writing Gists ==========
         function renderWritingGists() {
-            const container = document.getElementById('writing-gists-container');
             const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20gists/';
             const totalPages = 9;
-            let currentPage = 1;
-            function render() {
-                const prevDisabled = currentPage <= 1;
-                const nextDisabled = currentPage >= totalPages;
-                container.innerHTML = `
-                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
-                        Page <strong>${currentPage}</strong> / ${totalPages}
-                    </div>
-                    <div id="gists-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
-                        <div id="gists-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
-                            <img src="${baseUrl}${currentPage}.png"
-                                 alt="Writing gist ${currentPage}"
-                                 style="width:100%; display:block; background:#faf9f7;"
-                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
-                            >
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
-                    </div>
-                `;
-                document.getElementById('prev-btn').onclick = () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        playFlipSound('gists-page');
-                        render();
-                    }
-                };
-                document.getElementById('next-btn').onclick = () => {
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        playFlipSound('gists-page');
-                        render();
-                    }
-                };
-                const flipContainer = document.getElementById('gists-flip-container');
-                if (flipContainer) {
-                    let startX = 0;
-                    flipContainer.addEventListener('touchstart', e => {
-                        startX = e.touches[0].clientX;
-                    }, { passive: true });
-                    flipContainer.addEventListener('touchend', e => {
-                        const endX = e.changedTouches[0].clientX;
-                        const diff = startX - endX;
-                        if (Math.abs(diff) > 60) {
-                            if (diff > 0 && currentPage < totalPages) {
-                                currentPage++;
-                                playFlipSound('gists-page');
-                                render();
-                            } else if (diff < 0 && currentPage > 1) {
-                                currentPage--;
-                                playFlipSound('gists-page');
-                                render();
-                            }
-                        }
-                    }, { passive: true });
-                }
-            }
-            render();
+            createPageViewer('writing-gists-container', baseUrl, totalPages, 'gists');
         }
+
         // ========== GSAT Papers ==========
         function renderGsatPapers() {
-            const container = document.getElementById('gsat-viewer-container');
             const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/GSAT%20past%20papers/';
             const totalPages = 11;
-            let currentPage = 1;
-            function render() {
-                const prevDisabled = currentPage <= 1;
-                const nextDisabled = currentPage >= totalPages;
-                container.innerHTML = `
-                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
-                        Page <strong>${currentPage}</strong> / ${totalPages}
-                    </div>
-                    <div id="gsat-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
-                        <div id="gsat-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
-                            <img src="${baseUrl}${currentPage}.png"
-                                 alt="GSAT paper ${currentPage}"
-                                 style="width:100%; display:block; background:#faf9f7;"
-                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
-                            >
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
-                    </div>
-                `;
-                document.getElementById('prev-btn').onclick = () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        playFlipSound('gsat-page');
-                        render();
-                    }
-                };
-                document.getElementById('next-btn').onclick = () => {
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        playFlipSound('gsat-page');
-                        render();
-                    }
-                };
-                const flipContainer = document.getElementById('gsat-flip-container');
-                if (flipContainer) {
-                    let startX = 0;
-                    flipContainer.addEventListener('touchstart', e => {
-                        startX = e.touches[0].clientX;
-                    }, { passive: true });
-                    flipContainer.addEventListener('touchend', e => {
-                        const endX = e.changedTouches[0].clientX;
-                        const diff = startX - endX;
-                        if (Math.abs(diff) > 60) {
-                            if (diff > 0 && currentPage < totalPages) {
-                                currentPage++;
-                                playFlipSound('gsat-page');
-                                render();
-                            } else if (diff < 0 && currentPage > 1) {
-                                currentPage--;
-                                playFlipSound('gsat-page');
-                                render();
-                            }
-                        }
-                    }, { passive: true });
-                }
-            }
-            render();
+            createPageViewer('gsat-viewer-container', baseUrl, totalPages, 'gsat');
         }
+
         // ========== Writing Genres ==========
         function renderWritingGenres() {
             const container = document.getElementById('writing-genres-container');
             const genres = [
-                { name: "Diagrams", folder: "diagram" }, // ✅ 修正為 diagram
+                { name: "Diagrams", folder: "diagram" },
                 { name: "Argumentative", folder: "argumentative" },
                 { name: "Images", folder: "images" },
                 { name: "Narrative", folder: "narrative" },
@@ -897,6 +855,7 @@
             `).join('');
             container.innerHTML = `<div class="materials-grid">${html}</div>`;
         }
+
         // ========== Genre 圖片瀏覽器 ==========
         function renderGenreImages(folder, displayName) {
             const container = document.getElementById('genre-viewer-container');
@@ -904,6 +863,7 @@
             const maxPages = 10;
             let currentPage = 1;
             let totalPages = 1;
+            
             async function detectTotalPages() {
                 for (let i = 1; i <= maxPages; i++) {
                     try {
@@ -921,9 +881,11 @@
                 document.getElementById('genre-viewer-title').textContent = `${displayName} Examples`;
                 render();
             }
+            
             function render() {
                 const prevDisabled = currentPage <= 1;
                 const nextDisabled = currentPage >= totalPages;
+                
                 container.innerHTML = `
                     <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
                         Page <strong>${currentPage}</strong> / ${totalPages}
@@ -942,6 +904,7 @@
                         <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
+                
                 document.getElementById('prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
@@ -949,6 +912,7 @@
                         render();
                     }
                 };
+                
                 document.getElementById('next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
@@ -956,12 +920,14 @@
                         render();
                     }
                 };
+                
                 const flipContainer = document.getElementById('genre-flip-container');
                 if (flipContainer) {
                     let startX = 0;
                     flipContainer.addEventListener('touchstart', e => {
                         startX = e.touches[0].clientX;
                     }, { passive: true });
+                    
                     flipContainer.addEventListener('touchend', e => {
                         const endX = e.changedTouches[0].clientX;
                         const diff = startX - endX;
@@ -979,8 +945,10 @@
                     }, { passive: true });
                 }
             }
+            
             detectTotalPages();
         }
+
         // ========== 原始其他函數（略）==========
         function toggleRubric() { }
         function analyzeWriting() { alert('Analysis triggered (mock)'); }
@@ -992,6 +960,7 @@
         function printTopicDrafts() { }
         function initTopicCategories() { }
         function loadRubric() { }
+
         // ========== 全域暴露 ==========
         window.enterSection = enterSection;
         window.goBack = goBack;
@@ -1003,6 +972,11 @@
         window.useVersionAsCurrent = useVersionAsCurrent;
         window.useTopicVersionAsCurrent = useTopicVersionAsCurrent;
         window.printTopicDrafts = printTopicDrafts;
+        window.renderWritingGists = renderWritingGists;
+        window.renderWritingGenres = renderWritingGenres;
+        window.renderGenreImages = renderGenreImages;
+        window.renderGsatPapers = renderGsatPapers;
+
         // Init
         loadWritingMaterials();
         loadRubric();
