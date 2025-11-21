@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shirley's AI Writing Coach</title>
     <!-- diff / csv parser -->
-    < src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></>
+    <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <!-- OCR / PDF / DOCX -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -602,7 +602,7 @@
                 </div>
             </div>
             <p style="margin-top:8px; font-size: 0.9em;">
-                (Teachers can edit category & topics in the Java topicCategories object.)
+                (Teachers can edit category & topics in the JavaScript topicCategories object.)
             </p>
             <div class="analysis-run no-print">
                 <div class="version-header-inline">
@@ -688,7 +688,7 @@
         <div id="gsat-viewer-container"></div>
     </section>
     <div id="printable-drafts"></div>
-    <>
+    <script>
         // ========== 導航歷史 ==========
         let sectionHistory = ['home-section'];
 
@@ -827,170 +827,162 @@
 
         // ========== GSAT Papers ==========
         function renderGsatPapers() {
-    const container = document.getElementById('gsat-viewer-container');
-    const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/GSAT%20past%20papers/';
-    const totalPages = 11;
-    let currentPage = 1;
+            const container = document.getElementById('gsat-viewer-container');
+            const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/GSAT%20past%20papers/';
+            const totalPages = 11;
+            let currentPage = 1;
 
-    function render() {
-        const prevDisabled = currentPage <= 1;
-        const nextDisabled = currentPage >= totalPages;
+            function render() {
+                const prevDisabled = currentPage <= 1;
+                const nextDisabled = currentPage >= totalPages;
 
-        container.innerHTML = `
-            <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
-                Page <strong>${currentPage}</strong> / ${totalPages}
-            </div>
-            <div id="gsat-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
-                <div id="gsat-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
-                    <img src="${baseUrl}${currentPage}.png" 
-                         alt="GSAT paper ${currentPage}"
-                         style="width:100%; display:block; background:#faf9f7;"
-                         onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
-                    >
-                </div>
-            </div>
-            <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
-            </div>
-        `;
+                container.innerHTML = `
+                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
+                        Page <strong>${currentPage}</strong> / ${totalPages}
+                    </div>
+                    <div id="gsat-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
+                        <div id="gsat-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
+                            <img src="${baseUrl}${currentPage}.png" 
+                                 alt="GSAT paper ${currentPage}"
+                                 style="width:100%; display:block; background:#faf9f7;"
+                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
+                            >
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                    </div>
+                `;
 
-        // ✅ 關鍵：每次 render 後重新綁定按鈕事件
-        document.getElementById('prev-btn').onclick = () => {
-            if (currentPage > 1) {
-                currentPage--;
-                playFlipSound('gsat-page');
-                render();
-            }
-        };
-        document.getElementById('next-btn').onclick = () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                playFlipSound('gsat-page');
-                render();
-            }
-        };
-
-        // ✅ 滑動手勢
-        const flipContainer = document.getElementById('gsat-flip-container');
-        if (flipContainer) {
-            let startX = 0;
-            flipContainer.addEventListener('touchstart', e => {
-                startX = e.touches[0].clientX;
-            }, { passive: true });
-            flipContainer.addEventListener('touchend', e => {
-                const endX = e.changedTouches[0].clientX;
-                const diff = startX - endX;
-                if (Math.abs(diff) > 60) {
-                    if (diff > 0 && currentPage < totalPages) {
-                        currentPage++;
-                        playFlipSound('gsat-page');
-                        render();
-                    } else if (diff < 0 && currentPage > 1) {
+                document.getElementById('prev-btn').onclick = () => {
+                    if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('gsat-page');
                         render();
                     }
-                }
-            }, { passive: true });
-        }
-    }
+                };
+                document.getElementById('next-btn').onclick = () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        playFlipSound('gsat-page');
+                        render();
+                    }
+                };
 
-    render();
-}
+                const flipContainer = document.getElementById('gsat-flip-container');
+                if (flipContainer) {
+                    let startX = 0;
+                    flipContainer.addEventListener('touchstart', e => {
+                        startX = e.touches[0].clientX;
+                    }, { passive: true });
+                    flipContainer.addEventListener('touchend', e => {
+                        const endX = e.changedTouches[0].clientX;
+                        const diff = startX - endX;
+                        if (Math.abs(diff) > 60) {
+                            if (diff > 0 && currentPage < totalPages) {
+                                currentPage++;
+                                playFlipSound('gsat-page');
+                                render();
+                            } else if (diff < 0 && currentPage > 1) {
+                                currentPage--;
+                                playFlipSound('gsat-page');
+                                render();
+                            }
+                        }
+                    }, { passive: true });
+                }
+            }
+            render();
+        }
 
         // ========== Writing Genres ==========
-       function renderGenreImages(folder, displayName) {
-    const container = document.getElementById('genre-viewer-container');
-    const baseUrl = `https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20genres/${folder}/`;
-    const maxPages = 10;
-    let currentPage = 1;
-    let totalPages = 1;
+        function renderWritingGenres() {
+            const container = document.getElementById('writing-genres-container');
+            const genres = [
+                { name: "Diagrams", folder: "diagram" }, // ✅ 修正為 diagram
+                { name: "Argumentative", folder: "argumentative" },
+                { name: "Images", folder: "images" },
+                { name: "Narrative", folder: "narrative" },
+                { name: "Expository", folder: "expository" },
+                { name: "Descriptive", folder: "descriptive" }
+            ];
 
-    async function detectTotalPages() {
-        for (let i = 1; i <= maxPages; i++) {
-            try {
-                const response = await fetch(`${baseUrl}${i}.png`, { method: 'HEAD' });
-                if (!response.ok) {
-                    totalPages = i - 1;
-                    break;
-                }
-                if (i === maxPages) totalPages = maxPages;
-            } catch {
-                totalPages = i - 1;
-                break;
-            }
-        }
-        document.getElementById('genre-viewer-title').textContent = `${displayName} Examples`;
-        render();
-    }
-
-    function render() {
-        const prevDisabled = currentPage <= 1;
-        const nextDisabled = currentPage >= totalPages;
-
-        container.innerHTML = `
-            <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
-                Page <strong>${currentPage}</strong> / ${totalPages}
-            </div>
-            <div id="genre-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
-                <div id="genre-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
-                    <img src="${baseUrl}${currentPage}.png" 
-                         alt="${folder} example ${currentPage}"
-                         style="width:100%; display:block; background:#faf9f7;"
-                         onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
-                    >
+            const html = genres.map(g => `
+                <div class="material-card" style="cursor:pointer;" 
+                     onclick="enterSection('genre-image-viewer-section'); renderGenreImages('${g.folder}', '${g.name}')">
+                    <h4>${g.name}</h4>
+                    <p>Examples for ${g.name.toLowerCase()} writing.</p>
                 </div>
-            </div>
-            <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
-            </div>
-        `;
+            `).join('');
 
-        // ✅ 關鍵：每次 render 後重新綁定按鈕事件
-        document.getElementById('prev-btn').onclick = () => {
-            if (currentPage > 1) {
-                currentPage--;
-                playFlipSound('genre-page');
+            container.innerHTML = `<div class="materials-grid">${html}</div>`;
+        }
+
+        // ========== Genre 圖片瀏覽器 ==========
+        function renderGenreImages(folder, displayName) {
+            const container = document.getElementById('genre-viewer-container');
+            const baseUrl = `https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20genres/${folder}/`;
+            const maxPages = 10;
+            let currentPage = 1;
+            let totalPages = 1;
+
+            async function detectTotalPages() {
+                for (let i = 1; i <= maxPages; i++) {
+                    try {
+                        const response = await fetch(`${baseUrl}${i}.png`, { method: 'HEAD' });
+                        if (!response.ok) {
+                            totalPages = i - 1;
+                            break;
+                        }
+                        if (i === maxPages) totalPages = maxPages;
+                    } catch {
+                        totalPages = i - 1;
+                        break;
+                    }
+                }
+                document.getElementById('genre-viewer-title').textContent = `${displayName} Examples`;
                 render();
             }
-        };
-        document.getElementById('next-btn').onclick = () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                playFlipSound('genre-page');
-                render();
-            }
-        };
 
-        // ✅ 滑動手勢
-        const flipContainer = document.getElementById('genre-flip-container');
-        if (flipContainer) {
-            let startX = 0;
-            flipContainer.addEventListener('touchstart', e => {
-                startX = e.touches[0].clientX;
-            }, { passive: true });
-            flipContainer.addEventListener('touchend', e => {
-                const endX = e.changedTouches[0].clientX;
-                const diff = startX - endX;
-                if (Math.abs(diff) > 60) {
-                    if (diff > 0 && currentPage < totalPages) {
-                        currentPage++;
-                        playFlipSound('genre-page');
-                        render();
-                    } else if (diff < 0 && currentPage > 1) {
+            function render() {
+                const prevDisabled = currentPage <= 1;
+                const nextDisabled = currentPage >= totalPages;
+
+                container.innerHTML = `
+                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
+                        Page <strong>${currentPage}</strong> / ${totalPages}
+                    </div>
+                    <div id="genre-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
+                        <div id="genre-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
+                            <img src="${baseUrl}${currentPage}.png" 
+                                 alt="${folder} example ${currentPage}"
+                                 style="width:100%; display:block; background:#faf9f7;"
+                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
+                            >
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                    </div>
+                `;
+
+                document.getElementById('prev-btn').onclick = () => {
+                    if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('genre-page');
                         render();
                     }
-                }
-            }, { passive: true });
-        }
-    }
+                };
+                document.getElementById('next-btn').onclick = () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        playFlipSound('genre-page');
+                        render();
+                    }
+                };
 
-    detectTotalPages();
-}
                 const flipContainer = document.getElementById('genre-flip-container');
                 if (flipContainer) {
                     let startX = 0;
@@ -1046,6 +1038,6 @@
         loadWritingMaterials();
         loadRubric();
         initTopicCategories();
-    </>
+    </script>
 </body>
 </html>
