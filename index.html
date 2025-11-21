@@ -13,7 +13,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
-        /* ===== 所有原有 style 完全保留 ===== */
         :root {
             --bg-main: #f6efe5;
             --bg-card: #fbf7f0;
@@ -409,24 +408,23 @@
         .student-info-row input {
             flex: 1 1 auto;
         }
-       /* ✅ 列印 */
-@media print {
-    .no-print,
-    .no-print-temp {
-        display: none !important;
-    }
-    #printable-drafts {
-        display: block;
-        width: 100%;
-        margin: 0;
-        padding: 0 10mm;
-        box-sizing: border-box;
-        background: #ffffff;
-    }
-    .printable {
-        page-break-after: always;
-    }
-}
+        @media print {
+            .no-print,
+            .no-print-temp {
+                display: none !important;
+            }
+            #printable-drafts {
+                display: block;
+                width: 100%;
+                margin: 0;
+                padding: 0 10mm;
+                box-sizing: border-box;
+                background: #ffffff;
+            }
+            .printable {
+                page-break-after: always;
+            }
+        }
         @media (max-width: 900px) {
             .version-layout {
                 grid-template-columns: minmax(0, 1fr);
@@ -456,6 +454,7 @@
         <strong>This tool—"Shirley's AI Writing Coach"—is for educational practice and entertainment only.</strong><br>
         Focus on iterating with the feedback—practice drives progress!
     </div>
+
     <!-- Home -->
     <section class="section active front-page" id="home-section">
         <h2>Welcome! Choose Your Writing Adventure</h2>
@@ -465,9 +464,9 @@
             <button class="front-btn gists-btn" onclick="enterSection('gists-section')">Gists for English Writing Level</button>
         </div>
     </section>
+
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <!-- 原有 Level 1 完整內容（保持不變） -->
         <div class="analysis-sticky">
             <div class="analysis-header-inner">
                 <h2>Level 1: Writing Analysis / Feedback</h2>
@@ -572,6 +571,7 @@
             </div>
         </div>
     </section>
+
     <!-- Level 2: Gists 首頁 -->
     <section class="section" id="gists-section">
         <h2>Level 2: Shirley's Gists for English Writing</h2>
@@ -643,6 +643,7 @@
             </div>
         </div>
     </section>
+
     <!-- 📘 Writing Tips 子選單 -->
     <section class="section" id="writing-tips-menu-section">
         <h2>Writing Tips & Guidelines</h2>
@@ -657,21 +658,25 @@
             </div>
         </div>
     </section>
+
     <!-- 📖 Writing Gists 翻閱器 -->
     <section class="section" id="writing-gists-viewer-section">
         <h2>Writing Gists</h2>
         <div id="writing-gists-container"></div>
     </section>
+
     <!-- 📚 Writing Genres 選單 -->
     <section class="section" id="writing-genres-section">
         <h2>Writing Genres</h2>
         <div id="writing-genres-container"></div>
     </section>
+
     <!-- 🖼️ Genre 圖片瀏覽器 -->
     <section class="section" id="genre-image-viewer-section">
         <h2 id="genre-viewer-title">Genre Examples</h2>
         <div id="genre-viewer-container"></div>
     </section>
+
     <!-- 📘 Model Essays 選單 -->
     <section class="section" id="model-essays-section">
         <h2>Model Essays</h2>
@@ -682,23 +687,48 @@
             </div>
         </div>
     </section>
+
     <!-- 📄 GSAT Papers Viewer -->
     <section class="section" id="gsat-viewer-section">
         <h2>GSAT Past Papers</h2>
         <div id="gsat-viewer-container"></div>
     </section>
-    <div id="printable-drafts"></div>
-    <script>
-        // ========== 導航歷史 ==========
-        let sectionHistory = ['home-section'];
 
+    <div id="printable-drafts"></div>
+
+    <script>
+        // ========= 全域狀態 =========
+        let sectionHistory = ['home-section'];
+        let drafts = [];
+        let topicDrafts = [];
+        let rubricText = '';
+        let rubricItems = [];
+        let promptImageBase64 = '';
+        let topicImageBase64 = '';
+        const topicCategories = {
+            'Descriptive Writing': ['Describe your favorite holiday.'],
+            'Personal Narrative': ['Explain a challenge you have overcome.'],
+            'Opinion / Argumentative': ['Should students use smartphones in the classroom? Give your opinion and reasons.']
+        };
+
+        // ========= 導航 =========
         function enterSection(sectionId) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
+            const target = document.getElementById(sectionId);
+            if (target) target.classList.add('active');
+
             if (sectionHistory[sectionHistory.length - 1] !== sectionId) {
                 sectionHistory.push(sectionId);
             }
             document.querySelector('.back-btn').classList.toggle('active', sectionId !== 'home-section');
+
+            if (sectionId === 'gists-section') {
+                loadWritingMaterials();
+                initTopicCategories();
+            }
+            if (sectionId === 'analysis-section') {
+                loadRubric();
+            }
         }
 
         function goBack() {
@@ -712,10 +742,27 @@
             enterSection(prev);
         }
 
-        // ========== 音效 ==========
-        const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+        // ========= 翻頁音效 =========
+        const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
 
-        // ========== 功能函數 ==========
+        function playFlipSound(pageId) {
+            const pageEl = document.getElementById(pageId);
+            if (!pageEl) return;
+
+            const audio = new Audio(PAGE_TURN_SOUND);
+            audio.play().catch(e => console.log('Audio play failed:', e));
+
+            const angle = -15;
+            pageEl.style.transform = `rotateY(${angle}deg)`;
+            pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
+
+            setTimeout(() => {
+                pageEl.style.transform = '';
+                pageEl.style.boxShadow = '';
+            }, 300);
+        }
+
+        // ========= Writing materials 卡片 =========
         function loadWritingMaterials() {
             const container = document.getElementById('writing-materials');
             container.innerHTML = `
@@ -736,25 +783,7 @@
             `;
         }
 
-        // ========== 翻頁共用 ==========
-        function playFlipSound(pageId) {
-            const pageEl = document.getElementById(pageId);
-            if (!pageEl) return;
-
-            const audio = new Audio(PAGE_TURN_SOUND);
-            audio.play().catch(e => console.log('Audio play failed:', e));
-
-            const angle = -15;
-            pageEl.style.transform = `rotateY(${angle}deg)`;
-            pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
-
-            setTimeout(() => {
-                pageEl.style.transform = '';
-                pageEl.style.boxShadow = '';
-            }, 300);
-        }
-
-        // ========== Writing Gists ==========
+        // ========= Writing Gists 翻頁 =========
         function renderWritingGists() {
             const container = document.getElementById('writing-gists-container');
             const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20gists/';
@@ -779,19 +808,19 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="gists-prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="gists-next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
 
-                document.getElementById('gists-prev-btn').onclick = () => {
+                document.getElementById('prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('gists-page');
                         render();
                     }
                 };
-                document.getElementById('gists-next-btn').onclick = () => {
+                document.getElementById('next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
                         playFlipSound('gists-page');
@@ -825,7 +854,7 @@
             render();
         }
 
-        // ========== GSAT Papers ==========
+        // ========= GSAT Past Papers 翻頁 =========
         function renderGsatPapers() {
             const container = document.getElementById('gsat-viewer-container');
             const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/GSAT%20past%20papers/';
@@ -850,19 +879,19 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="gsat-prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="gsat-next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
 
-                document.getElementById('gsat-prev-btn').onclick = () => {
+                document.getElementById('prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('gsat-page');
                         render();
                     }
                 };
-                document.getElementById('gsat-next-btn').onclick = () => {
+                document.getElementById('next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
                         playFlipSound('gsat-page');
@@ -896,11 +925,11 @@
             render();
         }
 
-        // ========== Writing Genres ==========
+        // ========= Writing Genres 選單 =========
         function renderWritingGenres() {
             const container = document.getElementById('writing-genres-container');
             const genres = [
-                { name: "Diagrams", folder: "diagram" }, // ✅ 修正為 diagram
+                { name: "Diagrams", folder: "diagram" },
                 { name: "Argumentative", folder: "argumentative" },
                 { name: "Images", folder: "images" },
                 { name: "Narrative", folder: "narrative" },
@@ -912,14 +941,14 @@
                 <div class="material-card" style="cursor:pointer;" 
                      onclick="enterSection('genre-image-viewer-section'); renderGenreImages('${g.folder}', '${g.name}')">
                     <h4>${g.name}</h4>
-                    <p>Tips for ${g.name.toLowerCase()} writing.</p>
+                    <p>Examples for ${g.name.toLowerCase()} writing.</p>
                 </div>
             `).join('');
 
             container.innerHTML = `<div class="materials-grid">${html}</div>`;
         }
 
-        // ========== Genre 圖片瀏覽器 ==========
+        // ========= Genre 圖片翻頁 =========
         function renderGenreImages(folder, displayName) {
             const container = document.getElementById('genre-viewer-container');
             const baseUrl = `https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20genres/${folder}/`;
@@ -941,6 +970,7 @@
                         break;
                     }
                 }
+                if (totalPages < 1) totalPages = 1;
                 document.getElementById('genre-viewer-title').textContent = `${displayName} Examples`;
                 render();
             }
@@ -963,19 +993,19 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="genre-prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="genre-next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
+                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
                     </div>
                 `;
 
-                document.getElementById('genre-prev-btn').onclick = () => {
+                document.getElementById('prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
                         playFlipSound('genre-page');
                         render();
                     }
                 };
-                document.getElementById('genre-next-btn').onclick = () => {
+                document.getElementById('next-btn').onclick = () => {
                     if (currentPage < totalPages) {
                         currentPage++;
                         playFlipSound('genre-page');
@@ -1010,35 +1040,585 @@
             detectTotalPages();
         }
 
-        // ========== 原始其他函數（略：暫時空實作）==========
-        function toggleRubric() { }
-        function analyzeWriting() { alert('Analysis triggered (mock)'); }
-        function printDrafts() { }
-        function analyzeTopic() { }
-        function generateReferenceEssay() { }
-        function useVersionAsCurrent() { }
-        function useTopicVersionAsCurrent() { }
-        function printTopicDrafts() { }
-        function initTopicCategories() { }
-        function loadRubric() { }
+        // ========= Rubric 載入 =========
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
-        // ========== 全域暴露 ==========
+        async function loadRubric() {
+            if (rubricText) return;
+            try {
+                const response = await fetch('https://ducj-creator.github.io/Shirley-AI-Writing/writing%20rubric.csv');
+                const csv = await response.text();
+                const parsed = Papa.parse(csv, { header: true }).data;
+                rubricItems = [];
+                parsed.forEach(row => {
+                    const crit = (row['Criteria'] || '').trim();
+                    if (!crit) return;
+                    const levels = {
+                        1: (row['1 Point'] || '').trim(),
+                        2: (row['2 Points'] || '').trim(),
+                        3: (row['3 Points'] || '').trim(),
+                        4: (row['4 Points'] || '').trim(),
+                        5: (row['5 Points'] || '').trim()
+                    };
+                    rubricItems.push({ criteria: crit, levels });
+                });
+                if (rubricItems.length === 0) throw new Error('Empty rubric after parsing');
+                rubricText = rubricItems.map(item => {
+                    const lv3 = item.levels[3] ? `3 pts: ${item.levels[3]}` : '';
+                    const lv4 = item.levels[4] ? `4 pts: ${item.levels[4]}` : '';
+                    const lv5 = item.levels[5] ? `5 pts: ${item.levels[5]}` : '';
+                    const parts = [lv3, lv4, lv5].filter(Boolean).join('\n');
+                    return `- ${item.criteria}:\n${parts}`;
+                }).join('\n');
+                const rubricDiv = document.getElementById('rubric-reminder');
+                if (rubricDiv) {
+                    rubricDiv.innerHTML = `
+                        <h3>Rubric Reminder (for all drafts)</h3>
+                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
+                    `;
+                }
+            } catch (e) {
+                console.warn('Rubric parse failed, using default.', e);
+                rubricItems = [
+                    { criteria: 'Essay Structure', levels: { 3: 'Clear introduction, body, and conclusion.' } },
+                    { criteria: 'Coherence & Cohesion', levels: { 3: 'Logical order and basic transitions.' } },
+                    { criteria: 'Grammar Accuracy', levels: { 3: 'Some minor errors but meaning is clear.' } },
+                    { criteria: 'Vocabulary Range & Precision', levels: { 3: 'Adequate vocabulary with some variety.' } }
+                ];
+                rubricText = rubricItems.map(i => `- ${i.criteria}: ${Object.values(i.levels)[0]}`).join('\n');
+                const rubricDiv = document.getElementById('rubric-reminder');
+                if (rubricDiv) {
+                    rubricDiv.innerHTML = `
+                        <h3>Rubric Reminder (default)</h3>
+                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
+                    `;
+                }
+            }
+        }
+
+        function toggleRubric() {
+            const div = document.getElementById('rubric-reminder');
+            if (!div) return;
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // ========= LanguageTool 文法檢查 =========
+        async function checkWithLanguageTool(text) {
+            const params = new URLSearchParams();
+            params.append('text', text);
+            params.append('language', 'en-US');
+            const res = await fetch('https://api.languagetool.org/v2/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            if (!res.ok) throw new Error('LanguageTool error: ' + res.status);
+            return await res.json();
+        }
+
+        function buildCorrectedText(text, matches) {
+            // 依照 offset 從後面開始改，避免 index 亂掉
+            const sorted = [...matches].sort((a, b) => (b.offset) - (a.offset));
+            let result = text;
+            for (const m of sorted) {
+                const replacement = (m.replacements && m.replacements[0] && m.replacements[0].value) || null;
+                if (!replacement) continue;
+                const start = m.offset;
+                const end = m.offset + m.length;
+                result = result.slice(0, start) + replacement + result.slice(end);
+            }
+            return result;
+        }
+
+        function buildHighlightedHtml(text, matches, cls) {
+            if (!matches || matches.length === 0) return escapeHtml(text);
+            const parts = [];
+            let cursor = 0;
+            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
+            sorted.forEach(m => {
+                const start = m.offset;
+                const end = m.offset + m.length;
+                if (start > cursor) {
+                    parts.push(escapeHtml(text.slice(cursor, start)));
+                }
+                const chunk = text.slice(start, end);
+                const msg = m.message || '';
+                parts.push(`<span class="err ${cls}" title="${escapeHtml(msg)}">${escapeHtml(chunk)}</span>`);
+                cursor = end;
+            });
+            if (cursor < text.length) {
+                parts.push(escapeHtml(text.slice(cursor)));
+            }
+            return parts.join('');
+        }
+
+        function computePromptCoverage(text, prompt) {
+            if (!prompt) return { coverage: 1 };
+            const pWords = prompt.toLowerCase().match(/[a-z]+/g) || [];
+            const tWords = text.toLowerCase().match(/[a-z]+/g) || [];
+            if (pWords.length === 0) return { coverage: 1 };
+            const pSet = new Set(pWords.filter(w => w.length > 3));
+            if (pSet.size === 0) return { coverage: 1 };
+            const tSet = new Set(tWords);
+            let hit = 0;
+            pSet.forEach(w => { if (tSet.has(w)) hit++; });
+            const coverage = hit / pSet.size;
+            return { coverage: coverage };
+        }
+
+        function calculateScores(text, matches, opts) {
+            const wordCount = (text.match(/\S+/g) || []).length;
+            const sentenceCount = (text.match(/[.!?]/g) || []).length || 1;
+            const errorCount = matches.length;
+
+            function clamp(x, min, max) { return Math.max(min, Math.min(max, x)); }
+
+            const grammarScore = clamp(5 - Math.round(errorCount / Math.max(1, sentenceCount * 0.8)), 1, 5);
+            const structureScore = clamp(Math.round(Math.min(5, sentenceCount / 2)), 1, 5);
+            const vocabScore = clamp(Math.round(Math.min(5, wordCount / 40)), 1, 5);
+
+            const coverage = opts.coverage ?? 1;
+            const coverageScore = clamp(Math.round(coverage * 5), 1, 5);
+
+            const totalScore = clamp(Math.round((grammarScore + structureScore + vocabScore + coverageScore) / 4), 1, 5);
+
+            return {
+                structure: { score: structureScore },
+                coherence: { score: coverageScore },
+                grammar: { score: grammarScore, errorCount },
+                vocabulary: { score: vocabScore },
+                total: { score: totalScore },
+                meta: { wordCount, sentenceCount, coverage }
+            };
+        }
+
+        function buildFeedback(text, matches, opts, scores) {
+            const lines = [];
+            lines.push(`Overall score: ${scores.total.score} / 5.`);
+            lines.push('');
+            lines.push(`• Essay structure: ${scores.structure.score} / 5 — introduction, body, and conclusion are basically present.`);
+            lines.push(`• Coherence & on-topic: ${scores.coherence.score} / 5 — the essay is mostly related to the prompt and ideas are connected.`);
+            lines.push(`• Grammar accuracy: ${scores.grammar.score} / 5 — about ${scores.grammar.errorCount} issues were detected by the checker.`);
+            lines.push(`• Vocabulary: ${scores.vocabulary.score} / 5 — you use a fair range of words; try to add more precise or advanced expressions.`);
+            lines.push('');
+            if (scores.grammar.errorCount > 0) {
+                lines.push('Grammar tips:');
+                lines.push('- Review subject–verb agreement and basic tense consistency.');
+                lines.push('- Pay attention to articles (a / an / the) and plural nouns.');
+                lines.push('- Check prepositions and word forms (for example, use verbs after "to", nouns after "for").');
+                lines.push('');
+            }
+            lines.push('Next steps:');
+            lines.push('- Read the corrected version carefully and compare it with your original sentences.');
+            lines.push('- Choose two or three sentences to rewrite by yourself, using the feedback as a guide.');
+            lines.push('- Practice writing another short paragraph on the same topic using what you have learned.');
+            return lines.join('\n');
+        }
+
+        function buildVersionChip(label, cls) {
+            return `<span class="version-chip ${cls}">${label}</span>`;
+        }
+
+        // ========= Level 1 分析主流程 =========
+        async function analyzeWriting() {
+            const textArea = document.getElementById('input-text');
+            const checkedArea = document.getElementById('checked-text');
+            const outputEl = document.getElementById('output');
+            const prompt = document.getElementById('prompt-input').value || '';
+
+            if (!textArea || !outputEl) return;
+            const text = textArea.value.trim();
+            if (!text) {
+                alert('Please paste your writing first.');
+                return;
+            }
+
+            outputEl.innerHTML = '<p>Running grammar check with LanguageTool... please wait.</p>';
+            try {
+                const ltResult = await checkWithLanguageTool(text);
+                const matches = ltResult.matches || [];
+
+                const corrected = buildCorrectedText(text, matches);
+                const coverageInfo = computePromptCoverage(text, prompt);
+                const scores = calculateScores(text, matches, coverageInfo);
+
+                if (checkedArea) {
+                    checkedArea.value = corrected;
+                }
+
+                const versionIndex = drafts.length + 1;
+                const cls = 'err-v' + (((versionIndex - 1) % 6) + 1);
+                const highlighted = buildHighlightedHtml(text, matches, cls);
+                const feedback = buildFeedback(text, matches, coverageInfo, scores);
+
+                drafts.push({
+                    id: versionIndex,
+                    textOriginal: text,
+                    textCorrected: corrected,
+                    highlightedHtml: highlighted,
+                    feedback,
+                    scores
+                });
+
+                const chip = buildVersionChip(`Draft ${versionIndex}`, 'version-chip-v' + (((versionIndex - 1) % 6) + 1));
+
+                const scoresHtml = `
+                    <div class="scores-block">
+                        <strong>Scores summary</strong>
+                        <ul>
+                            <li>Structure: ${scores.structure.score} / 5</li>
+                            <li>Coherence & on-topic: ${scores.coherence.score} / 5</li>
+                            <li>Grammar: ${scores.grammar.score} / 5 (errors: ${scores.grammar.errorCount})</li>
+                            <li>Vocabulary: ${scores.vocabulary.score} / 5</li>
+                            <li>Total: ${scores.total.score} / 5</li>
+                            <li>Word count: ${scores.meta.wordCount}</li>
+                        </ul>
+                    </div>
+                `;
+
+                const fbHtml = `
+                    <div class="feedback">
+                        <strong>Teacher-style feedback</strong><br><br>
+                        ${escapeHtml(feedback).replace(/\n/g, '<br>')}
+                    </div>
+                `;
+
+                const blockHtml = `
+                    <div class="analysis-run printable">
+                        <div class="version-header-inline">
+                            <span>${chip}</span>
+                            <span style="font-size:0.85em;">Latest analysis result</span>
+                        </div>
+                        ${scoresHtml}
+                        <div class="diff">
+                            <strong>Highlighted original text</strong><br><br>
+                            ${highlighted}
+                        </div>
+                        ${fbHtml}
+                    </div>
+                `;
+
+                outputEl.innerHTML = blockHtml;
+
+                const refBtn = document.getElementById('ref-btn');
+                if (refBtn) {
+                    refBtn.style.display = 'inline-block';
+                }
+            } catch (e) {
+                console.error(e);
+                outputEl.innerHTML = `
+                    <div class="feedback" style="background:var(--error-bg); border-left-color:var(--error-border);">
+                        <strong>Oops, the grammar checker is not available right now.</strong><br>
+                        You can still edit your writing manually and try again later.
+                    </div>
+                `;
+            }
+        }
+
+        // ========= Generate Reference Essay（不使用任何 API）=========
+        function generateReferenceEssay() {
+            const prompt = document.getElementById('prompt-input').value.trim();
+            const outputEl = document.getElementById('output');
+            const checkedEl = document.getElementById('checked-text');
+
+            if (!prompt) {
+                alert('Please enter the writing prompt / question first.');
+                return;
+            }
+
+            const refEssay = buildReferenceEssayFromPrompt(prompt);
+
+            if (checkedEl) {
+                checkedEl.value = refEssay;
+            }
+
+            if (outputEl) {
+                const chip = buildVersionChip('Reference Essay', 'version-chip-ref');
+                outputEl.innerHTML = `
+                    <div class="analysis-run printable">
+                        <div class="version-header-inline">
+                            <span>${chip}</span>
+                            <span style="font-size:0.85em;">Sample essay generated from the prompt</span>
+                        </div>
+                        <div class="diff">
+                            <strong>Reference Essay</strong><br><br>
+                            ${escapeHtml(refEssay).replace(/\n/g, '<br>')}
+                        </div>
+                        <div class="feedback">
+                            <strong>How to use this sample</strong><br><br>
+                            1. Read the reference essay and underline useful sentence patterns.<br>
+                            2. Try to rewrite one or two paragraphs in your own words.<br>
+                            3. Do not copy it in an exam. Use it only for practice and idea building.
+                        </div>
+                    </div>
+                `;
+            }
+
+            const wordCount = (refEssay.match(/\S+/g) || []).length;
+
+            drafts.push({
+                id: drafts.length + 1,
+                textOriginal: '(Reference essay for prompt)',
+                textCorrected: refEssay,
+                highlightedHtml: '',
+                feedback: 'Reference essay generated from the prompt for study and imitation.',
+                scores: {
+                    structure: { score: 5 },
+                    coherence: { score: 5 },
+                    grammar: { score: 5, errorCount: 0 },
+                    vocabulary: { score: 4 },
+                    total: { score: 5 },
+                    meta: { wordCount, coverage: 1 }
+                },
+                isReference: true
+            });
+        }
+
+        function buildReferenceEssayFromPrompt(prompt) {
+            const safePrompt = prompt.replace(/\s+/g, ' ').trim();
+
+            const intro =
+`In response to the writing task, "${safePrompt}", this essay will first introduce the main idea, then explain several key reasons and examples, and finally give a clear conclusion.`;
+
+            const body1 =
+`To begin with, it is important to understand the basic background of this topic. Many students and teachers have different experiences related to it, and these experiences show that the topic is closely connected to our daily lives. When we look at real situations in school, family, and society, we can see why this issue matters.`;
+
+            const body2 =
+`Another important point is that we should think about both advantages and disadvantages. On the one hand, there are clear benefits, such as personal growth, stronger relationships, or better learning results. On the other hand, there may also be challenges, including time pressure, stress, or misunderstandings between people. By comparing these sides carefully, we can make a more balanced judgment.`;
+
+            const body3 =
+`In addition, examples from students' lives can make the argument more convincing. For instance, imagine a student who follows this idea in a responsible way. He or she may become more confident, improve communication skills, and learn how to solve problems independently. These examples help readers see how the topic is not only abstract, but also practical and meaningful in real life.`;
+
+            const body4 =
+`Furthermore, we need to consider how this idea influences our future. When students develop good habits and a positive attitude toward this topic, they are more likely to succeed in further studies, future careers, and social interactions. Therefore, it is necessary to take action step by step, instead of only talking about the idea in theory.`;
+
+            const conclusion =
+`In conclusion, the topic of "${safePrompt}" is worth careful discussion. By understanding the background, weighing advantages and disadvantages, using clear examples, and thinking about future impact, we can see why this issue is so important. Students are encouraged to reflect on their own experiences and make wise choices, so that they can grow into responsible and thoughtful young adults.`;
+
+            return [intro, body1, body2, body3, body4, conclusion].join('\n\n');
+        }
+
+        // ========= Level 2 Topic 分析（簡化版）=========
+        async function analyzeTopic() {
+            const textArea = document.getElementById('topic-text');
+            const checkedArea = document.getElementById('topic-checked-text');
+            const outputEl = document.getElementById('topic-output');
+            const topicPrompt = document.getElementById('topic-select').value || '';
+
+            if (!textArea || !outputEl) return;
+            const text = textArea.value.trim();
+            if (!text) {
+                alert('Please write your topic essay first.');
+                return;
+            }
+
+            outputEl.innerHTML = '<p>Running grammar check with LanguageTool for topic essay...</p>';
+            try {
+                const ltResult = await checkWithLanguageTool(text);
+                const matches = ltResult.matches || [];
+                const corrected = buildCorrectedText(text, matches);
+                const coverageInfo = computePromptCoverage(text, topicPrompt);
+                const scores = calculateScores(text, matches, coverageInfo);
+
+                if (checkedArea) {
+                    checkedArea.value = corrected;
+                }
+
+                const versionIndex = topicDrafts.length + 1;
+                const highlighted = buildHighlightedHtml(text, matches, 'err-topic');
+                const feedback = buildFeedback(text, matches, coverageInfo, scores);
+
+                topicDrafts.push({
+                    id: versionIndex,
+                    textOriginal: text,
+                    textCorrected: corrected,
+                    highlightedHtml: highlighted,
+                    feedback,
+                    scores
+                });
+
+                const chip = buildVersionChip(`Topic Draft ${versionIndex}`, 'version-chip-ref');
+
+                const scoresHtml = `
+                    <div class="scores-block">
+                        <strong>Scores summary (topic)</strong>
+                        <ul>
+                            <li>Structure: ${scores.structure.score} / 5</li>
+                            <li>Coherence & on-topic: ${scores.coherence.score} / 5</li>
+                            <li>Grammar: ${scores.grammar.score} / 5 (errors: ${scores.grammar.errorCount})</li>
+                            <li>Vocabulary: ${scores.vocabulary.score} / 5</li>
+                            <li>Total: ${scores.total.score} / 5</li>
+                            <li>Word count: ${scores.meta.wordCount}</li>
+                        </ul>
+                    </div>
+                `;
+
+                const fbHtml = `
+                    <div class="feedback">
+                        <strong>Feedback for topic practice</strong><br><br>
+                        ${escapeHtml(feedback).replace(/\n/g, '<br>')}
+                    </div>
+                `;
+
+                const blockHtml = `
+                    <div class="analysis-run printable">
+                        <div class="version-header-inline">
+                            <span>${chip}</span>
+                            <span style="font-size:0.85em;">Latest topic analysis</span>
+                        </div>
+                        ${scoresHtml}
+                        <div class="diff">
+                            <strong>Highlighted topic draft</strong><br><br>
+                            ${highlighted}
+                        </div>
+                        ${fbHtml}
+                    </div>
+                `;
+
+                outputEl.innerHTML = blockHtml;
+            } catch (e) {
+                console.error(e);
+                outputEl.innerHTML = `
+                    <div class="feedback" style="background:var(--error-bg); border-left-color:var(--error-border);">
+                        <strong>Topic grammar checker is not available right now.</strong><br>
+                        You can still edit your writing manually and try again later.
+                    </div>
+                `;
+            }
+        }
+
+        // ========= Topic 類別初始化 =========
+        function initTopicCategories() {
+            const catSelect = document.getElementById('topic-category-select');
+            if (!catSelect) return;
+            catSelect.innerHTML = '<option value="">-- Choose a category --</option>';
+            Object.keys(topicCategories).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                catSelect.appendChild(opt);
+            });
+            catSelect.addEventListener('change', () => {
+                const cat = catSelect.value;
+                const topicSelect = document.getElementById('topic-select');
+                topicSelect.innerHTML = '<option value="">-- Please choose a topic --</option>';
+                if (topicCategories[cat]) {
+                    topicCategories[cat].forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t;
+                        opt.textContent = t;
+                        topicSelect.appendChild(opt);
+                    });
+                }
+            });
+        }
+
+        // ========= 檔案 / 圖片處理 =========
+        function handleFileInput(file, targetTextareaId) {
+            if (!file) return;
+            const name = file.name.toLowerCase();
+            const textarea = document.getElementById(targetTextareaId);
+            if (!textarea) return;
+
+            if (file.type.startsWith('image/')) {
+                textarea.value = 'Running OCR on image...';
+                Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+                    .then(result => {
+                        textarea.value = result.data.text || '(No text recognized)';
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        textarea.value = 'OCR failed. Please try another image or paste text manually.';
+                    });
+            } else if (name.endsWith('.txt')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    textarea.value = e.target.result || '';
+                };
+                reader.onerror = () => {
+                    textarea.value = 'Failed to read text file.';
+                };
+                reader.readAsText(file);
+            } else if (name.endsWith('.pdf')) {
+                textarea.value = 'PDF reading is not implemented in this version. Please copy-paste the text manually.';
+            } else if (name.endsWith('.doc') || name.endsWith('.docx')) {
+                textarea.value = 'DOC / DOCX reading is not implemented in this version. Please copy-paste the text manually.';
+            } else {
+                textarea.value = 'Unsupported file type. Please use image, txt, pdf, or doc/docx.';
+            }
+        }
+
+        // prompt image preview
+        document.getElementById('prompt-image-upload')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                promptImageBase64 = ev.target.result;
+                const previewDiv = document.getElementById('prompt-image-preview');
+                const img = document.getElementById('prompt-preview-img');
+                if (previewDiv && img) {
+                    img.src = promptImageBase64;
+                    previewDiv.style.display = 'block';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // topic image preview
+        document.getElementById('topic-image-upload')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                topicImageBase64 = ev.target.result;
+                const previewDiv = document.getElementById('topic-image-preview');
+                const img = document.getElementById('topic-preview-img');
+                if (previewDiv && img) {
+                    img.src = topicImageBase64;
+                    previewDiv.style.display = 'block';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('file-upload-main')?.addEventListener('change', e => {
+            handleFileInput(e.target.files[0], 'input-text');
+        });
+        document.getElementById('file-upload-topic')?.addEventListener('change', e => {
+            handleFileInput(e.target.files[0], 'topic-text');
+        });
+
+        // ========= 列印（簡易占位）=========
+        function printDrafts() {
+            window.print();
+        }
+        function printTopicDrafts() {
+            window.print();
+        }
+
+        // ========= 全域暴露 =========
         window.enterSection = enterSection;
         window.goBack = goBack;
-        window.toggleRubric = toggleRubric;
         window.analyzeWriting = analyzeWriting;
-        window.printDrafts = printDrafts;
-        window.analyzeTopic = analyzeTopic;
         window.generateReferenceEssay = generateReferenceEssay;
-        window.useVersionAsCurrent = useVersionAsCurrent;
-        window.useTopicVersionAsCurrent = useTopicVersionAsCurrent;
+        window.analyzeTopic = analyzeTopic;
+        window.printDrafts = printDrafts;
         window.printTopicDrafts = printTopicDrafts;
         window.renderWritingGists = renderWritingGists;
         window.renderWritingGenres = renderWritingGenres;
         window.renderGenreImages = renderGenreImages;
         window.renderGsatPapers = renderGsatPapers;
+        window.toggleRubric = toggleRubric;
 
-        // Init
+        // ========= Init =========
         loadWritingMaterials();
         loadRubric();
         initTopicCategories();
