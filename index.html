@@ -409,6 +409,22 @@
         .student-info-row input {
             flex: 1 1 auto;
         }
+        .ocr-progress {
+            background: var(--info-bg);
+            border: 1px solid var(--info-border);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+        .word-count-warning {
+            color: #e74c3c;
+            font-weight: bold;
+            background: #ffeaa7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
        /* ✅ 列印 */
 @media print {
     .no-print,
@@ -467,7 +483,6 @@
     </section>
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <!-- 原有 Level 1 完整內容（保持不變） -->
         <div class="analysis-sticky">
             <div class="analysis-header-inner">
                 <h2>Level 1: Writing Analysis / Feedback</h2>
@@ -544,6 +559,7 @@
                     <div class="version-col">
                         <h3>Original text (or OCR result)</h3>
                         <textarea id="input-text" placeholder="Paste your writing here, or upload a file / image to extract text..."></textarea>
+                        <div id="ocr-progress-main" class="ocr-progress" style="display:none;"></div>
                     </div>
                     <div class="version-col version-actions">
                         <div>
@@ -618,6 +634,7 @@
                     <div class="version-col">
                         <h3>Original text (or OCR result)</h3>
                         <textarea id="topic-text" placeholder="Write your essay here, or upload a file / image..."></textarea>
+                        <div id="ocr-progress-topic" class="ocr-progress" style="display:none;"></div>
                     </div>
                     <div class="version-col version-actions">
                         <div>
@@ -712,6 +729,387 @@
         // ========== 音效 ==========
         const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
         
+        // ========== 評分標準 CSV 數據 ==========
+        const rubricCSV = `Criteria,1 Point,2 Points,3 Points,4 Points,5 Points
+Essay Structure,Lacks a clear structure; no logical order; fewer than 120 words.,Minimal structure; ideas are somewhat organized; 120-150 words.,Adequate structure; main points are identifiable but weakly organized; 151-200 words.,"Good structure; clear introduction, body, and conclusion; 201-300 words.",Excellent structure; logical and cohesive flow of ideas throughout; over 300 words.
+Coherence & Cohesion,Ideas are disconnected; lacks transitions.,Some coherence; few transitions used.,Moderately coherent; some transitions present.,Mostly coherent; effective use of transitions.,Highly coherent; strong connections between ideas with seamless transitions.
+Grammar Accuracy,Frequent grammatical errors hinder understanding.,Numerous errors; some impact clarity.,Several errors; clarity is mostly maintained.,Few errors; minor impact on clarity.,No grammatical errors; clear and precise expression.
+Vocabulary Range & Precision,Very limited vocabulary; inappropriate word choices.,Limited vocabulary; some inappropriate choices.,Adequate vocabulary; mostly appropriate but lacks variety.,Good vocabulary; mostly precise and varied word choices.,"Excellent vocabulary; precise, varied, and sophisticated word choices."`;
+
+        let rubricData = null;
+
+        function parseRubricData() {
+            const parsed = Papa.parse(rubricCSV, {
+                header: true,
+                skipEmptyLines: true
+            });
+            rubricData = parsed.data;
+            console.log('Rubric data loaded:', rubricData);
+        }
+
+        // ========== OCR 文字識別功能 ==========
+        async function performOCR(file, progressElement, targetTextarea) {
+            if (!file) return;
+            
+            progressElement.style.display = 'block';
+            progressElement.innerHTML = '🔄 Starting OCR...';
+            
+            try {
+                const worker = await Tesseract.createWorker('eng', 1, {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            progressElement.innerHTML = `🔍 Recognizing text... ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                });
+                
+                progressElement.innerHTML = '🔍 Processing image...';
+                
+                const { data: { text } } = await worker.recognize(file);
+                
+                const cleanedText = text
+                    .replace(/\n\s*\n/g, '\n\n')
+                    .replace(/[^\S\r\n]+/g, ' ')
+                    .trim();
+                
+                targetTextarea.value = cleanedText;
+                progressElement.innerHTML = '✅ OCR completed successfully!';
+                
+                const wordCount = cleanedText.split(/\s+/).filter(word => word.length > 0).length;
+                progressElement.innerHTML += `<br>📝 Word count: ${wordCount}`;
+                
+                setTimeout(() => {
+                    progressElement.style.display = 'none';
+                }, 3000);
+                
+                await worker.terminate();
+                
+            } catch (error) {
+                console.error('OCR Error:', error);
+                progressElement.innerHTML = '❌ OCR failed. Please try another image or paste text manually.';
+                progressElement.style.background = 'var(--error-bg)';
+                progressElement.style.borderColor = 'var(--error-border)';
+            }
+        }
+
+        // ========== 文件上傳處理 ==========
+        function setupFileUploads() {
+            // Level 1 主文件上傳
+            const mainFileUpload = document.getElementById('file-upload-main');
+            const mainProgress = document.getElementById('ocr-progress-main');
+            const mainTextarea = document.getElementById('input-text');
+            
+            mainFileUpload.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (file.type.startsWith('image/')) {
+                    await performOCR(file, mainProgress, mainTextarea);
+                } else if (file.type === 'text/plain') {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        mainTextarea.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                } else if (file.type === 'application/pdf') {
+                    mainProgress.style.display = 'block';
+                    mainProgress.innerHTML = '📄 Processing PDF...';
+                    
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const typedarray = new Uint8Array(e.target.result);
+                            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                            let fullText = '';
+                            
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                const pageText = textContent.items.map(item => item.str).join(' ');
+                                fullText += pageText + '\n\n';
+                            }
+                            
+                            mainTextarea.value = fullText.trim();
+                            mainProgress.innerHTML = '✅ PDF processed successfully!';
+                            
+                            setTimeout(() => {
+                                mainProgress.style.display = 'none';
+                            }, 3000);
+                        } catch (error) {
+                            mainProgress.innerHTML = '❌ PDF processing failed.';
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            });
+
+            // Level 2 主題文件上傳
+            const topicFileUpload = document.getElementById('file-upload-topic');
+            const topicProgress = document.getElementById('ocr-progress-topic');
+            const topicTextarea = document.getElementById('topic-text');
+            
+            topicFileUpload.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (file.type.startsWith('image/')) {
+                    await performOCR(file, topicProgress, topicTextarea);
+                } else if (file.type === 'text/plain') {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        topicTextarea.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        // ========== 根據評分標準計算分數 ==========
+        function calculateScoresBasedOnRubric(originalText) {
+            if (!rubricData) return null;
+            
+            const wordCount = originalText.split(/\s+/).filter(word => word.length > 0).length;
+            
+            // 根據評分標準計算每個項目的分數
+            const scores = {
+                essayStructure: calculateEssayStructureScore(wordCount),
+                coherenceCohesion: calculateCoherenceScore(originalText),
+                grammarAccuracy: calculateGrammarScore(originalText),
+                vocabularyRange: calculateVocabularyScore(originalText)
+            };
+            
+            // 字數扣分
+            let wordCountPenalty = 0;
+            if (wordCount < 120) {
+                wordCountPenalty = 2;
+            }
+            
+            // 總分計算 (各5分，總分20分)
+            const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0) - wordCountPenalty;
+            
+            return {
+                essayStructure: scores.essayStructure,
+                coherenceCohesion: scores.coherenceCohesion,
+                grammarAccuracy: scores.grammarAccuracy,
+                vocabularyRange: scores.vocabularyRange,
+                wordCount: wordCount,
+                wordCountPenalty: wordCountPenalty,
+                total: Math.max(0, totalScore).toFixed(1)
+            };
+        }
+
+        function calculateEssayStructureScore(wordCount) {
+            if (wordCount < 120) return 1;
+            if (wordCount <= 150) return 2;
+            if (wordCount <= 200) return 3;
+            if (wordCount <= 300) return 4;
+            return 5;
+        }
+
+        function calculateCoherenceScore(text) {
+            // 簡單的連貫性評估
+            const transitionWords = ['however', 'therefore', 'moreover', 'furthermore', 'consequently', 'additionally'];
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const transitionCount = transitionWords.reduce((count, word) => {
+                return count + (text.toLowerCase().split(word).length - 1);
+            }, 0);
+            
+            const transitionRatio = transitionCount / sentences.length;
+            
+            if (transitionRatio < 0.1) return 2;
+            if (transitionRatio < 0.2) return 3;
+            if (transitionRatio < 0.3) return 4;
+            return 5;
+        }
+
+        function calculateGrammarScore(text) {
+            // 簡單的語法錯誤評估
+            const commonErrors = [
+                /\b(he|she|it) (go|eat|see)\b/gi, // 第三人稱單數錯誤
+                /\b(I|you|we|they) (goes|eats|sees)\b/gi, // 動詞形式錯誤
+                /\b(are|is) (go|eat|see)\b/gi, // be動詞後接原形動詞
+                /\b(have|has) (go|eat|see)\b/gi  // have/has 後接原形動詞
+            ];
+            
+            let errorCount = 0;
+            commonErrors.forEach(pattern => {
+                const matches = text.match(pattern);
+                if (matches) errorCount += matches.length;
+            });
+            
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const errorRatio = errorCount / sentences.length;
+            
+            if (errorRatio > 0.3) return 1;
+            if (errorRatio > 0.2) return 2;
+            if (errorRatio > 0.1) return 3;
+            if (errorRatio > 0.05) return 4;
+            return 5;
+        }
+
+        function calculateVocabularyScore(text) {
+            // 簡單的詞彙多樣性評估
+            const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+            const uniqueWords = new Set(words);
+            const diversityRatio = uniqueWords.size / words.length;
+            
+            if (diversityRatio < 0.3) return 2;
+            if (diversityRatio < 0.4) return 3;
+            if (diversityRatio < 0.5) return 4;
+            return 5;
+        }
+
+        // ========== 分析寫作功能 ==========
+        function analyzeWriting() {
+            const originalText = document.getElementById('input-text').value.trim();
+            
+            if (!originalText) {
+                alert('Please enter some text to analyze.');
+                return;
+            }
+            
+            const scores = calculateScoresBasedOnRubric(originalText);
+            
+            if (!scores) {
+                alert('Rubric data not loaded. Please try again.');
+                return;
+            }
+            
+            const output = document.getElementById('output');
+            output.innerHTML = `
+                <div class="scores-block">
+                    <strong>📊 Writing Assessment Results (Based on Rubric):</strong>
+                    <ul>
+                        <li>Essay Structure: ${scores.essayStructure}/5</li>
+                        <li>Coherence & Cohesion: ${scores.coherenceCohesion}/5</li>
+                        <li>Grammar Accuracy: ${scores.grammarAccuracy}/5</li>
+                        <li>Vocabulary Range & Precision: ${scores.vocabularyRange}/5</li>
+                        <li>Word Count: ${scores.wordCount} words
+                            ${scores.wordCountPenalty > 0 ? 
+                                `<span class="word-count-warning">(-${scores.wordCountPenalty} penalty for under 120 words)</span>` : 
+                                ''}
+                        </li>
+                        <li><strong>Total Score: ${scores.total}/20</strong></li>
+                    </ul>
+                </div>
+                <div class="feedback">
+                    <strong>💡 Feedback:</strong><br>
+                    ${generateRubricFeedback(scores, originalText)}
+                </div>
+            `;
+        }
+
+        function analyzeTopic() {
+            const originalText = document.getElementById('topic-text').value.trim();
+            
+            if (!originalText) {
+                alert('Please enter some text to analyze.');
+                return;
+            }
+            
+            const scores = calculateScoresBasedOnRubric(originalText);
+            
+            if (!scores) {
+                alert('Rubric data not loaded. Please try again.');
+                return;
+            }
+            
+            const output = document.getElementById('topic-output');
+            output.innerHTML = `
+                <div class="scores-block">
+                    <strong>📊 Topic Writing Assessment Results (Based on Rubric):</strong>
+                    <ul>
+                        <li>Essay Structure: ${scores.essayStructure}/5</li>
+                        <li>Coherence & Cohesion: ${scores.coherenceCohesion}/5</li>
+                        <li>Grammar Accuracy: ${scores.grammarAccuracy}/5</li>
+                        <li>Vocabulary Range & Precision: ${scores.vocabularyRange}/5</li>
+                        <li>Word Count: ${scores.wordCount} words
+                            ${scores.wordCountPenalty > 0 ? 
+                                `<span class="word-count-warning">(-${scores.wordCountPenalty} penalty for under 120 words)</span>` : 
+                                ''}
+                        </li>
+                        <li><strong>Total Score: ${scores.total}/20</strong></li>
+                    </ul>
+                </div>
+                <div class="feedback">
+                    <strong>💡 Feedback:</strong><br>
+                    ${generateRubricFeedback(scores, originalText)}
+                </div>
+            `;
+        }
+
+        function generateRubricFeedback(scores, text) {
+            const feedbacks = [];
+            
+            // 根據評分標準提供具體反饋
+            if (scores.essayStructure <= 2) {
+                feedbacks.push("Focus on developing a clear structure with introduction, body paragraphs, and conclusion.");
+            } else if (scores.essayStructure <= 3) {
+                feedbacks.push("Your structure is adequate but could be improved with clearer organization.");
+            }
+            
+            if (scores.coherenceCohesion <= 2) {
+                feedbacks.push("Use more transition words to connect your ideas smoothly.");
+            } else if (scores.coherenceCohesion <= 3) {
+                feedbacks.push("Try to improve the flow between sentences and paragraphs.");
+            }
+            
+            if (scores.grammarAccuracy <= 2) {
+                feedbacks.push("Review basic grammar rules, especially verb tenses and subject-verb agreement.");
+            } else if (scores.grammarAccuracy <= 3) {
+                feedbacks.push("Pay attention to grammar accuracy to improve clarity.");
+            }
+            
+            if (scores.vocabularyRange <= 2) {
+                feedbacks.push("Expand your vocabulary and use more precise word choices.");
+            } else if (scores.vocabularyRange <= 3) {
+                feedbacks.push("Try to use more varied vocabulary to express your ideas.");
+            }
+            
+            if (scores.wordCountPenalty > 0) {
+                feedbacks.push("Your essay is too short. Aim for at least 120 words to fully develop your ideas.");
+            }
+            
+            if (feedbacks.length === 0) {
+                feedbacks.push("Excellent work! Your writing demonstrates good structure, coherence, grammar, and vocabulary.");
+            }
+            
+            return feedbacks.join(' ');
+        }
+
+        // ========== 載入評分標準到提示區域 ==========
+        function loadRubric() {
+            const rubricReminder = document.getElementById('rubric-reminder');
+            if (!rubricData) return;
+            
+            let rubricHTML = '<h3>Writing Rubric</h3>';
+            rubricData.forEach(criteria => {
+                rubricHTML += `
+                    <div style="margin-bottom: 15px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px;">
+                        <strong>${criteria.Criteria}:</strong>
+                        <div style="font-size: 0.85em; margin-top: 5px;">
+                            <div>1 pt: ${criteria['1 Point']}</div>
+                            <div>2 pts: ${criteria['2 Points']}</div>
+                            <div>3 pts: ${criteria['3 Points']}</div>
+                            <div>4 pts: ${criteria['4 Points']}</div>
+                            <div>5 pts: ${criteria['5 Points']}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            rubricReminder.innerHTML = rubricHTML;
+        }
+
+        function toggleRubric() {
+            const rubricReminder = document.getElementById('rubric-reminder');
+            if (rubricReminder.style.display === 'none') {
+                rubricReminder.style.display = 'block';
+            } else {
+                rubricReminder.style.display = 'none';
+            }
+        }
+
         // ========== 翻頁共用函數 ==========
         function createPageViewer(containerId, baseUrl, totalPages, pageType) {
             let currentPage = 1;
@@ -740,7 +1138,6 @@
                     </div>
                 `;
                 
-                // 按鈕事件
                 document.getElementById('prev-btn').onclick = () => {
                     if (currentPage > 1) {
                         currentPage--;
@@ -757,7 +1154,6 @@
                     }
                 };
                 
-                // 滑動手勢支援
                 const flipContainer = document.getElementById(`${pageType}-flip-container`);
                 if (flipContainer) {
                     let startX = 0;
@@ -801,25 +1197,29 @@
         }
 
         // ========== 功能函數 ==========
-        function loadWritingMaterials() {
-            const container = document.getElementById('writing-materials');
-            container.innerHTML = `
-                <div class="materials-grid">
-                    <div class="material-card" onclick="enterSection('writing-tips-menu-section')">
-                        <h4>Writing Tips & Guidelines</h4>
-                        <p>Click to explore writing gists and genres.</p>
-                    </div>
-                    <div class="material-card" onclick="enterSection('model-essays-section')">
-                        <h4>Model Essays</h4>
-                        <p>Click to browse sample essays and past papers.</p>
-                    </div>
-                    <div class="material-card">
-                        <h4>Idea Bank / Writing Materials (coming soon)</h4>
-                        <p>Collect interesting ideas, vocabulary, or prompts for students.</p>
-                    </div>
-                </div>
-            `;
-        }
+      function loadWritingMaterials() {
+    const container = document.getElementById('writing-materials');
+    container.innerHTML = `
+        <div class="materials-grid">
+            <div class="material-card" onclick="enterSection('writing-tips-menu-section')">
+                <h4>Writing Tips & Guidelines</h4>
+                <p>Click to explore writing gists and genres.</p>
+            </div>
+            <div class="material-card" onclick="enterSection('model-essays-section')">
+                <h4>Model Essays</h4>
+                <p>Click to browse sample essays and past papers.</p>
+            </div>
+            <div class="material-card" onclick="window.open('https://ducj-creator.github.io/Shirley-AI-Writing/idea%20bank/index.html', '_blank')">
+                <h4>GSAT Topic Writing</h4>
+                <p>Explore GSAT writing topics and practice materials.</p>
+            </div>
+            <div class="material-card">
+                <h4>More Writing Materials (coming soon)</h4>
+                <p>Collect interesting ideas, vocabulary, or prompts for students.</p>
+            </div>
+        </div>
+    `;
+}
 
         // ========== Writing Gists ==========
         function renderWritingGists() {
@@ -949,17 +1349,13 @@
             detectTotalPages();
         }
 
-        // ========== 原始其他函數（略）==========
-        function toggleRubric() { }
-        function analyzeWriting() { alert('Analysis triggered (mock)'); }
+        // ========== 原始其他函數 ==========
         function printDrafts() { }
-        function analyzeTopic() { }
         function generateReferenceEssay() { }
         function useVersionAsCurrent() { }
         function useTopicVersionAsCurrent() { }
         function printTopicDrafts() { }
         function initTopicCategories() { }
-        function loadRubric() { }
 
         // ========== 全域暴露 ==========
         window.enterSection = enterSection;
@@ -977,10 +1373,14 @@
         window.renderGenreImages = renderGenreImages;
         window.renderGsatPapers = renderGsatPapers;
 
-        // Init
-        loadWritingMaterials();
-        loadRubric();
-        initTopicCategories();
+        // ========== 初始化 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            parseRubricData(); // 解析評分標準
+            loadWritingMaterials();
+            loadRubric(); // 載入評分標準到提示區域
+            initTopicCategories();
+            setupFileUploads();
+        });
     </script>
 </body>
 </html>
