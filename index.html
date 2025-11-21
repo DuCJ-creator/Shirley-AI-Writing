@@ -415,16 +415,31 @@
             margin: 8px 0;
             font-size: 0.9em;
         }
+        .language-selector {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: #fffdf8;
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        .language-selector label {
+            margin-right: 10px;
+            font-weight: 600;
+            color: var(--accent-dark);
+        }
+        .language-selector select {
+            width: auto;
+            margin: 0;
+            padding: 4px 8px;
+        }
 
        /* ✅ 列印：用 class 控制隱藏，支援 iPad Safari */
 @media print {
-    /* 1. 所有標成 no-print / no-print-temp 的元素在列印時都隱藏 */
     .no-print,
     .no-print-temp {
         display: none !important;
     }
-
-    /* 2. 讓報告本身正常佈局即可（不強制 position:absolute，避免 Safari 異常） */
     #printable-drafts {
         display: block;
         width: 100%;
@@ -433,8 +448,6 @@
         box-sizing: border-box;
         background: #ffffff;
     }
-
-    /* 3. 每一份版本報告獨立一頁 */
     .printable {
         page-break-after: always;
     }
@@ -491,6 +504,14 @@
                 <div id="rubric-reminder" class="rubric-reminder" style="display:none;">
                     <h3>Rubric Reminder (for all drafts)</h3>
                     <p>Loading rubric...</p>
+                </div>
+                <div class="language-selector">
+                    <label for="language-select">OCR Language:</label>
+                    <select id="language-select">
+                        <option value="eng">English</option>
+                        <option value="chi_tra">繁體中文</option>
+                        <option value="chi_sim">简体中文</option>
+                    </select>
                 </div>
                 <div class="prompt-row">
                     <div class="prompt-main">
@@ -686,11 +707,16 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // LanguageTool API
+        // LanguageTool API - 支援繁體中文
         async function checkWithLanguageTool(text) {
             const params = new URLSearchParams();
             params.append('text', text);
-            params.append('language', 'en-US');
+            
+            // 檢測文字語言
+            const containsChinese = /[\u4e00-\u9fff]/.test(text);
+            const language = containsChinese ? 'zh-TW' : 'en-US';
+            
+            params.append('language', language);
             const res = await fetch('https://api.languagetool.org/v2/check', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -743,14 +769,28 @@
             if (!promptOrTopic) {
                 return { coverage: 1, matchedKeywords: [], totalKeywords: 0 };
             }
-            const lowerPrompt = promptOrTopic.toLowerCase();
-            const keywordCandidates = lowerPrompt.match(/[a-z]{4,}/g) || [];
+            
+            // 支援中英文關鍵詞提取
+            const containsChinese = /[\u4e00-\u9fff]/.test(promptOrTopic);
+            
+            let keywordCandidates = [];
+            if (containsChinese) {
+                // 中文關鍵詞提取：提取2個字符以上的中文字詞
+                keywordCandidates = promptOrTopic.match(/[\u4e00-\u9fff]{2,}/g) || [];
+            } else {
+                // 英文關鍵詞提取
+                keywordCandidates = promptOrTopic.toLowerCase().match(/[a-z]{4,}/g) || [];
+            }
+            
             const uniqueKeywords = Array.from(new Set(keywordCandidates));
             const lowerText = text.toLowerCase();
+            const textForComparison = containsChinese ? text : lowerText;
+            
             let matched = 0;
             const matchedWords = [];
             uniqueKeywords.forEach(w => {
-                if (lowerText.includes(w)) {
+                const searchWord = containsChinese ? w : w.toLowerCase();
+                if (textForComparison.includes(searchWord)) {
                     matched++;
                     matchedWords.push(w);
                 }
@@ -1126,15 +1166,18 @@
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
 
-        // ✅ 強化版 OCR：對 image 先放大＋灰階＋提高對比，再丟給 Tesseract
+        // ✅ 強化版 OCR：支援繁體中文
         async function performOCR(file, progressElement, targetTextarea) {
             if (!file) return;
+            
+            const languageSelect = document.getElementById('language-select');
+            const selectedLanguage = languageSelect ? languageSelect.value : 'eng';
             
             progressElement.style.display = 'block';
             progressElement.innerHTML = '🔄 Starting OCR...';
             
             try {
-                const worker = await Tesseract.createWorker('eng', 1, {
+                const worker = await Tesseract.createWorker(selectedLanguage, 1, {
                     logger: m => {
                         if (m.status === 'recognizing text') {
                             progressElement.innerHTML = `🔍 Recognizing text... ${Math.round(m.progress * 100)}%`;
@@ -1146,6 +1189,7 @@
                 
                 const { data: { text } } = await worker.recognize(file);
                 
+                // 清理文字
                 const cleanedText = text
                     .replace(/\n\s*\n/g, '\n\n')
                     .replace(/[^\S\r\n]+/g, ' ')
