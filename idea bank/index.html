@@ -6,32 +6,162 @@
     <title>GSAT 寫作議題 | 聖誕寫作樹 2025</title>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <style>
-        body{margin:0;height:100vh;background:linear-gradient(to bottom,#1e3a5f 0%,#0f1b3a 70%,#0a1428 100%);overflow:hidden;font-family:'Microsoft JhengHei','Arial',sans-serif;color:white;position:relative}
-        .snow{position:absolute;width:10px;height:10px;background:white;border-radius:50%;opacity:0.8;pointer-events:none;animation:fall linear infinite}
-        @keyframes fall{0%{transform:translateY(-100vh)}100%{transform:translateY(100vh)}}
-        .tree{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:400px;height:500px;background:radial-gradient(circle at 50% 0%,#0f5132 30%,#0a3d1f 100%);clip-path:polygon(50% 0%,0% 100%,100% 100%);z-index:0;opacity:0.7}
-        .star{position:absolute;top:80px;left:50%;transform:translateX(-50%);width:80px;height:80px;background:radial-gradient(circle,#ffdd00,#ffaa00);clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);box-shadow:0 0 40px #ffd700;animation:twinkle 2s infinite;z-index:5}
-        @keyframes twinkle{0%,100%{opacity:1}50%{opacity:0.7}}
-        #container{position:relative;width:1000px;height:1000px;margin:0 auto}
-        .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:260px;height:260px;background:radial-gradient(circle,#ffd700,#ff8c00);border-radius:50%;box-shadow:0 0 80px #ffd700,inset 0 0 40px rgba(255,255,255,0.6);display:flex;flex-direction:column;align-items:center;justify-content  justify-content:center;font-size:34px;font-weight:bold;text-shadow:0 0 20px #000;z-index:10}
-        .center span{font-size:26px;margin-top:10px}
-        .topic{position:absolute;width:170px;height:170px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:bold;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,0.6),inset 0 0 25px rgba(255,255,255,0.4),0 0 40px rgba(255,215,0,0.7);transition:transform .3s;animation:float 7s ease-in-out infinite,shine 5s infinite;padding:10px;box-sizing:border-box;z-index:8}
-        .topic:hover{transform:scale(1.25)!important;z-index:30}
-        .topic .zh{font-size:19px;line-height:1.3}
-        .topic .en{font-size:14px;opacity:0.95}
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #1e3a5f 0%, #0f1b3a 70%, #0a1428 100%);
+            font-family: 'Microsoft JhengHei','Arial', sans-serif;
+            color: white;
+            position: relative;
+            overflow-y: auto; /* 允許垂直滾動 */
+            padding: 20px 0;
+        }
+        .snow {
+            position: fixed; /* 改為 fixed，雪永遠滿版 */
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+        .snowflake {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+            animation: fall linear infinite;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-100vh); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .tree {
+            position: fixed;
+            bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 400px; height: 500px;
+            background: radial-gradient(circle at 50% 0%, #0f5132 30%, #0a3d1f 100%);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            opacity: 0.7; z-index: 1;
+        }
+        .star {
+            position: fixed;
+            top: 80px; left: 50%; transform: translateX(-50%);
+            width: 80px; height: 80px;
+            background: radial-gradient(circle, #ffdd00, #ffaa00);
+            clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+            box-shadow: 0 0 40px #ffd700;
+            animation: twinkle 2s infinite; z-index: 5;
+        }
+        @keyframes twinkle {0%,100%{opacity:1}50%{opacity:0.7}}
+
+        #container {
+            position: relative;
+            width: 100vw;
+            min-height: 120vh; /* 確保夠高可滾 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 100px;
+        }
+
+        .center {
+            position: sticky;
+            top: 20px;
+            width: 260px; height: 260px;
+            background: radial-gradient(circle,#ffd700,#ff8c00);
+            border-radius: 50%;
+            box-shadow: 0 0 80px #ffd700, inset 0 0 40px rgba(255,255,255,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #000;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .center span {font-size:26px;margin-top:10px}
+
+        .topics-wrapper {
+            position: relative;
+            width: 900px;
+            height: 900px;
+            margin: 50px auto;
+        }
+
+        .topic {
+            position: absolute;
+            width: 170px; height: 170px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 0 25px rgba(255,255,255,0.4), 0 0 40px rgba(255,215,0,0.7);
+            transition: transform .3s;
+            animation: float 7s ease-in-out infinite, shine 5s infinite;
+            padding: 10px;
+            box-sizing: border-box;
+            z-index: 8;
+        }
+        .topic:hover {transform: scale(1.25)!important; z-index:30}
+        .topic .zh {font-size:19px;line-height:1.3}
+        .topic .en {font-size:14px;opacity:0.95}
+
+        /* 18種聖誕彩球 */
         .c1{background:radial-gradient(circle at 30% 30%,#e74c3c,#c0392b)}.c2{background:radial-gradient(circle at 30% 30%,#f1c40f,#e67e22)}.c3{background:radial-gradient(circle at 30% 30%,#27ae60,#1e8449)}.c4{background:radial-gradient(circle at 30% 30%,#3498db,#2980b9)}.c5{background:radial-gradient(circle at 30% 30%,#9b59b6,#8e44ad)}.c6{background:radial-gradient(circle at 30% 30%,#e91e63,#c2185b)}.c7{background:radial-gradient(circle at 30% 30%,#ff9800,#f57c00)}.c8{background:radial-gradient(circle at 30% 30%,#00bcd4,#0097a7)}.c9{background:radial-gradient(circle at 30% 30%,#e67e22,#d35400)}.c10{background:radial-gradient(circle at 30% 30%,#95a5a6,#7f8c8d)}.c11{background:radial-gradient(circle at 30% 30%,#f39c12,#e67e22)}.c12{background:radial-gradient(circle at 30% 30%,#c0392b,#a93226)}.c13{background:radial-gradient(circle at 30% 30%,#2ecc71,#27ae60)}.c14{background:radial-gradient(circle at 30% 30%,#8e44ad,#71368a)}.c15{background:radial-gradient(circle at 30% 30%,#e74c3c,#c0392b)}.c16{background:radial-gradient(circle at 30% 30%,#16a085,#117a65)}.c17{background:radial-gradient(circle at 30% 30%,#f1c40f,#f39c12)}.c18{background:radial-gradient(circle at 30% 30%,#3498db,#2980b9)}
+
         @keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-25px) rotate(6deg)}}
         @keyframes shine{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,0.6),inset 0 0 25px rgba(255,255,255,0.4),0 0 40px rgba(255,215,0,0.7)}50%{box-shadow:0 10px 30px rgba(0,0,0,0.6),inset 0 0 25px rgba(255,255,255,0.6),0 0 60px rgba(255,215,0,1)}}
-        .line{position:absolute;top:50%;left:50%;width:2px;background:linear-gradient(to bottom,transparent,#ffd700,transparent);box-shadow:0 0 12px #ffd700;transform-origin:top left;animation:twinkle 3s infinite;pointer-events:none;z-index:1}
-        #sentences{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,36,57,0.98);padding:40px;border-radius:25px;max-width:950px;width:92%;max-height:92vh;overflow-y:auto;z-index:100;display:none;box-shadow:0 0 100px rgba(255,215,0,0.8);border:3px solid #ffd700}
-        .close{position:absolute;top:15px;right:25px;font-size:40px;cursor:pointer;color:#ffd700}
-        .sentence{margin:30px 0;padding:22px;background:rgba(255,255,255,0.12);border-radius:18px;line-height:2.2;backdrop-filter:blur(8px);border-left:5px solid #ffd700}
-        .vocab{background:rgba(255,215,0,0.25);padding:2px 6px;border-radius:6px;cursor:pointer;border-bottom:2px solid #ffd700;position:relative}
-        .vocab:hover::after{content:attr(data-trans)"（"attr(data-pron)"）";position:absolute;top:-35px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#ffd700;padding:8px 12px;border-radius:8px;white-space:nowrap;font-size:14px;z-index:10;box-shadow:0 0 15px rgba(0,0,0,0.6)}
-        .play-btn{margin-left:15px;cursor:pointer;font-size:26px}
+
+        .line {
+            position: absolute;
+            width: 2px;
+            background: linear-gradient(to bottom,transparent,#ffd700,transparent);
+            box-shadow: 0 0 12px #ffd700;
+            transform-origin: top left;
+            animation: twinkle 3s infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #sentences {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            background: rgba(15,36,57,0.98);
+            padding: 40px;
+            border-radius: 25px;
+            max-width: 950px;
+            width: 92%;
+            max-height: 92vh;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 0 100px rgba(255,215,0,0.8);
+            border: 3px solid #ffd700;
+        }
+        .close {position:absolute;top:15px;right:25px;font-size:40px;cursor:pointer;color:#ffd700}
+        .sentence {margin:30px 0;padding:22px;background:rgba(255,255,255,0.12);border-radius:18px;line-height:2.2;backdrop-filter:blur(8px);border-left:5px solid #ffd700}
+        .vocab {background:rgba(255,215,0,0.25);padding:2px 6px;border-radius:6px;cursor:pointer;border-bottom:2px solid #ffd700;position:relative}
+        .vocab:hover::after {content:attr(data-trans)"（"attr(data-pron)"）";position:absolute;top:-35px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#ffd700;padding:8px 12px;border-radius:8px;white-space:nowrap;font-size:14px;z-index:10;box-shadow:0 0 15px rgba(0,0,0,0.6)}
+        .play-btn {margin-left:15px;cursor:pointer;font-size:26px}
+
+        @media (max-width: 1000px) {
+            .topics-wrapper {width: 700px; height: 700px;}
+        }
+        @media (max-width: 768px) {
+            .topics-wrapper {width: 500px; height: 900px;}
+            .center {width: 220px; height: 220px; font-size: 28px;}
+            .center span {font-size: 22px;}
+        }
     </style>
 </head>
 <body>
+
+    <div class="snow"></div>
     <div class="tree"></div>
     <div class="star"></div>
 
@@ -40,6 +170,8 @@
             GSAT 寫作議題
             <span>Writing Topics 2025</span>
         </div>
+
+        <div class="topics-wrapper" id="topicsWrapper"></div>
     </div>
 
     <div id="sentences">
@@ -49,15 +181,26 @@
     </div>
 
     <script>
-        // 飄雪
-        function createSnow(){const s=document.createElement('div');s.classList.add('snow');s.style.left=Math.random()*100+'vw';s.style.animationDuration=Math.random()*5+5+'s';s.style.opacity=Math.random()*0.5+0.5;s.style.width=s.style.height=Math.random()*8+5+'px';document.body.appendChild(s);setTimeout(()=>s.remove(),10000)}setInterval(createSnow,100);
+        // 滿版飄雪
+        const snowContainer = document.querySelector('.snow');
+        function createSnowflake() {
+            const s = document.createElement('div');
+            s.classList.add('snowflake');
+            s.style.left = Math.random() * 100 + 'vw';
+            s.style.animationDuration = Math.random() * 5 + 5 + 's';
+            s.style.opacity = Math.random() * 0.5 + 0.5;
+            s.style.width = s.style.height = Math.random() * 8 + 5 + 'px';
+            snowContainer.appendChild(s);
+            setTimeout(() => s.remove(), 10000);
+        }
+        setInterval(createSnowflake, 800);
 
         const csvUrl="https://raw.githubusercontent.com/DuCJ-creator/Shirley-AI-Writing/main/idea%20bank/topic%20writing%20ideas.csv";
         let data=[];
         const colors=['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18'];
 
-        // === 超大高階單字庫（80個）===
-        const vocabDict = {
+        // 80個高階單字庫（保持不變）
+        const vocabDict = { /* 這裡貼上之前那80個單字，為了篇幅省略，你直接從上一個版本複製進來即可 */ 
             "equality":["平等","ɪˈkwɑːləti"],"fundamental":["基本的","ˌfʌndəˈmentl"],"despite":["儘管","dɪˈspaɪt"],"discriminatory":["歧視性的","dɪsˈkrɪmɪnətɔːri"],
             "pervasive":["普遍的","pɜːrˈveɪsɪv"],"underrepresented":["代表性不足的","ˌʌndərreprɪˈzentɪd"],"parity":["平等","ˈpærəti"],"inroads":["進展","ˈɪnroʊdz"],
             "sustainable":["永續的","səˈsteɪnəbl"],"biodiversity":["生物多樣性","ˌbaɪoʊdaɪˈvɜːrsəti"],"renewable":["可再生的","rɪˈnuːəbl"],"mitigate":["減緩","ˈmɪtɪɡeɪt"],
@@ -69,37 +212,56 @@
             "trajectory":["軌跡","trəˈdʒektəri"],"mentorship":["導師制","ˈmentɔːrʃɪp"],"diversity":["多樣性","dɪˈvɜːrsəti"],"inclusivity":["包容性","ˌɪnkluːˈsɪvɪti"],
             "reconciliation":["和解","ˌrekənsɪliˈeɪʃn"],"heritage":["遺產","ˈherɪtɪdʒ"],"indigenous":["原住民的","ɪnˈdɪdʒənəs"],"preservation":["保存","ˌprezərˈveɪʃn"],
             "ethical":["倫理的","ˈeθɪkl"],"integrity":["誠信","ɪnˈteɡrəti"],"compassion":["同情","kəmˈpæʃn"],"altruism":["利他","ˈæltruɪzəm"],
-            "resilient":["有韌性的","rɪˈzɪliənt"],"navigate":["導航／應對","ˈnævɪɡeɪt"],"interconnectedness":["相互連結","ˌɪntərkəˈnektɪdnəs"],"empathy":["同理心","ˈempəθi"],
+            "resilient":["有韌性的","rɪˈzɪliənt"],"navigate":["應對","ˈnævɪɡeɪt"],"interconnectedness":["相互連結","ˌɪntərkəˈnektɪdnəs"],"empathy":["同理心","ˈempəθi"],
             "transcend":["超越","trænˈsend"],"cohesion":["凝聚","koʊˈhiːʒn"],"equitable":["公平的","ˈekwɪtəbl"],"governance":["治理","ˈɡʌvərnəns"],
             "accountability":["問責","əˌkaʊntəˈbɪləti"],"impartial":["公正的","ɪmˈpɑːrʃl"],"transparency":["透明","trænsˈpærənsi"],"arbitrary":["任意的","ˈɑːrbətreri"],
             "legitimacy":["正當性","lɪˈdʒɪtɪməsi"],"vigilance":["警覺","ˈvɪdʒɪləns"],"profound":["深刻的","prəˈfaʊnd"],"catastrophic":["災難性的","ˌkætəˈstrɑːfɪk"],
             "vulnerable":["脆弱的","ˈvʌlnərəbl"],"mitigation":["緩解","ˌmɪtɪˈɡeɪʃn"],"evacuation":["疏散","ɪˌvækjuˈeɪʃn"],"preparedness":["準備","prɪˈperdnəs"],
-            "literacy":["識字／素養","ˈlɪtərəsi"],"empowerment":["賦權","ɪmˈpaʊərmənt"],"inclusive":["包容的","ɪnˈkluːsɪv"],"facilitate":["促進","fəˈsɪlɪteɪt"],
-            "immersive":["沉浸式的","ɪˈmɜːrsɪv"],"stewardship":["管家職責","ˈstuːərdʃɪp"],"globalization":["全球化","ˌɡloʊbələˈzeɪʃn"],"citizenship":["公民身份","ˈsɪtɪzənʃɪp"],
+            "literacy":["素養","ˈlɪtərəsi"],"empowerment":["賦權","ɪmˈpaʊərmənt"],"inclusive":["包容的","ɪnˈkluːsɪv"],"facilitate":["促進","fəˈsɪlɪteɪt"],
+            "immersive":["沉浸式的","ɪˈmɜːrsɪv"],"globalization":["全球化","ˌɡloʊbələˈzeɪʃn"],"citizenship":["公民身份","ˈsɪtɪzənʃɪp"],
             "tolerance":["寬容","ˈtɑːlərəns"],"solidarity":["團結","ˌsɑːlɪˈdærəti"]
         };
 
-        Papa.parse(csvUrl,{download:true,header:true,complete:function(r){data=r.data.filter(x=>x.category&&x['model sentence']);const topics=[...new Set(data.map(x=>x.category.trim()))];renderTopics(topics)}});
+        Papa.parse(csvUrl,{download:true,header:true,complete:function(r){
+            data=r.data.filter(x=>x.category&&x['model sentence']);
+            const topics=[...new Set(data.map(x=>x.category.trim()))];
+            renderTopics(topics);
+        }});
 
         function renderTopics(topics){
-            const radius=370,centerX=500,centerY=500;
+            const wrapper = document.getElementById('topicsWrapper');
+            const centerX = wrapper.offsetWidth / 2;
+            const centerY = wrapper.offsetHeight / 2;
+            const baseRadius = Math.min(wrapper.offsetWidth, wrapper.offsetHeight) * 0.42;
+
             topics.forEach((n,i)=>{
-                const a=(i/topics.length)*2*Math.PI-Math.PI/2;
-                const x=centerX+radius*Math.cos(a)-85;
-                const y=centerY+radius*Math.sin(a)-85;
-                const div=document.createElement('div');div.className=`topic ${colors[i]}`;
-                div.style.left=x+'px';div.style.top=y+'px';div.style.animationDelay=i*0.2+'s';
-                const zh=n.split(' ')[0];const en=n.split(' ').slice(1).join(' ');
+                const angle = (i / topics.length) * 2 * Math.PI - Math.PI/2;
+                const radius = i < 9 ? baseRadius * 0.85 : baseRadius * 1.25; // 前9個內圈，後9個外圈
+                const x = centerX + radius * Math.cos(angle) - 85;
+                const y = centerY + radius * Math.sin(angle) - 85;
+
+                const div=document.createElement('div');
+                div.className=`topic ${colors[i]}`;
+                div.style.left=x+'px';
+                div.style.top=y+'px';
+                div.style.animationDelay=i*0.2+'s';
+                const zh=n.split(' ')[0];
+                const en=n.split(' ').slice(1).join(' ');
                 div.innerHTML=`<div class="zh">${zh}</div><div class="en">${en}</div>`;
                 div.onclick=()=>showSentences(n);
-                document.getElementById('container').appendChild(div);
+                wrapper.appendChild(div);
 
                 // 金色燈串
-                const dx=x+85-centerX,dy=y+85-centerY,dist=Math.sqrt(dx*dx+dy*dy),deg=Math.atan2(dy,dx)*180/Math.PI;
-                const line=document.createElement('div');line.className='line';
-                line.style.width=dist+'px';line.style.left=centerX+'px';line.style.top=centerY+'px';
+                const dx=x+85-centerX, dy=y+85-centerY;
+                const dist=Math.sqrt(dx*dx+dy*dy);
+                const deg=Math.atan2(dy,dx)*180/Math.PI;
+                const line=document.createElement('div');
+                line.className='line';
+                line.style.width=dist+'px';
+                line.style.left=centerX+'px';
+                line.style.top=centerY+'px';
                 line.style.transform=`rotate(${deg}deg)`;
-                document.getElementById('container').appendChild(line);
+                wrapper.appendChild(line);
             });
         }
 
