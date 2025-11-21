@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shirley's AI Writing Coach</title>
-    <!-- diff / csv parser -->
+    <!-- diff / csv parser（全域掛在 window） -->
     <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <!-- OCR / PDF / DOCX -->
@@ -13,7 +13,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
-        /* ===== 所有原有 style 完全保留 ===== */
         :root {
             --bg-main: #f6efe5;
             --bg-card: #fbf7f0;
@@ -280,30 +279,25 @@
             border: 1px solid var(--border-soft);
             border-radius: 12px;
             padding: 12px;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            cursor: pointer;
         }
-        .material-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-        }
-        .material-card h4 {
-            margin-top: 0;
-            color: var(--accent-dark);
-        }
+        .material-card h4 { margin-top: 0; }
         #printable-drafts { display: none; }
+        /* 錯誤高亮共用基底 */
         .err {
             background: #ffeaa7;
             border-bottom: 2px solid #d63031;
             cursor: help;
         }
+        /* 不同版本的顏色（Version 1~6 循環使用） */
         .err-v1 { background: #ffeaa7; border-bottom-color: #d63031; }
         .err-v2 { background: #d1ffd6; border-bottom-color: #16a085; }
         .err-v3 { background: #d6e9ff; border-bottom-color: #2980b9; }
         .err-v4 { background: #f9d1ff; border-bottom-color: #8e44ad; }
         .err-v5 { background: #ffe6d1; border-bottom-color: #e67e22; }
         .err-v6 { background: #fff8b3; border-bottom-color: #f1c40f; }
+        /* Level 2（topic 練習）的顏色 */
         .err-topic { background: #ffd6e0; border-bottom-color: #c0392b; }
+        /* Rubric reminder block（預設收合，由按鈕開啟） */
         .rubric-reminder {
             background: #fffdf8;
             border-radius: 10px;
@@ -326,9 +320,11 @@
             font-size: 0.82em;
             padding: 6px 14px;
         }
+        /* 原本 sticky 的 class，現在只當一般容器用（取消凍結） */
         .analysis-sticky {
             position: static;
         }
+        /* 版本顏色 legend */
         .version-legend {
             margin: 4px 0 10px;
             font-size: 0.8em;
@@ -357,6 +353,7 @@
         .legend-v5 { background: #ffe6d1; border-color: #e67e22; }
         .legend-v6 { background: #fff8b3; border-color: #f1c40f; }
         .legend-topic { background: #ffd6e0; border-color: #c0392b; }
+        /* 版本標題的小彩色 badge */
         .version-chip {
             padding: 2px 8px;
             border-radius: 999px;
@@ -373,6 +370,7 @@
         .version-chip-v5 { background: #ffe9d6; border: 1px solid #e67e22; color: #8c3f09; }
         .version-chip-v6 { background: #fffad1; border: 1px solid #f1c40f; color: #8a6d1e; }
         .version-chip-ref { background: #e6e6e6; border: 1px solid #aaaaaa; color: #444; }
+        /* Prompt + 學生資訊 */
         .prompt-row {
             display: flex;
             gap: 16px;
@@ -417,20 +415,16 @@
             margin: 8px 0;
             font-size: 0.9em;
         }
-        .word-count-warning {
-            color: #e74c3c;
-            font-weight: bold;
-            background: #ffeaa7;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-left: 8px;
-        }
-       /* ✅ 列印 */
+
+       /* ✅ 列印：用 class 控制隱藏，支援 iPad Safari */
 @media print {
+    /* 1. 所有標成 no-print / no-print-temp 的元素在列印時都隱藏 */
     .no-print,
     .no-print-temp {
         display: none !important;
     }
+
+    /* 2. 讓報告本身正常佈局即可（不強制 position:absolute，避免 Safari 異常） */
     #printable-drafts {
         display: block;
         width: 100%;
@@ -439,10 +433,13 @@
         box-sizing: border-box;
         background: #ffffff;
     }
+
+    /* 3. 每一份版本報告獨立一頁 */
     .printable {
         page-break-after: always;
     }
 }
+
         @media (max-width: 900px) {
             .version-layout {
                 grid-template-columns: minmax(0, 1fr);
@@ -465,7 +462,7 @@
     </style>
 </head>
 <body>
-    <button class="back-btn" onclick="goBack()">← <span>Back</span></button>
+    <button class="back-btn" onclick="goHome()">← <span>Back to Home</span></button>
     <h1 class="title">Shirley's AI Writing Coach</h1>
     <p class="subtitle">Educational Practice & Entertainment only </p>
     <div class="disclaimer">
@@ -477,8 +474,8 @@
         <h2>Welcome! Choose Your Writing Adventure</h2>
         <p>Press a button below to enter the next level of your writing journey.</p>
         <div class="front-buttons">
-            <button class="front-btn analysis-btn" onclick="enterSection('analysis-section')">Writing Analysis Level</button>
-            <button class="front-btn gists-btn" onclick="enterSection('gists-section')">Gists for English Writing Level</button>
+            <button class="front-btn analysis-btn" onclick="enterLevel('analysis')">Writing Analysis Level</button>
+            <button class="front-btn gists-btn" onclick="enterLevel('gists')">Gists for English Writing Level</button>
         </div>
     </section>
     <!-- Level 1 -->
@@ -588,7 +585,7 @@
             </div>
         </div>
     </section>
-    <!-- Level 2: Gists 首頁 -->
+    <!-- Level 2 -->
     <section class="section" id="gists-section">
         <h2>Level 2: Shirley's Gists for English Writing</h2>
         <p>Enhance your writing skills with these resources.</p>
@@ -606,6 +603,7 @@
             <select id="topic-select">
                 <option value="">-- Please choose a topic --</option>
             </select>
+            <!-- Level 2: Prompt Image Upload -->
             <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start;">
                 <div style="flex:1; min-width:300px;">
                     <label><strong>Optional: Add an image to the topic (for inspiration)</strong></label>
@@ -660,94 +658,475 @@
             </div>
         </div>
     </section>
-    <!-- 📘 Writing Tips 子選單 -->
-    <section class="section" id="writing-tips-menu-section">
-        <h2>Writing Tips & Guidelines</h2>
-        <div class="materials-grid">
-            <div class="material-card" onclick="enterSection('writing-gists-viewer-section'); renderWritingGists();">
-                <h4>Writing Gists</h4>
-                <p>9 illustrated pages of core writing tips.</p>
-            </div>
-            <div class="material-card" onclick="enterSection('writing-genres-section'); renderWritingGenres();">
-                <h4>Writing Genres</h4>
-                <p>Explore 6 common writing types with examples.</p>
-            </div>
-        </div>
-    </section>
-    <!-- 📖 Writing Gists 翻閱器 -->
-    <section class="section" id="writing-gists-viewer-section">
-        <h2>Writing Gists</h2>
-        <div id="writing-gists-container"></div>
-    </section>
-    <!-- 📚 Writing Genres 選單 -->
-    <section class="section" id="writing-genres-section">
-        <h2>Writing Genres</h2>
-        <div id="writing-genres-container"></div>
-    </section>
-    <!-- 🖼️ Genre 圖片瀏覽器 -->
-    <section class="section" id="genre-image-viewer-section">
-        <h2 id="genre-viewer-title">Genre Examples</h2>
-        <div id="genre-viewer-container"></div>
-    </section>
-    <!-- 📘 Model Essays 選單 -->
-    <section class="section" id="model-essays-section">
-        <h2>Model Essays</h2>
-        <div class="materials-grid">
-            <div class="material-card" onclick="enterSection('gsat-viewer-section'); renderGsatPapers();">
-                <h4>GSAT Past Papers</h4>
-                <p>View past GSAT writing prompts and sample responses.</p>
-            </div>
-        </div>
-    </section>
-    <!-- 📄 GSAT Papers Viewer -->
-    <section class="section" id="gsat-viewer-section">
-        <h2>GSAT Past Papers</h2>
-        <div id="gsat-viewer-container"></div>
-    </section>
     <div id="printable-drafts"></div>
     <script>
-        // ========== 導航歷史 ==========
-        let sectionHistory = ['home-section'];
-        function enterSection(sectionId) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
-            if (sectionHistory[sectionHistory.length - 1] !== sectionId) {
-                sectionHistory.push(sectionId);
-            }
-            document.querySelector('.back-btn').classList.toggle('active', sectionId !== 'home-section');
-        }
-        function goBack() {
-            if (sectionHistory.length <= 1) {
-                sectionHistory = ['home-section'];
-                enterSection('home-section');
-                return;
-            }
-            sectionHistory.pop();
-            const prev = sectionHistory[sectionHistory.length - 1];
-            enterSection(prev);
-        }
-        // ========== 音效 ==========
-        const PAGE_TURN_SOUND = 'audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
-        
-        // ========== 評分標準 CSV 數據 ==========
-        const rubricCSV = `Criteria,1 Point,2 Points,3 Points,4 Points,5 Points
-Essay Structure,Lacks a clear structure; no logical order; fewer than 120 words.,Minimal structure; ideas are somewhat organized; 120-150 words.,Adequate structure; main points are identifiable but weakly organized; 151-200 words.,"Good structure; clear introduction, body, and conclusion; 201-300 words.",Excellent structure; logical and cohesive flow of ideas throughout; over 300 words.
-Coherence & Cohesion,Ideas are disconnected; lacks transitions.,Some coherence; few transitions used.,Moderately coherent; some transitions present.,Mostly coherent; effective use of transitions.,Highly coherent; strong connections between ideas with seamless transitions.
-Grammar Accuracy,Frequent grammatical errors hinder understanding.,Numerous errors; some impact clarity.,Several errors; clarity is mostly maintained.,Few errors; minor impact on clarity.,No grammatical errors; clear and precise expression.
-Vocabulary Range & Precision,Very limited vocabulary; inappropriate word choices.,Limited vocabulary; some inappropriate choices.,Adequate vocabulary; mostly appropriate but lacks variety.,Good vocabulary; mostly precise and varied word choices.,"Excellent vocabulary; precise, varied, and sophisticated word choices."`;
+        let currentLevel = 'home';
+        let drafts = [];
+        let rubricText = '';
+        let rubricItems = [];
+        let realDraftCount = 0;
+        let topicReport = null;
+        let promptImageBase64 = '';
+        let topicImageBase64 = '';
+        let topicDrafts = [];
+        let topicRealDraftCount = 0;
+        const topicCategories = {
+            'Descriptive Writing': ['Describe your favorite holiday.'],
+            'Personal Narrative': ['Explain a challenge you have overcome.'],
+            'Opinion / Argumentative': ['Should students use smartphones in the classroom? Give your opinion and reasons.']
+        };
 
-        let rubricData = null;
+        // ---------- Util ----------
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '<')
+                .replace(/>/g, '>')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
-        function parseRubricData() {
-            const parsed = Papa.parse(rubricCSV, {
-                header: true,
-                skipEmptyLines: true
+        // LanguageTool API
+        async function checkWithLanguageTool(text) {
+            const params = new URLSearchParams();
+            params.append('text', text);
+            params.append('language', 'en-US');
+            const res = await fetch('https://api.languagetool.org/v2/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
             });
-            rubricData = parsed.data;
-            console.log('Rubric data loaded:', rubricData);
+            if (!res.ok) throw new Error('LanguageTool error: ' + res.status);
+            return await res.json();
         }
 
-        // ========== OCR 文字識別功能 ==========
+        function findCapitalizationMatches(text) {
+            const regex = /(^|[.!?]\s+)([a-z])/g;
+            const matches = [];
+            let m;
+            while ((m = regex.exec(text)) !== null) {
+                const offset = m.index + m[1].length;
+                const length = 1;
+                const wrongChar = m[2];
+                matches.push({
+                    offset,
+                    length,
+                    replacements: [{ value: wrongChar.toUpperCase() }],
+                    message: 'Sentence should start with a capital letter.',
+                    rule: {
+                        issueType: 'grammar',
+                        description: 'Capitalization at the beginning of a sentence'
+                    }
+                });
+            }
+            return matches;
+        }
+
+        function buildCorrectedText(text, matches) {
+            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
+            let result = '';
+            let cursor = 0;
+            for (const m of sorted) {
+                const start = m.offset;
+                const end = m.offset + m.length;
+                const replacement = (m.replacements && m.replacements[0])
+                    ? m.replacements[0].value
+                    : text.slice(start, end);
+                result += text.slice(cursor, start) + replacement;
+                cursor = end;
+            }
+            result += text.slice(cursor);
+            return result;
+        }
+
+        function computePromptCoverage(text, promptOrTopic) {
+            if (!promptOrTopic) {
+                return { coverage: 1, matchedKeywords: [], totalKeywords: 0 };
+            }
+            const lowerPrompt = promptOrTopic.toLowerCase();
+            const keywordCandidates = lowerPrompt.match(/[a-z]{4,}/g) || [];
+            const uniqueKeywords = Array.from(new Set(keywordCandidates));
+            const lowerText = text.toLowerCase();
+            let matched = 0;
+            const matchedWords = [];
+            uniqueKeywords.forEach(w => {
+                if (lowerText.includes(w)) {
+                    matched++;
+                    matchedWords.push(w);
+                }
+            });
+            const coverage = uniqueKeywords.length ? matched / uniqueKeywords.length : 1;
+            return { coverage, matchedKeywords: matchedWords, totalKeywords: uniqueKeywords.length };
+        }
+
+        function buildHighlightedHtml(text, matches, highlightClass = 'err') {
+            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
+            let result = '';
+            let cursor = 0;
+            for (const m of sorted) {
+                const start = m.offset;
+                const end = m.offset + m.length;
+                const original = text.slice(start, end);
+                const tipBase = m.message || '';
+                const suggestion = (m.replacements && m.replacements[0])
+                    ? ' → ' + m.replacements[0].value
+                    : '';
+                const tip = escapeHtml(tipBase + suggestion);
+                result += escapeHtml(text.slice(cursor, start));
+                result += `<span class="${highlightClass}" title="${tip}">${escapeHtml(original)}</span>`;
+                cursor = end;
+            }
+            result += escapeHtml(text.slice(cursor));
+            return result;
+        }
+
+        function calculateScores(text, matches, options = {}) {
+            const wordTokens = text.trim().split(/\s+/).filter(Boolean);
+            const wordCount = wordTokens.length;
+            const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const sentences = sentencesArr.length || 1;
+            const paragraphs = text.split(/\n{2,}/).filter(p => p.trim().length > 0).length || 1;
+            const grammarMatches = matches.filter(m =>
+                m.rule && (m.rule.issueType === 'grammar' || m.rule.issueType === 'misspelling')
+            );
+            const spellingMatches = matches.filter(m =>
+                m.rule && m.rule.issueType === 'misspelling'
+            );
+            const styleMatches = matches.filter(m =>
+                m.rule && m.rule.issueType === 'style'
+            );
+            const errorPer100 = wordCount ? (grammarMatches.length / wordCount) * 100 : grammarMatches.length;
+            const promptOrTopic = options.prompt || options.topic || '';
+            const coverageInfo = computePromptCoverage(text, promptOrTopic);
+            const cov = coverageInfo.coverage;
+
+            let structureScore = 3;
+            if (paragraphs >= 3 && wordCount >= 120) structureScore = 5;
+            else if (paragraphs >= 3 && wordCount >= 80) structureScore = 4;
+            else if (paragraphs === 2 && wordCount >= 60) structureScore = 3;
+            else if (paragraphs === 1 && wordCount >= 40) structureScore = 2;
+            else structureScore = 1;
+
+            const linkingWords = ['however','therefore','in addition','for example','for instance','on the other hand','because','although','since','as a result'];
+            const lowerText = text.toLowerCase();
+            let linkingCount = 0;
+            linkingWords.forEach(w => {
+                if (lowerText.includes(w)) linkingCount++;
+            });
+            let coherenceScore = 3;
+            if (linkingCount >= 4) coherenceScore = 5;
+            else if (linkingCount >= 2) coherenceScore = 4;
+            else if (linkingCount === 1) coherenceScore = 3;
+            else if (linkingCount === 0 && sentences >= 5) coherenceScore = 2;
+            else coherenceScore = 2;
+
+            let onTopicScore = 5;
+            if (cov < 0.15) onTopicScore = 1;
+            else if (cov < 0.3) onTopicScore = 2;
+            else if (cov < 0.45) onTopicScore = 3;
+            else if (cov < 0.6) onTopicScore = 4;
+            coherenceScore = Math.min(coherenceScore, onTopicScore);
+
+            let grammarScore = 3;
+            if (errorPer100 <= 1) grammarScore = 5;
+            else if (errorPer100 <= 3) grammarScore = 4;
+            else if (errorPer100 <= 6) grammarScore = 3;
+            else if (errorPer100 <= 10) grammarScore = 2;
+            else grammarScore = 1;
+
+            const types = new Set(wordTokens.map(w => w.toLowerCase().replace(/[^a-z']/g, '')));
+            const typeTokenRatio = wordCount ? types.size / wordCount : 0;
+            const simpleWords = ['good','nice','very','really','a lot','many','things','stuff'];
+            let simpleCount = 0;
+            simpleWords.forEach(w => {
+                if (lowerText.includes(w)) simpleCount++;
+            });
+            let vocabScore = 3;
+            if (typeTokenRatio > 0.6 && simpleCount <= 1) vocabScore = 5;
+            else if (typeTokenRatio > 0.45 && simpleCount <= 3) vocabScore = 4;
+            else if (typeTokenRatio > 0.3) vocabScore = 3;
+            else if (typeTokenRatio > 0.2) vocabScore = 2;
+            else vocabScore = 1;
+
+            const total = structureScore + coherenceScore + grammarScore + vocabScore;
+            return {
+                structure: { label: 'Structure & Organization', score: structureScore, max: 5, reason: `Paragraphs: ${paragraphs}; Words: ${wordCount}.` },
+                coherence: { label: 'Coherence, Cohesion & Relevance', score: coherenceScore, max: 5, reason: `Linking devices: ${linkingCount}; on-topic coverage ≈ ${(cov * 100).toFixed(0)}% of key prompt words.` },
+                grammar: { label: 'Grammar Accuracy', score: grammarScore, max: 5, reason: `Approx. ${grammarMatches.length} grammar/spelling issues (~${errorPer100.toFixed(1)} per 100 words).` },
+                vocabulary: { label: 'Vocabulary Range & Precision', score: vocabScore, max: 5, reason: `Type-token ratio ≈ ${(typeTokenRatio*100).toFixed(1)}%; simple/common words flagged: ${simpleCount}.` },
+                total: { label: 'Total', score: total, max: 20 },
+                meta: {
+                    wordCount, sentences, paragraphs, grammarMatchesCount: grammarMatches.length,
+                    spellingMatchesCount: spellingMatches.length, styleMatchesCount: styleMatches.length,
+                    linkingCount, onTopicCoverage: cov, onTopicMatchedKeywords: coverageInfo.matchedKeywords,
+                    onTopicTotalKeywords: coverageInfo.totalKeywords
+                }
+            };
+        }
+
+        function buildFeedback(text, matches, options = {}, scores) {
+            const topic = options.topic || null;
+            const prompt = options.prompt || null;
+            const mode = options.mode || 'first';
+            const prevScores = options.prevScores || null;
+            const previousVersionLabel = options.previousVersionLabel || null;
+            const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+            const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const sentences = sentencesArr.length;
+            const avgLen = sentences ? (wordCount / sentences).toFixed(1) : 'N/A';
+            const paragraphs = text.split(/\n{2,}/).filter(p => p.trim().length > 0).length || 1;
+            const grammarCount = matches.filter(m => m.rule && m.rule.issueType === 'grammar').length;
+            const spellingCount = matches.filter(m => m.rule && m.rule.issueType === 'misspelling').length;
+            const styleCount = matches.filter(m => m.rule && m.rule.issueType === 'style').length;
+            const meta = scores && scores.meta ? scores.meta : null;
+            let msg = '';
+            if (prompt) msg += `Writing prompt:\n"${prompt}"\n\n`;
+            if (topic) msg += `Topic:\n"${topic}"\n\n`;
+            if (mode === 'first' || !prevScores) {
+                if (scores) {
+                    msg += '=== Rubric Scores (out of 5) ===\n';
+                    msg += `- ${scores.structure.label}: ${scores.structure.score} / ${scores.structure.max}\n`;
+                    msg += `  Reason: ${scores.structure.reason}\n`;
+                    msg += `- ${scores.coherence.label}: ${scores.coherence.score} / ${scores.coherence.max}\n`;
+                    msg += `  Reason: ${scores.coherence.reason}\n`;
+                    msg += `- ${scores.grammar.label}: ${scores.grammar.score} / ${scores.grammar.max}\n`;
+                    msg += `  Reason: ${scores.grammar.reason}\n`;
+                    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score} / ${scores.vocabulary.max}\n`;
+                    msg += `  Reason: ${scores.vocabulary.reason}\n\n`;
+                    msg += `>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
+                }
+                msg += `Length & structure:\n`;
+                msg += `- Paragraphs: ${paragraphs} (aim for at least 3: introduction, body, conclusion)\n`;
+                msg += `- Words: ${wordCount}\n`;
+                msg += `- Sentences: ${sentences}\n`;
+                msg += `- Average words per sentence: ${avgLen}\n\n`;
+                msg += `Issues detected:\n`;
+                msg += `- Grammar: ${grammarCount}\n`;
+                msg += `- Spelling: ${spellingCount}\n`;
+                msg += `- Style / phrasing: ${styleCount}\n\n`;
+                if (meta && meta.onTopicTotalKeywords > 0) {
+                    const covPercent = (meta.onTopicCoverage * 100).toFixed(0);
+                    msg += `Relevance to prompt/topic:\n`;
+                    msg += `- About ${covPercent}% of key words/ideas from the prompt appear in your essay.\n`;
+                    if (meta.onTopicCoverage < 0.3) {
+                        msg += `- Your essay seems partly off-topic. Make sure each main paragraph responds directly to the question.\n`;
+                    } else {
+                        msg += `- Overall, you are mostly on-topic. Check if any paragraph drifts away from the main task.\n`;
+                    }
+                }
+                const exampleLines = [];
+                matches.slice(0, 5).forEach(m => {
+                    const snippet = text.slice(m.offset, m.offset + m.length);
+                    const repl = (m.replacements && m.replacements[0]) ? m.replacements[0].value : null;
+                    const rule = m.rule && (m.rule.description || m.rule.issueType || '');
+                    if (repl) {
+                        exampleLines.push(`- "${snippet}" → "${repl}" (${rule})`);
+                    } else {
+                        exampleLines.push(`- "${snippet}" (${rule})`);
+                    }
+                });
+                if (exampleLines.length > 0) {
+                    msg += `\nExample grammar / wording issues:\n`;
+                    msg += exampleLines.join('\n') + '\n';
+                }
+                msg += `\nSuggestions on structure & logic:\n`;
+                msg += `- Make sure the first paragraph clearly introduces the topic and your main idea.\n`;
+                msg += `- Each body paragraph should focus on ONE main point, supported by examples.\n`;
+                msg += `- Use linking words (for example, however, therefore, in addition) to connect ideas.\n`;
+                msg += `- End with a conclusion that summarizes the main points and reflects on the topic.\n`;
+                if (prompt || topic) {
+                    msg += `- Check that every paragraph directly responds to the prompt/topic, not just tells unrelated details.\n`;
+                }
+                msg += '\nSuggestions on language:\n';
+                msg += `- Review highlighted grammar and spelling errors and rewrite the sentences.\n`;
+                msg += `- Replace repeated simple words (good, nice, very) with more precise vocabulary when possible.\n`;
+            } else {
+                msg += `=== Targeted Feedback for This Version ===\n`;
+                if (previousVersionLabel) msg += `(Compared with ${previousVersionLabel})\n\n`;
+                const dims = ['structure','coherence','grammar','vocabulary'];
+                const prettyNames = { structure: 'Structure & Organization', coherence: 'Coherence / Relevance', grammar: 'Grammar', vocabulary: 'Vocabulary' };
+                const improvements = [], regressions = [], unchanged = [];
+                dims.forEach(key => {
+                    const newS = scores[key].score;
+                    const oldS = prevScores[key].score;
+                    if (newS > oldS) improvements.push(`${prettyNames[key]}: ${oldS} → ${newS}`);
+                    else if (newS < oldS) regressions.push(`${prettyNames[key]}: ${oldS} → ${newS}`);
+                    else unchanged.push(`${prettyNames[key]}: still at ${newS}`);
+                });
+                if (improvements.length) {
+                    msg += `Areas of improvement:\n`;
+                    improvements.forEach(line => msg += `- ${line}\n`);
+                    msg += '\n';
+                }
+                if (regressions.length) {
+                    msg += `Areas slightly weaker than last time:\n`;
+                    regressions.forEach(line => msg += `- ${line}\n`);
+                    msg += '\n';
+                }
+                const prevMeta = prevScores.meta || null;
+                const metaNow = scores.meta || null;
+                if (metaNow && prevMeta) {
+                    const prevErrors = prevMeta.grammarMatchesCount + prevMeta.spellingMatchesCount;
+                    const nowErrors = metaNow.grammarMatchesCount + metaNow.spellingMatchesCount;
+                    const diff = prevErrors - nowErrors;
+                    msg += `Grammar & spelling progress:\n`;
+                    msg += `- Previous errors: ${prevErrors}\n`;
+                    msg += `- Current errors: ${nowErrors}\n`;
+                    if (diff > 0) msg += `→ Nice! You reduced about ${diff} grammar/spelling issues.\n`;
+                    else if (diff < 0) msg += `→ Be careful: there are slightly more issues than the last draft.\n`;
+                    else msg += `→ Number of issues is similar. Focus on correcting the highlighted ones.\n`;
+                    msg += '\n';
+                    if (metaNow.onTopicTotalKeywords > 0) {
+                        const prevCov = (prevMeta.onTopicCoverage * 100).toFixed(0);
+                        const nowCov = (metaNow.onTopicCoverage * 100).toFixed(0);
+                        msg += `Relevance to prompt/topic:\n`;
+                        msg += `- Previous on-topic coverage: ~${prevCov}% of key prompt words.\n`;
+                        msg += `- Current on-topic coverage: ~${nowCov}%.\n`;
+                        if (metaNow.onTopicCoverage > prevMeta.onTopicCoverage) {
+                            msg += `→ Better connection to the prompt. Keep making each paragraph answer the question.\n`;
+                        } else if (metaNow.onTopicCoverage < prevMeta.onTopicCoverage) {
+                            msg += `→ Some parts may drift away from the prompt. Re-check each paragraph against the question.\n`;
+                        } else {
+                            msg += `→ Similar level of relevance. Make sure new details still support your main point.\n`;
+                        }
+                        msg += '\n';
+                    }
+                }
+                const needWork = ['structure','coherence','grammar','vocabulary'].filter(d => scores[d].score < 4);
+                if (needWork.length) {
+                    msg += `Key areas to focus on next:\n`;
+                    needWork.forEach(key => {
+                        const sc = scores[key];
+                        msg += `- ${sc.label}: now ${sc.score}/${sc.max}. ${sc.reason}\n`;
+                    });
+                    msg += '\n';
+                }
+                msg += `Short checklist for your next revision:\n`;
+                msg += `- Re-read the writing prompt and underline the key words. Check if each body paragraph matches them.\n`;
+                msg += `- Fix the remaining highlighted grammar and spelling errors.\n`;
+                msg += `- Add 1–2 clear linking words between paragraphs (for example, however, as a result).\n`;
+                msg += `- Replace very simple words with more precise ones where appropriate.\n`;
+            }
+            return msg;
+        }
+
+        async function loadRubric() {
+            if (rubricText) return;
+            try {
+                const response = await fetch('https://ducj-creator.github.io/Shirley-AI-Writing/writing%20rubric.csv');
+                const csv = await response.text();
+                const parsed = Papa.parse(csv, { header: true }).data;
+                rubricItems = [];
+                parsed.forEach(row => {
+                    const crit = (row['Criteria'] || '').trim();
+                    if (!crit) return;
+                    const levels = {
+                        1: (row['1 Point'] || '').trim(),
+                        2: (row['2 Points'] || '').trim(),
+                        3: (row['3 Points'] || '').trim(),
+                        4: (row['4 Points'] || '').trim(),
+                        5: (row['5 Points'] || '').trim()
+                    };
+                    rubricItems.push({ criteria: crit, levels });
+                });
+                if (rubricItems.length === 0) throw new Error('Empty rubric after parsing');
+                rubricText = rubricItems.map(item => {
+                    const lv3 = item.levels[3] ? `3 pts: ${item.levels[3]}` : '';
+                    const lv4 = item.levels[4] ? `4 pts: ${item.levels[4]}` : '';
+                    const lv5 = item.levels[5] ? `5 pts: ${item.levels[5]}` : '';
+                    const parts = [lv3, lv4, lv5].filter(Boolean).join('\n');
+                    return `- ${item.criteria}:\n${parts}`;
+                }).join('\n');
+                const rubricDiv = document.getElementById('rubric-reminder');
+                if (rubricDiv) {
+                    rubricDiv.innerHTML = `
+                        <h3>Rubric Reminder (for all drafts)</h3>
+                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
+                    `;
+                }
+            } catch (e) {
+                console.warn('Rubric parse failed, using default.', e);
+                rubricItems = [
+                    { criteria: 'Essay Structure', levels: { 3: 'Clear introduction, body, and conclusion.' } },
+                    { criteria: 'Coherence & Cohesion', levels: { 3: 'Logical order and basic transitions.' } },
+                    { criteria: 'Grammar Accuracy', levels: { 3: 'Some minor errors but meaning is clear.' } },
+                    { criteria: 'Vocabulary Range & Precision', levels: { 3: 'Adequate vocabulary with some variety.' } }
+                ];
+                rubricText = rubricItems.map(i => `- ${i.criteria}: ${Object.values(i.levels)[0]}`).join('\n');
+                const rubricDiv = document.getElementById('rubric-reminder');
+                if (rubricDiv) {
+                    rubricDiv.innerHTML = `
+                        <h3>Rubric Reminder (default)</h3>
+                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
+                    `;
+                }
+            }
+        }
+
+        async function loadWritingMaterials() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing-materials.md');
+                const md = await response.text();
+                const container = document.getElementById('writing-materials');
+                container.innerHTML = `
+                    <div class="materials-grid">
+                        <div class="material-card">
+                            <h4>Writing Tips & Guidelines</h4>
+                            <pre style="white-space: pre-wrap;">${escapeHtml(md)}</pre>
+                        </div>
+                        <div class="material-card">
+                            <h4>Model Essays (coming soon)</h4>
+                            <p>Teachers can place sample essays here in the future.</p>
+                        </div>
+                        <div class="material-card">
+                            <h4>Idea Bank / Writing Materials (coming soon)</h4>
+                            <p>Collect interesting ideas, vocabulary, or prompts for students.</p>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('writing-materials').innerHTML =
+                    '<p>Place your self-designed materials in writing-materials.md in the repo and update the fetch URL.</p>';
+            }
+        }
+
+        function toggleRubric() {
+            const div = document.getElementById('rubric-reminder');
+            if (!div) return;
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function enterLevel(level) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(level + '-section');
+            if (target) target.classList.add('active');
+            document.querySelector('.back-btn').classList.add('active');
+            currentLevel = level;
+            if (level === 'gists') {
+                loadWritingMaterials();
+                initTopicCategories();
+            }
+            if (level === 'analysis') loadRubric();
+        }
+
+        function goHome() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('home-section').classList.add('active');
+            document.querySelector('.back-btn').classList.remove('active');
+            currentLevel = 'home';
+        }
+
+        function updateReferenceButtonVisibility() {
+            const btn = document.getElementById('ref-btn');
+            if (!btn) return;
+            btn.style.display = realDraftCount >= 2 ? 'inline-block' : 'none';
+        }
+
+        if (window['pdfjsLib']) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // ✅ 強化版 OCR：對 image 先放大＋灰階＋提高對比，再丟給 Tesseract
         async function performOCR(file, progressElement, targetTextarea) {
             if (!file) return;
             
@@ -792,594 +1171,654 @@ Vocabulary Range & Precision,Very limited vocabulary; inappropriate word choices
             }
         }
 
-        // ========== 文件上傳處理 ==========
-        function setupFileUploads() {
-            // Level 1 主文件上傳
-            const mainFileUpload = document.getElementById('file-upload-main');
-            const mainProgress = document.getElementById('ocr-progress-main');
-            const mainTextarea = document.getElementById('input-text');
+        // ✅ 修復文件上傳處理
+        function handleFileInput(file, targetTextareaId) {
+            if (!file) return;
+            const name = file.name.toLowerCase();
+            const textarea = document.getElementById(targetTextareaId);
+            const progressElement = document.getElementById(`ocr-progress-${targetTextareaId.includes('topic') ? 'topic' : 'main'}`);
             
-            mainFileUpload.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+            if (!textarea) return;
+
+            if (file.type.startsWith('image/')) {
+                performOCR(file, progressElement, textarea);
+            } else if (name.endsWith('.txt')) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    textarea.value = ev.target.result;
+                };
+                reader.readAsText(file);
+            } else if (name.endsWith('.pdf')) {
+                progressElement.style.display = 'block';
+                progressElement.innerHTML = '📄 Processing PDF...';
                 
-                if (file.type.startsWith('image/')) {
-                    await performOCR(file, mainProgress, mainTextarea);
-                } else if (file.type === 'text/plain') {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        mainTextarea.value = e.target.result;
-                    };
-                    reader.readAsText(file);
-                } else if (file.type === 'application/pdf') {
-                    mainProgress.style.display = 'block';
-                    mainProgress.innerHTML = '📄 Processing PDF...';
-                    
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
-                        try {
-                            const typedarray = new Uint8Array(e.target.result);
-                            const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                            let fullText = '';
-                            
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const textContent = await page.getTextContent();
-                                const pageText = textContent.items.map(item => item.str).join(' ');
-                                fullText += pageText + '\n\n';
-                            }
-                            
-                            mainTextarea.value = fullText.trim();
-                            mainProgress.innerHTML = '✅ PDF processed successfully!';
+                const reader = new FileReader();
+                reader.onload = async ev => {
+                    try {
+                        const typedArray = new Uint8Array(ev.target.result);
+                        const pdf = await pdfjsLib.getDocument({ typedArray }).promise;
+                        const page = await pdf.getPage(1);
+                        const content = await page.getTextContent();
+                        const strings = content.items.map(item => item.str);
+                        textarea.value = strings.join(' ');
+                        progressElement.innerHTML = '✅ PDF processed successfully!';
+                        
+                        setTimeout(() => {
+                            progressElement.style.display = 'none';
+                        }, 3000);
+                    } catch (e) {
+                        console.error(e);
+                        textarea.value = '';
+                        progressElement.innerHTML = '❌ Unable to extract text from this PDF.';
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (name.endsWith('.docx')) {
+                progressElement.style.display = 'block';
+                progressElement.innerHTML = '📄 Processing DOCX...';
+                
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    const arrayBuffer = ev.target.result;
+                    mammoth.extractRawText({ arrayBuffer })
+                        .then(result => {
+                            textarea.value = result.value || '';
+                            progressElement.innerHTML = '✅ DOCX processed successfully!';
                             
                             setTimeout(() => {
-                                mainProgress.style.display = 'none';
+                                progressElement.style.display = 'none';
                             }, 3000);
-                        } catch (error) {
-                            mainProgress.innerHTML = '❌ PDF processing failed.';
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                }
-            });
-
-            // Level 2 主題文件上傳
-            const topicFileUpload = document.getElementById('file-upload-topic');
-            const topicProgress = document.getElementById('ocr-progress-topic');
-            const topicTextarea = document.getElementById('topic-text');
-            
-            topicFileUpload.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                if (file.type.startsWith('image/')) {
-                    await performOCR(file, topicProgress, topicTextarea);
-                } else if (file.type === 'text/plain') {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        topicTextarea.value = e.target.result;
-                    };
-                    reader.readAsText(file);
-                }
-            });
-        }
-
-        // ========== 根據評分標準計算分數 ==========
-        function calculateScoresBasedOnRubric(originalText) {
-            if (!rubricData) return null;
-            
-            const wordCount = originalText.split(/\s+/).filter(word => word.length > 0).length;
-            
-            // 根據評分標準計算每個項目的分數
-            const scores = {
-                essayStructure: calculateEssayStructureScore(wordCount),
-                coherenceCohesion: calculateCoherenceScore(originalText),
-                grammarAccuracy: calculateGrammarScore(originalText),
-                vocabularyRange: calculateVocabularyScore(originalText)
-            };
-            
-            // 字數扣分
-            let wordCountPenalty = 0;
-            if (wordCount < 120) {
-                wordCountPenalty = 2;
-            }
-            
-            // 總分計算 (各5分，總分20分)
-            const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0) - wordCountPenalty;
-            
-            return {
-                essayStructure: scores.essayStructure,
-                coherenceCohesion: scores.coherenceCohesion,
-                grammarAccuracy: scores.grammarAccuracy,
-                vocabularyRange: scores.vocabularyRange,
-                wordCount: wordCount,
-                wordCountPenalty: wordCountPenalty,
-                total: Math.max(0, totalScore).toFixed(1)
-            };
-        }
-
-        function calculateEssayStructureScore(wordCount) {
-            if (wordCount < 120) return 1;
-            if (wordCount <= 150) return 2;
-            if (wordCount <= 200) return 3;
-            if (wordCount <= 300) return 4;
-            return 5;
-        }
-
-        function calculateCoherenceScore(text) {
-            // 簡單的連貫性評估
-            const transitionWords = ['however', 'therefore', 'moreover', 'furthermore', 'consequently', 'additionally'];
-            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const transitionCount = transitionWords.reduce((count, word) => {
-                return count + (text.toLowerCase().split(word).length - 1);
-            }, 0);
-            
-            const transitionRatio = transitionCount / sentences.length;
-            
-            if (transitionRatio < 0.1) return 2;
-            if (transitionRatio < 0.2) return 3;
-            if (transitionRatio < 0.3) return 4;
-            return 5;
-        }
-
-        function calculateGrammarScore(text) {
-            // 簡單的語法錯誤評估
-            const commonErrors = [
-                /\b(he|she|it) (go|eat|see)\b/gi, // 第三人稱單數錯誤
-                /\b(I|you|we|they) (goes|eats|sees)\b/gi, // 動詞形式錯誤
-                /\b(are|is) (go|eat|see)\b/gi, // be動詞後接原形動詞
-                /\b(have|has) (go|eat|see)\b/gi  // have/has 後接原形動詞
-            ];
-            
-            let errorCount = 0;
-            commonErrors.forEach(pattern => {
-                const matches = text.match(pattern);
-                if (matches) errorCount += matches.length;
-            });
-            
-            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const errorRatio = errorCount / sentences.length;
-            
-            if (errorRatio > 0.3) return 1;
-            if (errorRatio > 0.2) return 2;
-            if (errorRatio > 0.1) return 3;
-            if (errorRatio > 0.05) return 4;
-            return 5;
-        }
-
-        function calculateVocabularyScore(text) {
-            // 簡單的詞彙多樣性評估
-            const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 3);
-            const uniqueWords = new Set(words);
-            const diversityRatio = uniqueWords.size / words.length;
-            
-            if (diversityRatio < 0.3) return 2;
-            if (diversityRatio < 0.4) return 3;
-            if (diversityRatio < 0.5) return 4;
-            return 5;
-        }
-
-        // ========== 分析寫作功能 ==========
-        function analyzeWriting() {
-            const originalText = document.getElementById('input-text').value.trim();
-            
-            if (!originalText) {
-                alert('Please enter some text to analyze.');
-                return;
-            }
-            
-            const scores = calculateScoresBasedOnRubric(originalText);
-            
-            if (!scores) {
-                alert('Rubric data not loaded. Please try again.');
-                return;
-            }
-            
-            const output = document.getElementById('output');
-            output.innerHTML = `
-                <div class="scores-block">
-                    <strong>📊 Writing Assessment Results (Based on Rubric):</strong>
-                    <ul>
-                        <li>Essay Structure: ${scores.essayStructure}/5</li>
-                        <li>Coherence & Cohesion: ${scores.coherenceCohesion}/5</li>
-                        <li>Grammar Accuracy: ${scores.grammarAccuracy}/5</li>
-                        <li>Vocabulary Range & Precision: ${scores.vocabularyRange}/5</li>
-                        <li>Word Count: ${scores.wordCount} words
-                            ${scores.wordCountPenalty > 0 ? 
-                                `<span class="word-count-warning">(-${scores.wordCountPenalty} penalty for under 120 words)</span>` : 
-                                ''}
-                        </li>
-                        <li><strong>Total Score: ${scores.total}/20</strong></li>
-                    </ul>
-                </div>
-                <div class="feedback">
-                    <strong>💡 Feedback:</strong><br>
-                    ${generateRubricFeedback(scores, originalText)}
-                </div>
-            `;
-        }
-
-        function analyzeTopic() {
-            const originalText = document.getElementById('topic-text').value.trim();
-            
-            if (!originalText) {
-                alert('Please enter some text to analyze.');
-                return;
-            }
-            
-            const scores = calculateScoresBasedOnRubric(originalText);
-            
-            if (!scores) {
-                alert('Rubric data not loaded. Please try again.');
-                return;
-            }
-            
-            const output = document.getElementById('topic-output');
-            output.innerHTML = `
-                <div class="scores-block">
-                    <strong>📊 Topic Writing Assessment Results (Based on Rubric):</strong>
-                    <ul>
-                        <li>Essay Structure: ${scores.essayStructure}/5</li>
-                        <li>Coherence & Cohesion: ${scores.coherenceCohesion}/5</li>
-                        <li>Grammar Accuracy: ${scores.grammarAccuracy}/5</li>
-                        <li>Vocabulary Range & Precision: ${scores.vocabularyRange}/5</li>
-                        <li>Word Count: ${scores.wordCount} words
-                            ${scores.wordCountPenalty > 0 ? 
-                                `<span class="word-count-warning">(-${scores.wordCountPenalty} penalty for under 120 words)</span>` : 
-                                ''}
-                        </li>
-                        <li><strong>Total Score: ${scores.total}/20</strong></li>
-                    </ul>
-                </div>
-                <div class="feedback">
-                    <strong>💡 Feedback:</strong><br>
-                    ${generateRubricFeedback(scores, originalText)}
-                </div>
-            `;
-        }
-
-        function generateRubricFeedback(scores, text) {
-            const feedbacks = [];
-            
-            // 根據評分標準提供具體反饋
-            if (scores.essayStructure <= 2) {
-                feedbacks.push("Focus on developing a clear structure with introduction, body paragraphs, and conclusion.");
-            } else if (scores.essayStructure <= 3) {
-                feedbacks.push("Your structure is adequate but could be improved with clearer organization.");
-            }
-            
-            if (scores.coherenceCohesion <= 2) {
-                feedbacks.push("Use more transition words to connect your ideas smoothly.");
-            } else if (scores.coherenceCohesion <= 3) {
-                feedbacks.push("Try to improve the flow between sentences and paragraphs.");
-            }
-            
-            if (scores.grammarAccuracy <= 2) {
-                feedbacks.push("Review basic grammar rules, especially verb tenses and subject-verb agreement.");
-            } else if (scores.grammarAccuracy <= 3) {
-                feedbacks.push("Pay attention to grammar accuracy to improve clarity.");
-            }
-            
-            if (scores.vocabularyRange <= 2) {
-                feedbacks.push("Expand your vocabulary and use more precise word choices.");
-            } else if (scores.vocabularyRange <= 3) {
-                feedbacks.push("Try to use more varied vocabulary to express your ideas.");
-            }
-            
-            if (scores.wordCountPenalty > 0) {
-                feedbacks.push("Your essay is too short. Aim for at least 120 words to fully develop your ideas.");
-            }
-            
-            if (feedbacks.length === 0) {
-                feedbacks.push("Excellent work! Your writing demonstrates good structure, coherence, grammar, and vocabulary.");
-            }
-            
-            return feedbacks.join(' ');
-        }
-
-        // ========== 載入評分標準到提示區域 ==========
-        function loadRubric() {
-            const rubricReminder = document.getElementById('rubric-reminder');
-            if (!rubricData) return;
-            
-            let rubricHTML = '<h3>Writing Rubric</h3>';
-            rubricData.forEach(criteria => {
-                rubricHTML += `
-                    <div style="margin-bottom: 15px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px;">
-                        <strong>${criteria.Criteria}:</strong>
-                        <div style="font-size: 0.85em; margin-top: 5px;">
-                            <div>1 pt: ${criteria['1 Point']}</div>
-                            <div>2 pts: ${criteria['2 Points']}</div>
-                            <div>3 pts: ${criteria['3 Points']}</div>
-                            <div>4 pts: ${criteria['4 Points']}</div>
-                            <div>5 pts: ${criteria['5 Points']}</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            rubricReminder.innerHTML = rubricHTML;
-        }
-
-        function toggleRubric() {
-            const rubricReminder = document.getElementById('rubric-reminder');
-            if (rubricReminder.style.display === 'none') {
-                rubricReminder.style.display = 'block';
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            textarea.value = '';
+                            progressElement.innerHTML = '❌ Unable to extract text from this DOCX.';
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (name.endsWith('.doc')) {
+                alert('Legacy .doc files are not fully supported in this browser-only version. Please convert to .docx or .pdf first.');
             } else {
-                rubricReminder.style.display = 'none';
+                alert('Unsupported file type. Please use image / txt / pdf / doc / docx.');
             }
         }
 
-        // ========== 翻頁共用函數 ==========
-        function createPageViewer(containerId, baseUrl, totalPages, pageType) {
-            let currentPage = 1;
+        function getLastRealDraft() {
+            for (let i = drafts.length - 1; i >= 0; i--) {
+                if (!drafts[i].isReference) return drafts[i];
+            }
+            return null;
+        }
+
+        // ========== 圖片上傳處理 ==========
+        document.getElementById('prompt-image-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('prompt-image-preview');
+            const img = document.getElementById('prompt-preview-img');
+            const promptTextarea = document.getElementById('prompt-input');
             
-            function render() {
-                const container = document.getElementById(containerId);
-                const prevDisabled = currentPage <= 1;
-                const nextDisabled = currentPage >= totalPages;
+            if (!file) {
+                promptImageBase64 = '';
+                preview.style.display = 'none';
+                return;
+            }
+            
+            // 如果是圖片，進行 OCR 提取文字
+            if (file.type.startsWith('image/')) {
+                const progressElement = document.createElement('div');
+                progressElement.className = 'ocr-progress';
+                progressElement.innerHTML = '🔄 Extracting text from prompt image...';
+                preview.parentNode.insertBefore(progressElement, preview);
                 
-                container.innerHTML = `
-                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
-                        Page <strong>${currentPage}</strong> / ${totalPages}
+                performOCR(file, progressElement, promptTextarea).then(() => {
+                    setTimeout(() => {
+                        progressElement.remove();
+                    }, 3000);
+                });
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const result = event.target.result;
+                promptImageBase64 = result;
+                img.src = result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('topic-image-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('topic-image-preview');
+            const img = document.getElementById('topic-preview-img');
+            if (!file) {
+                topicImageBase64 = '';
+                preview.style.display = 'none';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const result = event.target.result;
+                topicImageBase64 = result;
+                img.src = result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ========== Level 1 ==========
+        async function analyzeWriting() {
+            const container = document.getElementById('output');
+            const text = document.getElementById('input-text').value;
+            const prompt = document.getElementById('prompt-input').value;
+            if (!text.trim()) {
+                alert('Please enter text.');
+                return;
+            }
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'analysis-run';
+            tempDiv.innerHTML = '<em>Checking your writing... (grammar, capitalization, relevance to the prompt, rubric scores)</em>';
+            container.prepend(tempDiv);
+            try {
+                await loadRubric();
+                const result = await checkWithLanguageTool(text);
+                const matchesLT = result.matches || [];
+                const capMatches = findCapitalizationMatches(text);
+                const allMatches = [...matchesLT, ...capMatches];
+                const isFirstRealDraft = !getLastRealDraft();
+                const prevDraft = isFirstRealDraft ? null : getLastRealDraft();
+                const prevScores = prevDraft ? prevDraft.scores : null;
+                const upcomingRealVersion = realDraftCount + 1;
+                const colorIndex = ((upcomingRealVersion - 1) % 6) + 1;
+                const highlightClass = `err err-v${colorIndex}`;
+                const corrected = buildCorrectedText(text, allMatches);
+                const highlighted = buildHighlightedHtml(text, allMatches, highlightClass);
+                const scores = calculateScores(text, allMatches, { prompt });
+                const feedbackText = buildFeedback(
+                    text,
+                    allMatches,
+                    {
+                        prompt,
+                        mode: isFirstRealDraft ? 'first' : 'revision',
+                        prevScores,
+                        previousVersionLabel: prevDraft ? prevDraft.label : null
+                    },
+                    scores
+                );
+                realDraftCount += 1;
+                const label = `Version ${realDraftCount}`;
+                const index = drafts.length;
+                drafts.push({
+                    original: text,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores,
+                    meta: scores.meta,
+                    label,
+                    isReference: false
+                });
+                document.getElementById('checked-text').value = corrected;
+                tempDiv.innerHTML = renderVersionBlock({
+                    index,
+                    label,
+                    original: text,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores,
+                    isReference: false
+                });
+                updateReferenceButtonVisibility();
+            } catch (err) {
+                console.error(err);
+                tempDiv.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
+            }
+        }
+
+        function buildVersionChip(label) {
+            let cls = 'version-chip';
+            const match = label.match(/Version\s+(\d+)/i);
+            if (match) {
+                const n = parseInt(match[1], 10);
+                const idx = ((n - 1) % 6) + 1;
+                cls += ' version-chip-v' + idx;
+            } else if (/Reference Essay/i.test(label)) {
+                cls += ' version-chip-ref';
+            }
+            return `<span class="${cls}">${escapeHtml(label)}</span>`;
+        }
+
+        function renderVersionBlock({ index, label, original, corrected, highlighted, feedback, scores, isReference }) {
+            const scoreHtml = scores ? `
+                <div class="scores-block">
+                    <strong>Rubric scores (out of 5)</strong>
+                    <ul>
+                        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+                        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+                        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+                        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
+                    </ul>
+                    <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
+                </div>
+            ` : '';
+            const chipHtml = buildVersionChip(label);
+            const checkboxHtml = isReference
+                ? ''
+                : `<label class="no-print" style="font-size:0.9em;">
+                        <input type="checkbox" class="print-select" data-index="${index}">
+                        Select this version for printing
+                   </label>`;
+            return `
+                <div class="version-header-inline">
+                    <span>${chipHtml}</span>
+                    ${checkboxHtml}
+                </div>
+                <div class="version-layout">
+                    <div class="version-col">
+                        <h3>Original text</h3>
+                        <textarea>${escapeHtml(original)}</textarea>
                     </div>
-                    <div id="${pageType}-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
-                        <div id="${pageType}-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
-                            <img src="${baseUrl}${currentPage}.png"
-                                 alt="${pageType} page ${currentPage}"
-                                 style="width:100%; display:block; background:#faf9f7;"
-                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
-                            >
-                        </div>
+                    <div class="version-col version-actions">
+                        <small>You can copy this text into the current workspace to create a new version.</small>
+                        <button onclick="useVersionAsCurrent(${index})">Use as current draft</button>
                     </div>
-                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
+                    <div class="version-col">
+                        <h3>Checked version</h3>
+                        <textarea>${escapeHtml(corrected)}</textarea>
+                    </div>
+                </div>
+                ${scoreHtml}
+                <h3 style="margin-top:16px;font-size:0.95em;">Original with highlighted issues:</h3>
+                <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
+                <div class="feedback">
+                    <h3 style="margin-top:0;font-size:1em;">Feedback &amp; suggestions:</h3>
+                    <pre style="white-space: pre-wrap;">${escapeHtml(feedback)}</pre>
+                </div>
+            `;
+        }
+
+        function useVersionAsCurrent(idx) {
+            const draft = drafts[idx];
+            if (!draft) return;
+            document.getElementById('input-text').value = draft.corrected;
+            document.getElementById('checked-text').value = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function generateReferenceEssay() {
+            const lastRealDraft = getLastRealDraft();
+            if (!lastRealDraft) {
+                alert('Please run analysis at least once first.');
+                return;
+            }
+            const container = document.getElementById('output');
+            Array.from(container.querySelectorAll('.analysis-run[data-ref="true"]'))
+                .forEach(el => el.remove());
+            drafts = drafts.filter(d => !d.isReference);
+            const div = document.createElement('div');
+            div.className = 'analysis-run';
+            div.dataset.ref = 'true';
+            const referenceText =
+                'This is a polished reference version based on your latest corrected draft:\n' +
+                lastRealDraft.corrected;
+            const feedbackText =
+                'Reference essay notes:\n' +
+                '- Use this version only as a model. Do NOT copy it directly.\n' +
+                '- Compare it with your own draft and highlight what has improved in grammar, vocabulary, and structure.\n' +
+                '- Try to write your OWN final version after reading this reference.\n';
+            const index = drafts.length;
+            const label = `Reference Essay (based on ${lastRealDraft.label})`;
+            const scores = lastRealDraft.scores || null;
+            drafts.push({
+                original: lastRealDraft.corrected,
+                corrected: referenceText,
+                highlighted: escapeHtml(lastRealDraft.corrected),
+                feedback: feedbackText,
+                scores,
+                meta: scores ? scores.meta : null,
+                label,
+                isReference: true
+            });
+            div.innerHTML = renderVersionBlock({
+                index,
+                label,
+                original: lastRealDraft.corrected,
+                corrected: referenceText,
+                highlighted: escapeHtml(lastRealDraft.corrected),
+                feedback: feedbackText,
+                scores,
+                isReference: true
+            });
+            container.prepend(div);
+        }
+
+        function printDrafts() {
+            const allCheckboxes = Array.from(document.querySelectorAll('.print-select:checked'));
+            if (allCheckboxes.length === 0) {
+                alert('Please select at least one version to print.');
+                return;
+            }
+            const selectedDrafts = allCheckboxes
+                .map(cb => {
+                    const idx = parseInt(cb.getAttribute('data-index'), 10);
+                    return drafts[idx];
+                })
+                .filter(d => d && !d.isReference);
+            if (selectedDrafts.length === 0) {
+                alert('Reference essays are not included in the report. Please select at least one actual draft version.');
+                return;
+            }
+            const school = document.getElementById('student-school')?.value || '';
+            const klass = document.getElementById('student-class')?.value || '';
+            const seat = document.getElementById('student-seat')?.value || '';
+            const name = document.getElementById('student-name')?.value || '';
+            const prompt = document.getElementById('prompt-input')?.value || '';
+            const schoolEsc = escapeHtml(school || '________');
+            const classEsc = escapeHtml(klass || '________');
+            const seatEsc = escapeHtml(seat || '________');
+            const nameEsc = escapeHtml(name || '________');
+            const promptEsc = escapeHtml(prompt || '____________________________________________');
+            const promptImageHtml = promptImageBase64
+                ? `<p><img src="${promptImageBase64}" alt="Prompt illustration" style="max-width:100%; margin-top:10px; border-radius:6px;"></p>`
+                : '';
+            const headerHtml = `
+                <div class="print-header">
+                    <h1>A Writing Progress &amp; Product Report Generated by Shirley's AI Writing Coach</h1>
+                    <p>School: ${schoolEsc} &nbsp;&nbsp; Class: ${classEsc} &nbsp;&nbsp; Seat No.: ${seatEsc} &nbsp;&nbsp; Name: ${nameEsc}</p>
+                    <p><strong>Writing Prompt:</strong> ${promptEsc}</p>
+                    ${promptImageHtml}
+                </div>
+            `;
+            const draftsHtml = selectedDrafts.map(draft => {
+                return `
+                    <div class="printable">
+                        <h2>${escapeHtml(draft.label || '')}</h2>
+                        <h3>Original with highlighted issues:</h3>
+                        <p>${draft.highlighted.replace(/\n/g, '<br>')}</p>
+                        <h3>Feedback:</h3>
+                        <pre style="white-space: pre-wrap;">${escapeHtml(draft.feedback)}</pre>
                     </div>
                 `;
-                
-                document.getElementById('prev-btn').onclick = () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        playFlipSound(`${pageType}-page`);
-                        render();
-                    }
-                };
-                
-                document.getElementById('next-btn').onclick = () => {
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        playFlipSound(`${pageType}-page`);
-                        render();
-                    }
-                };
-                
-                const flipContainer = document.getElementById(`${pageType}-flip-container`);
-                if (flipContainer) {
-                    let startX = 0;
-                    flipContainer.addEventListener('touchstart', e => {
-                        startX = e.touches[0].clientX;
-                    }, { passive: true });
-                    
-                    flipContainer.addEventListener('touchend', e => {
-                        const endX = e.changedTouches[0].clientX;
-                        const diff = startX - endX;
-                        if (Math.abs(diff) > 60) {
-                            if (diff > 0 && currentPage < totalPages) {
-                                currentPage++;
-                                playFlipSound(`${pageType}-page`);
-                                render();
-                            } else if (diff < 0 && currentPage > 1) {
-                                currentPage--;
-                                playFlipSound(`${pageType}-page`);
-                                render();
-                            }
-                        }
-                    }, { passive: true });
-                }
+            }).join('');
+            let topicHtml = '';
+            if (topicReport && topicReport.topic && topicReport.highlighted) {
+                const topicImageHtml = topicImageBase64
+                    ? `<p><img src="${topicImageBase64}" alt="Topic illustration" style="max-width:100%; margin-top:10px; border-radius:6px;"></p>`
+                    : '';
+                topicHtml = `
+                    <div class="printable">
+                        <h2>Topic Practice Essay</h2>
+                        <p><strong>Topic:</strong> ${escapeHtml(topicReport.topic)}</p>
+                        ${topicImageHtml}
+                        <h3>Original with highlighted issues:</h3>
+                        <p>${topicReport.highlighted.replace(/\n/g, '<br>')}</p>
+                        <h3>Feedback:</h3>
+                        <pre style="white-space: pre-wrap;">${escapeHtml(topicReport.feedback)}</pre>
+                    </div>
+                `;
             }
-            
-            render();
+            const printable = document.getElementById('printable-drafts');
+            printable.innerHTML = headerHtml + draftsHtml + topicHtml;
+            const bodyChildren = Array.from(document.body.children);
+            const toHide = bodyChildren.filter(el => el !== printable);
+            toHide.forEach(el => el.classList.add('no-print-temp'));
+            printable.style.display = 'block';
+            window.print();
+            printable.style.display = 'none';
+            toHide.forEach(el => el.classList.remove('no-print-temp'));
         }
 
-        function playFlipSound(pageId) {
-            const pageEl = document.getElementById(pageId);
-            if (!pageEl) return;
-            const audio = new Audio(PAGE_TURN_SOUND);
-            audio.play().catch(e => console.log('Audio play failed:', e));
-            const angle = -15;
-            pageEl.style.transform = `rotateY(${angle}deg)`;
-            pageEl.style.boxShadow = '0 16px 32px rgba(0,0,0,0.2)';
-            setTimeout(() => {
-                pageEl.style.transform = '';
-                pageEl.style.boxShadow = '';
-            }, 300);
-        }
-
-        // ========== 功能函數 ==========
-      function loadWritingMaterials() {
-    const container = document.getElementById('writing-materials');
-    container.innerHTML = `
-        <div class="materials-grid">
-            <div class="material-card" onclick="enterSection('writing-tips-menu-section')">
-                <h4>Writing Tips & Guidelines</h4>
-                <p>Click to explore writing gists and genres.</p>
-            </div>
-            <div class="material-card" onclick="enterSection('model-essays-section')">
-                <h4>Model Essays</h4>
-                <p>Click to browse sample essays and past papers.</p>
-            </div>
-            <div class="material-card" onclick="window.open('https://ducj-creator.github.io/Shirley-AI-Writing/idea%20bank/index.html', '_blank')">
-                <h4>GSAT Topic Writing</h4>
-                <p>Explore GSAT writing topics and practice materials.</p>
-            </div>
-            <div class="material-card">
-                <h4>More Writing Materials (coming soon)</h4>
-                <p>Collect interesting ideas, vocabulary, or prompts for students.</p>
-            </div>
-        </div>
-    `;
-}
-
-        // ========== Writing Gists ==========
-        function renderWritingGists() {
-            const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20gists/';
-            const totalPages = 9;
-            createPageViewer('writing-gists-container', baseUrl, totalPages, 'gists');
-        }
-
-        // ========== GSAT Papers ==========
-        function renderGsatPapers() {
-            const baseUrl = 'https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/GSAT%20past%20papers/';
-            const totalPages = 11;
-            createPageViewer('gsat-viewer-container', baseUrl, totalPages, 'gsat');
-        }
-
-        // ========== Writing Genres ==========
-        function renderWritingGenres() {
-            const container = document.getElementById('writing-genres-container');
-            const genres = [
-                { name: "Diagrams", folder: "diagram" },
-                { name: "Argumentative", folder: "argumentative" },
-                { name: "Images", folder: "images" },
-                { name: "Narrative", folder: "narrative" },
-                { name: "Expository", folder: "expository" },
-                { name: "Descriptive", folder: "descriptive" }
-            ];
-            const html = genres.map(g => `
-                <div class="material-card" style="cursor:pointer;"
-                     onclick="enterSection('genre-image-viewer-section'); renderGenreImages('${g.folder}', '${g.name}')">
-                    <h4>${g.name}</h4>
-                    <p>Examples for ${g.name.toLowerCase()} writing.</p>
-                </div>
-            `).join('');
-            container.innerHTML = `<div class="materials-grid">${html}</div>`;
-        }
-
-        // ========== Genre 圖片瀏覽器 ==========
-        function renderGenreImages(folder, displayName) {
-            const container = document.getElementById('genre-viewer-container');
-            const baseUrl = `https://raw.githubusercontent.com/ducj-creator/Shirley-AI-Writing/main/writing%20genres/${folder}/`;
-            const maxPages = 10;
-            let currentPage = 1;
-            let totalPages = 1;
-            
-            async function detectTotalPages() {
-                for (let i = 1; i <= maxPages; i++) {
-                    try {
-                        const response = await fetch(`${baseUrl}${i}.png`, { method: 'HEAD' });
-                        if (!response.ok) {
-                            totalPages = i - 1;
-                            break;
-                        }
-                        if (i === maxPages) totalPages = maxPages;
-                    } catch {
-                        totalPages = i - 1;
+        // ========== Level 2 ==========
+        async function analyzeTopic() {
+            const output = document.getElementById('topic-output');
+            const topic = document.getElementById('topic-select').value;
+            const text = document.getElementById('topic-text').value;
+            if (!topic.trim() || !text.trim()) {
+                alert('Please choose a topic and enter your essay.');
+                return;
+            }
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'analysis-run';
+            tempDiv.innerHTML = '<em>Checking your essay for this topic (grammar, capitalization, relevance, rubric scores)...</em>';
+            output.prepend(tempDiv);
+            try {
+                await loadRubric();
+                const result = await checkWithLanguageTool(text);
+                const matchesLT = result.matches || [];
+                const capMatches = findCapitalizationMatches(text);
+                const allMatches = [...matchesLT, ...capMatches];
+                let prevTopicDraft = null;
+                for (let i = topicDrafts.length - 1; i >= 0; i--) {
+                    if (topicDrafts[i].topic === topic) {
+                        prevTopicDraft = topicDrafts[i];
                         break;
                     }
                 }
-                document.getElementById('genre-viewer-title').textContent = `${displayName} Examples`;
-                render();
-            }
-            
-            function render() {
-                const prevDisabled = currentPage <= 1;
-                const nextDisabled = currentPage >= totalPages;
-                
-                container.innerHTML = `
-                    <div style="text-align:center; margin-bottom:12px; color:var(--text-muted); font-size:1em;">
-                        Page <strong>${currentPage}</strong> / ${totalPages}
-                    </div>
-                    <div id="genre-flip-container" style="display:flex; justify-content:center; align-items:center; min-height:500px; padding:0 10px;">
-                        <div id="genre-page" style="width:95%; max-width:800px; background:white; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden; transition:transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55),box-shadow 0.3s ease; transform-style:preserve-3d;">
-                            <img src="${baseUrl}${currentPage}.png"
-                                 alt="${folder} example ${currentPage}"
-                                 style="width:100%; display:block; background:#faf9f7;"
-                                 onerror="this.parentElement.innerHTML='<p style=\'color:var(--error-border); padding:30px; text-align:center;\'>Image load failed.</p>'"
-                            >
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:16px; justify-content:center; margin-top:20px;">
-                        <button id="prev-btn" ${prevDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">← Previous</button>
-                        <button id="next-btn" ${nextDisabled ? 'disabled' : ''} style="padding:10px 20px; font-size:16px;">Next →</button>
-                    </div>
-                `;
-                
-                document.getElementById('prev-btn').onclick = () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        playFlipSound('genre-page');
-                        render();
-                    }
+                const isFirstTopicDraft = !prevTopicDraft;
+                const prevScores = prevTopicDraft ? prevTopicDraft.scores : null;
+                const corrected = buildCorrectedText(text, allMatches);
+                const highlighted = buildHighlightedHtml(text, allMatches, 'err err-topic');
+                const scores = calculateScores(text, allMatches, { topic });
+                const feedbackText = buildFeedback(
+                    text,
+                    allMatches,
+                    {
+                        topic,
+                        mode: isFirstTopicDraft ? 'first' : 'revision',
+                        prevScores,
+                        previousVersionLabel: prevTopicDraft ? prevTopicDraft.label : null
+                    },
+                    scores
+                );
+                document.getElementById('topic-checked-text').value = corrected;
+                topicRealDraftCount += 1;
+                const label = `Topic Version ${topicRealDraftCount}`;
+                const index = topicDrafts.length;
+                topicDrafts.push({
+                    topic,
+                    original: text,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores,
+                    label
+                });
+                topicReport = {
+                    topic,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores
                 };
-                
-                document.getElementById('next-btn').onclick = () => {
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        playFlipSound('genre-page');
-                        render();
-                    }
-                };
-                
-                const flipContainer = document.getElementById('genre-flip-container');
-                if (flipContainer) {
-                    let startX = 0;
-                    flipContainer.addEventListener('touchstart', e => {
-                        startX = e.touches[0].clientX;
-                    }, { passive: true });
-                    
-                    flipContainer.addEventListener('touchend', e => {
-                        const endX = e.changedTouches[0].clientX;
-                        const diff = startX - endX;
-                        if (Math.abs(diff) > 60) {
-                            if (diff > 0 && currentPage < totalPages) {
-                                currentPage++;
-                                playFlipSound('genre-page');
-                                render();
-                            } else if (diff < 0 && currentPage > 1) {
-                                currentPage--;
-                                playFlipSound('genre-page');
-                                render();
-                            }
-                        }
-                    }, { passive: true });
-                }
+                tempDiv.innerHTML = renderTopicVersionBlock({
+                    index,
+                    label,
+                    topic,
+                    original: text,
+                    corrected,
+                    highlighted,
+                    feedback: feedbackText,
+                    scores
+                });
+            } catch (err) {
+                console.error(err);
+                tempDiv.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
             }
-            
-            detectTotalPages();
         }
 
-        // ========== 原始其他函數 ==========
-        function printDrafts() { }
-        function generateReferenceEssay() { }
-        function useVersionAsCurrent() { }
-        function useTopicVersionAsCurrent() { }
-        function printTopicDrafts() { }
-        function initTopicCategories() { }
+        function renderTopicVersionBlock({ index, label, topic, original, corrected, highlighted, feedback, scores }) {
+            const scoreHtml = scores ? `
+                <div class="scores-block">
+                    <strong>Rubric scores (out of 5)</strong>
+                    <ul>
+                        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+                        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+                        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+                        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
+                    </ul>
+                    <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
+                </div>
+            ` : '';
+            const chipHtml = buildVersionChip(label);
+            return `
+                <div class="version-header-inline">
+                    <span>
+                        ${chipHtml}
+                        &nbsp;
+                        <span style="font-size:0.85em;color:var(--text-muted);">
+                            Topic: ${escapeHtml(topic)}
+                        </span>
+                    </span>
+                    <label class="no-print" style="font-size:0.9em;">
+                        <input type="checkbox" class="topic-print-select" data-index="${index}">
+                        Select this topic version for printing
+                    </label>
+                </div>
+                <div class="version-layout">
+                    <div class="version-col">
+                        <h3>Original text</h3>
+                        <textarea>${escapeHtml(original)}</textarea>
+                    </div>
+                    <div class="version-col version-actions">
+                        <small>You can copy this text into the current topic workspace to create a new version.</small>
+                        <button onclick="useTopicVersionAsCurrent(${index})">Use as current topic draft</button>
+                    </div>
+                    <div class="version-col">
+                        <h3>Checked version</h3>
+                        <textarea>${escapeHtml(corrected)}</textarea>
+                    </div>
+                </div>
+                ${scoreHtml}
+                <h3 style="margin-top:16px;font-size:0.95em;">Original with highlighted issues:</h3>
+                <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
+                <div class="feedback">
+                    <h3 style="margin-top:0;font-size:1em;">Feedback &amp; suggestions for this topic:</h3>
+                    <pre style="white-space: pre-wrap;">${escapeHtml(feedback)}</pre>
+                </div>
+            `;
+        }
 
-        // ========== 全域暴露 ==========
-        window.enterSection = enterSection;
-        window.goBack = goBack;
-        window.toggleRubric = toggleRubric;
+        function useTopicVersionAsCurrent(idx) {
+            const draft = topicDrafts[idx];
+            if (!draft) return;
+            document.getElementById('topic-text').value = draft.corrected;
+            document.getElementById('topic-checked-text').value = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function printTopicDrafts() {
+            const allCheckboxes = Array.from(document.querySelectorAll('.topic-print-select:checked'));
+            if (allCheckboxes.length === 0) {
+                alert('Please select at least one topic version to print.');
+                return;
+            }
+            const selected = allCheckboxes
+                .map(cb => {
+                    const idx = parseInt(cb.getAttribute('data-index'), 10);
+                    return topicDrafts[idx];
+                })
+                .filter(Boolean);
+            if (selected.length === 0) {
+                alert('No valid topic versions selected.');
+                return;
+            }
+            const school = document.getElementById('student-school')?.value || '';
+            const klass = document.getElementById('student-class')?.value || '';
+            const seat = document.getElementById('student-seat')?.value || '';
+            const name = document.getElementById('student-name')?.value || '';
+            const schoolEsc = escapeHtml(school || '________');
+            const classEsc = escapeHtml(klass || '________');
+            const seatEsc = escapeHtml(seat || '________');
+            const nameEsc = escapeHtml(name || '________');
+            const topic = selected[0].topic || '';
+            const topicEsc = escapeHtml(topic || '');
+            const topicImageHtml = topicImageBase64
+                ? `<p><img src="${topicImageBase64}" alt="Topic illustration" style="max-width:100%; margin-top:10px; border-radius:6px;"></p>`
+                : '';
+            const headerHtml = `
+                <div class="print-header">
+                    <h1>A Writing Progress &amp; Product Report Generated by Shirley's AI Writing Coach</h1>
+                    <p>School: ${schoolEsc} &nbsp;&nbsp; Class: ${classEsc} &nbsp;&nbsp; Seat No.: ${seatEsc} &nbsp;&nbsp; Name: ${nameEsc}</p>
+                    <p><strong>Level 2: Topic Practice</strong></p>
+                    <p><strong>Topic:</strong> ${topicEsc}</p>
+                    ${topicImageHtml}
+                </div>
+            `;
+            const bodyHtml = selected.map(d => {
+                return `
+                    <div class="printable">
+                        <h2>${escapeHtml(d.label || '')}</h2>
+                        <h3>Original with highlighted issues:</h3>
+                        <p>${d.highlighted.replace(/\n/g, '<br>')}</p>
+                        <h3>Feedback:</h3>
+                        <pre style="white-space: pre-wrap;">${escapeHtml(d.feedback)}</pre>
+                    </div>
+                `;
+            }).join('');
+            const printable = document.getElementById('printable-drafts');
+            printable.innerHTML = headerHtml + bodyHtml;
+            const bodyChildren = Array.from(document.body.children);
+            const toHide = bodyChildren.filter(el => el !== printable);
+            toHide.forEach(el => el.classList.add('no-print-temp'));
+            printable.style.display = 'block';
+            window.print();
+            printable.style.display = 'none';
+            toHide.forEach(el => el.classList.remove('no-print-temp'));
+        }
+
+        function initTopicCategories() {
+            const catSelect = document.getElementById('topic-category-select');
+            const topicSelect = document.getElementById('topic-select');
+            if (!catSelect || !topicSelect) return;
+            catSelect.innerHTML = '<option value="">-- Choose a category --</option>';
+            Object.keys(topicCategories).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                catSelect.appendChild(opt);
+            });
+            topicSelect.innerHTML = '<option value="">-- Please choose a topic --</option>';
+            catSelect.addEventListener('change', () => {
+                const cat = catSelect.value;
+                topicSelect.innerHTML = '<option value="">-- Please choose a topic --</option>';
+                if (!cat || !topicCategories[cat]) return;
+                topicCategories[cat].forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    opt.textContent = t;
+                    topicSelect.appendChild(opt);
+                });
+            });
+        }
+
+        // ========== 設置文件上傳事件監聽器 ==========
+        document.getElementById('file-upload-main').addEventListener('change', e => {
+            const file = e.target.files[0];
+            handleFileInput(file, 'input-text');
+        });
+        document.getElementById('file-upload-topic').addEventListener('change', e => {
+            const file = e.target.files[0];
+            handleFileInput(file, 'topic-text');
+        });
+
+        // Expose functions to global scope
+        window.enterLevel = enterLevel;
+        window.goHome = goHome;
         window.analyzeWriting = analyzeWriting;
         window.printDrafts = printDrafts;
         window.analyzeTopic = analyzeTopic;
         window.generateReferenceEssay = generateReferenceEssay;
         window.useVersionAsCurrent = useVersionAsCurrent;
+        window.toggleRubric = toggleRubric;
         window.useTopicVersionAsCurrent = useTopicVersionAsCurrent;
         window.printTopicDrafts = printTopicDrafts;
-        window.renderWritingGists = renderWritingGists;
-        window.renderWritingGenres = renderWritingGenres;
-        window.renderGenreImages = renderGenreImages;
-        window.renderGsatPapers = renderGsatPapers;
 
-        // ========== 初始化 ==========
+        // Init on load
         document.addEventListener('DOMContentLoaded', function() {
-            parseRubricData(); // 解析評分標準
             loadWritingMaterials();
-            loadRubric(); // 載入評分標準到提示區域
+            loadRubric();
             initTopicCategories();
-            setupFileUploads();
         });
     </script>
 </body>
