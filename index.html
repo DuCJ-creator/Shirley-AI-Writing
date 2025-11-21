@@ -873,11 +873,11 @@
             ]
         };
 
- // ---------- Level 2 圖片瀏覽功能 ----------
+// ---------- Level 2 圖片瀏覽功能 ----------
 function openImageGallery(galleryName, imageCount) {
     currentGallery = galleryName;
     totalImages = imageCount;
-    currentImageIndex = 0;
+    currentImageIndex = 1; // 從 1 開始，因為圖片編號是 1.png, 2.png...
     updateImageViewer();
     document.getElementById('image-viewer').classList.add('active');
 }
@@ -893,40 +893,64 @@ function closeGenreModal() {
 function openGenreGallery(genre) {
     closeGenreModal();
     currentGallery = `writing genres/${genre}`;
-    totalImages = 8; // 假設每個genre有8張圖片
-    currentImageIndex = 0;
+    totalImages = 10; // 每個genre有10張圖片
+    currentImageIndex = 1; // 從 1 開始
     updateImageViewer();
     document.getElementById('image-viewer').classList.add('active');
 }
 
 function updateImageViewer() {
-    // 修正：使用正確的圖片路徑格式
-    const imageUrl = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex + 1}.png`;
-    console.log('Loading image:', imageUrl); // 調試用
+    // 修正：確保圖片路徑格式正確，從 1 開始編號
+    const imageUrl = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex}.png`;
+    console.log('Loading image:', imageUrl);
     
     const viewerImage = document.getElementById('viewer-image');
     const imageCounter = document.getElementById('image-counter');
     
-    // 添加加載狀態
-    viewerImage.style.opacity = '0.5';
+    // 顯示加載狀態
+    viewerImage.style.opacity = '0.3';
+    imageCounter.textContent = `Loading... (${currentImageIndex} / ${totalImages})`;
     
-    viewerImage.onload = function() {
+    // 預加載圖片
+    const img = new Image();
+    img.onload = function() {
+        viewerImage.src = imageUrl;
         viewerImage.style.opacity = '1';
+        imageCounter.textContent = `${currentImageIndex} / ${totalImages}`;
     };
     
-    viewerImage.onerror = function() {
+    img.onerror = function() {
         console.error('Failed to load image:', imageUrl);
-        viewerImage.alt = '圖片加載失敗';
+        viewerImage.alt = '圖片加載失敗，請檢查網路連線';
         viewerImage.style.opacity = '1';
+        imageCounter.textContent = `${currentImageIndex} / ${totalImages} - 加載失敗`;
+        
+        // 如果圖片加載失敗，嘗試下一個
+        setTimeout(() => {
+            if (currentImageIndex < totalImages) {
+                currentImageIndex++;
+                updateImageViewer();
+            }
+        }, 1000);
     };
     
-    viewerImage.src = imageUrl;
-    imageCounter.textContent = `${currentImageIndex + 1} / ${totalImages}`;
+    img.src = imageUrl;
 }
 
 function changeImage(direction) {
-    currentImageIndex = (currentImageIndex + direction + totalImages) % totalImages;
-    updateImageViewer();
+    const newIndex = currentImageIndex + direction;
+    
+    // 確保索引在 1 到 totalImages 之間
+    if (newIndex >= 1 && newIndex <= totalImages) {
+        currentImageIndex = newIndex;
+        updateImageViewer();
+    } else if (newIndex < 1) {
+        currentImageIndex = totalImages; // 循環到最後一張
+        updateImageViewer();
+    } else if (newIndex > totalImages) {
+        currentImageIndex = 1; // 循環到第一張
+        updateImageViewer();
+    }
 }
 
 function closeImageViewer() {
@@ -942,16 +966,6 @@ document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeImageViewer();
     }
 });
-
-        // 鍵盤導航支持
-        document.addEventListener('keydown', function(e) {
-            const viewer = document.getElementById('image-viewer');
-            if (viewer.classList.contains('active')) {
-                if (e.key === 'ArrowLeft') changeImage(-1);
-                if (e.key === 'ArrowRight') changeImage(1);
-                if (e.key === 'Escape') closeImageViewer();
-            }
-        });
 
         // ---------- Util ----------
         function escapeHtml(str) {
