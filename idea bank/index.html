@@ -6,6 +6,7 @@
     <title>GSAT 寫作議題 | 聖誕寫作樹</title>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <style>
+        /* 保持原有的 CSS 樣式不變 */
         :root {
             --primary-color: #ffd700;
             --secondary-color: #1e3a5f;
@@ -25,6 +26,9 @@
             color: white;
             overflow-x: hidden;
             padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .snow {
@@ -475,34 +479,91 @@
             "tolerance":["寬容","ˈtɑːlərəns"],"solidarity":["團結","ˌsɑːlɪˈdærəti"]
         };
 
-        // 載入 CSV 資料
+        // 載入 CSV 資料 - 修正資料處理
         Papa.parse(csvUrl, {
             download: true,
             header: true,
             complete: function(r) {
-                data = r.data.filter(x => x.category && x['model sentence']);
+                console.log("原始 CSV 資料:", r.data); // 除錯用
+                
+                // 過濾並處理資料
+                data = r.data
+                    .filter(x => x.category && x['model sentence'])
+                    .map(item => {
+                        let sentence = item['model sentence'].trim();
+                        
+                        // 檢查句子是否被截斷（包含換行或非常短）
+                        if (sentence.includes('\n') || sentence.split(' ').length < 3) {
+                            console.warn('可能被截斷的句子:', sentence);
+                            return null; // 跳過被截斷的句子
+                        }
+                        
+                        // 確保句子開頭大寫
+                        if (sentence.length > 0) {
+                            sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+                        }
+                        
+                        // 確保句子有適當的結束標點
+                        if (!sentence.endsWith('.') && !sentence.endsWith('!') && !sentence.endsWith('?')) {
+                            sentence += '.';
+                        }
+                        
+                        item['model sentence'] = sentence;
+                        return item;
+                    })
+                    .filter(x => x !== null);
+                
+                console.log("處理後的資料:", data); // 除錯用
+                
                 const topics = [...new Set(data.map(x => x.category.trim()))];
                 renderTopics(topics);
+            },
+            error: function(err) {
+                console.error('CSV 載入錯誤:', err);
+                // 如果載入失敗，使用備用資料
+                useFallbackData();
             }
         });
 
-        // 渲染主題圓圈 - 修正彩燈位置計算
+        // 備用資料
+        function useFallbackData() {
+            const fallbackData = [
+                {
+                    category: "教育平等 Education Equality",
+                    "model sentence": "Education equality ensures that every student has access to quality learning opportunities regardless of their background."
+                },
+                {
+                    category: "環境保護 Environmental Protection", 
+                    "model sentence": "Environmental protection requires collective efforts to preserve natural resources for future generations."
+                },
+                {
+                    category: "科技發展 Technology Development",
+                    "model sentence": "Technology development has revolutionized the way we communicate and access information in modern society."
+                }
+            ];
+            
+            data = fallbackData;
+            const topics = [...new Set(data.map(x => x.category.trim()))];
+            renderTopics(topics);
+        }
+
+        // 渲染主題圓圈
         function renderTopics(topics) {
             const wrapper = document.getElementById('topicsWrapper');
             const centerX = wrapper.offsetWidth / 2;
             const centerY = wrapper.offsetHeight / 2;
-            const baseRadius = Math.min(wrapper.offsetWidth, wrapper.offsetHeight) * 0.38; // 調整半徑
+            const baseRadius = Math.min(wrapper.offsetWidth, wrapper.offsetHeight) * 0.35;
 
             topics.forEach((n, i) => {
                 const angle = (i / topics.length) * 2 * Math.PI - Math.PI / 2;
-                const radius = i < 9 ? baseRadius * 0.8 : baseRadius * 1.15; // 調整內外圈半徑
-                const x = centerX + radius * Math.cos(angle) - 85;
-                const y = centerY + radius * Math.sin(angle) - 85;
+                const radius = i < 9 ? baseRadius * 0.75 : baseRadius * 1.1;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
 
                 const div = document.createElement('div');
                 div.className = `topic ${colors[i]}`;
-                div.style.left = x + 'px';
-                div.style.top = y + 'px';
+                div.style.left = `calc(50% + ${radius * Math.cos(angle)}px - 85px)`;
+                div.style.top = `calc(50% + ${radius * Math.sin(angle)}px - 85px)`;
                 div.style.animationDelay = i * 0.2 + 's';
                 const zh = n.split(' ')[0];
                 const en = n.split(' ').slice(1).join(' ');
@@ -510,24 +571,29 @@
                 div.onclick = () => showSentences(n);
                 wrapper.appendChild(div);
 
-                // 添加連接線 - 修正線條計算
-                const dx = x + 85 - centerX, dy = y + 85 - centerY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const deg = Math.atan2(dy, dx) * 180 / Math.PI;
+                // 添加連接線
                 const line = document.createElement('div');
                 line.className = 'line';
-                line.style.width = dist + 'px';
-                line.style.left = centerX + 'px';
-                line.style.top = centerY + 'px';
-                line.style.transform = `rotate(${deg}deg)`;
+                line.style.width = `${radius}px`;
+                line.style.left = '50%';
+                line.style.top = '50%';
+                line.style.transform = `rotate(${angle * 180 / Math.PI}deg)`;
+                line.style.transformOrigin = '0 0';
                 wrapper.appendChild(line);
             });
         }
 
-        // 顯示句子 - 確保每行CSV對應一個完整句子，並強制句首大寫
+        // 顯示句子 - 加強句子檢查
         function showSentences(topic) {
             const rows = data.filter(r => r.category.trim() === topic);
             
+            console.log(`主題 "${topic}" 的句子:`, rows); // 除錯用
+            
+            if (rows.length === 0) {
+                alert('找不到這個主題的完整句子，請檢查 CSV 檔案格式。');
+                return;
+            }
+
             // 隨機選擇2個完整的句子
             const selected = rows.sort(() => 0.5 - Math.random()).slice(0, 2);
 
@@ -538,9 +604,24 @@
             selected.forEach(item => {
                 let sent = item['model sentence'].trim();
 
-                // 強制句首大寫（確保每句話開頭都是大寫）
-                if (sent.length > 0) {
+                // 最終檢查和清理
+                if (sent) {
+                    // 移除所有換行符和多餘空格
+                    sent = sent.replace(/[\n\r]/g, ' ').replace(/\s+/g, ' ').trim();
+                    
+                    // 強制句首大寫
                     sent = sent.charAt(0).toUpperCase() + sent.slice(1);
+                    
+                    // 確保句子以句號結束
+                    if (!sent.endsWith('.') && !sent.endsWith('!') && !sent.endsWith('?')) {
+                        sent += '.';
+                    }
+                    
+                    // 檢查句子長度
+                    if (sent.split(' ').length < 4) {
+                        console.warn('句子太短，可能不完整:', sent);
+                        return; // 跳過太短的句子
+                    }
                 }
 
                 sent = highlightVocab(sent);
@@ -601,21 +682,47 @@
         });
 
         // 燈光切換功能
+        let lightsOn = true;
         document.getElementById('lightsToggle').addEventListener('click', () => {
             const topics = document.querySelectorAll('.topic');
             const lines = document.querySelectorAll('.line');
-            
-            topics.forEach(topic => {
-                topic.style.animationPlayState = topic.style.animationPlayState === 'paused' ? 'running' : 'paused';
-            });
-            
-            lines.forEach(line => {
-                line.style.animationPlayState = line.style.animationPlayState === 'paused' ? 'running' : 'paused';
-                line.style.opacity = line.style.opacity === '0.3' ? '1' : '0.3';
-            });
-            
             const star = document.querySelector('.star');
-            star.style.animationPlayState = star.style.animationPlayState === 'paused' ? 'running' : 'paused';
+            
+            if (lightsOn) {
+                // 關閉燈光
+                topics.forEach(topic => {
+                    topic.style.animationPlayState = 'paused';
+                    topic.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)';
+                });
+                
+                lines.forEach(line => {
+                    line.style.animationPlayState = 'paused';
+                    line.style.opacity = '0.2';
+                });
+                
+                star.style.animationPlayState = 'paused';
+                star.style.opacity = '0.5';
+                
+                document.getElementById('lightsToggle').textContent = '✨ 開啟燈光效果';
+            } else {
+                // 開啟燈光
+                topics.forEach(topic => {
+                    topic.style.animationPlayState = 'running';
+                    topic.style.boxShadow = '';
+                });
+                
+                lines.forEach(line => {
+                    line.style.animationPlayState = 'running';
+                    line.style.opacity = '1';
+                });
+                
+                star.style.animationPlayState = 'running';
+                star.style.opacity = '1';
+                
+                document.getElementById('lightsToggle').textContent = '✨ 切換燈光效果';
+            }
+            
+            lightsOn = !lightsOn;
         });
 
         // 添加鍵盤快捷鍵
@@ -629,6 +736,11 @@
                     }, 300);
                 }
             }
+        });
+
+        // 確保頁面居中
+        window.addEventListener('load', () => {
+            document.body.style.justifyContent = 'flex-start';
         });
     </script>
 </body>
