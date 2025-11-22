@@ -113,6 +113,13 @@
             z-index: 20;
             flex-shrink: 0;
             margin-bottom: 30px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .center:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 100px #ffd700, inset 0 0 50px rgba(255, 255, 255, 0.8);
         }
         
         .center span {
@@ -146,6 +153,7 @@
             z-index: 8;
             text-align: center;
             overflow: hidden;
+            transform-origin: center;
         }
         
         .topic:hover {
@@ -223,6 +231,12 @@
             box-shadow: 0 0 100px rgba(255, 215, 0, 0.8);
             border: 3px solid #ffd700;
             backdrop-filter: blur(10px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #sentences.show {
+            opacity: 1;
         }
         
         .close {
@@ -299,6 +313,48 @@
             transform: scale(1.2);
         }
         
+        /* 新增互動元素 */
+        .instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 215, 0, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            z-index: 5;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        .lights-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 215, 0, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            z-index: 5;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        
+        .lights-toggle:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+        
         /* 響應式設計 */
         @media (max-width: 1000px) {
             .topics-wrapper {
@@ -322,6 +378,11 @@
                 width: min(140px, 25vw);
                 height: min(140px, 25vw);
             }
+            
+            .instructions {
+                width: 90%;
+                font-size: 12px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -339,6 +400,13 @@
                 padding: 15px;
                 margin: 15px 0;
             }
+            
+            .lights-toggle {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -346,14 +414,18 @@
     <div class="snow"></div>
     <div class="tree"></div>
     <div class="star"></div>
+    
+    <button class="lights-toggle" id="lightsToggle">✨ 切換燈光效果</button>
 
     <div id="container">
-        <div class="center">
+        <div class="center" id="centerCircle">
             GSAT 寫作議題
             <span>Writing Topics</span>
         </div>
         <div class="topics-wrapper" id="topicsWrapper"></div>
     </div>
+
+    <div class="instructions">點擊彩燈查看寫作範例 • 點擊單字查看翻譯 • 點擊喇叭聽發音</div>
 
     <div id="sentences">
         <span class="close">×</span>
@@ -414,16 +486,16 @@
             }
         });
 
-        // 渲染主題圓圈
+        // 渲染主題圓圈 - 修正彩燈位置計算
         function renderTopics(topics) {
             const wrapper = document.getElementById('topicsWrapper');
             const centerX = wrapper.offsetWidth / 2;
             const centerY = wrapper.offsetHeight / 2;
-            const baseRadius = Math.min(wrapper.offsetWidth, wrapper.offsetHeight) * 0.42;
+            const baseRadius = Math.min(wrapper.offsetWidth, wrapper.offsetHeight) * 0.38; // 調整半徑
 
             topics.forEach((n, i) => {
                 const angle = (i / topics.length) * 2 * Math.PI - Math.PI / 2;
-                const radius = i < 9 ? baseRadius * 0.85 : baseRadius * 1.25;
+                const radius = i < 9 ? baseRadius * 0.8 : baseRadius * 1.15; // 調整內外圈半徑
                 const x = centerX + radius * Math.cos(angle) - 85;
                 const y = centerY + radius * Math.sin(angle) - 85;
 
@@ -438,7 +510,7 @@
                 div.onclick = () => showSentences(n);
                 wrapper.appendChild(div);
 
-                // 添加連接線
+                // 添加連接線 - 修正線條計算
                 const dx = x + 85 - centerX, dy = y + 85 - centerY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 const deg = Math.atan2(dy, dx) * 180 / Math.PI;
@@ -478,7 +550,11 @@
                 list.appendChild(div);
             });
 
-            document.getElementById('sentences').style.display = 'block';
+            const sentencesDiv = document.getElementById('sentences');
+            sentencesDiv.style.display = 'block';
+            setTimeout(() => {
+                sentencesDiv.classList.add('show');
+            }, 10);
         }
 
         // 高亮單字
@@ -501,13 +577,57 @@
 
         // 關閉句子視窗
         document.querySelector('.close').onclick = () => {
-            document.getElementById('sentences').style.display = 'none';
+            const sentencesDiv = document.getElementById('sentences');
+            sentencesDiv.classList.remove('show');
+            setTimeout(() => {
+                sentencesDiv.style.display = 'none';
+            }, 300);
         };
 
         // 點擊背景關閉句子視窗
         document.getElementById('sentences').addEventListener('click', (e) => {
             if (e.target === document.getElementById('sentences')) {
-                document.getElementById('sentences').style.display = 'none';
+                const sentencesDiv = document.getElementById('sentences');
+                sentencesDiv.classList.remove('show');
+                setTimeout(() => {
+                    sentencesDiv.style.display = 'none';
+                }, 300);
+            }
+        });
+
+        // 新增互動功能
+        document.getElementById('centerCircle').addEventListener('click', () => {
+            alert('🎄 聖誕寫作樹 🎄\n點擊周圍的彩燈查看不同主題的寫作範例！');
+        });
+
+        // 燈光切換功能
+        document.getElementById('lightsToggle').addEventListener('click', () => {
+            const topics = document.querySelectorAll('.topic');
+            const lines = document.querySelectorAll('.line');
+            
+            topics.forEach(topic => {
+                topic.style.animationPlayState = topic.style.animationPlayState === 'paused' ? 'running' : 'paused';
+            });
+            
+            lines.forEach(line => {
+                line.style.animationPlayState = line.style.animationPlayState === 'paused' ? 'running' : 'paused';
+                line.style.opacity = line.style.opacity === '0.3' ? '1' : '0.3';
+            });
+            
+            const star = document.querySelector('.star');
+            star.style.animationPlayState = star.style.animationPlayState === 'paused' ? 'running' : 'paused';
+        });
+
+        // 添加鍵盤快捷鍵
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const sentencesDiv = document.getElementById('sentences');
+                if (sentencesDiv.style.display === 'block') {
+                    sentencesDiv.classList.remove('show');
+                    setTimeout(() => {
+                        sentencesDiv.style.display = 'none';
+                    }, 300);
+                }
             }
         });
     </script>
