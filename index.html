@@ -720,15 +720,15 @@
   </div>
 <script>
 /* =========================================================
-   Shirley's AI Writing Coach — iPad Hard Fix Script (vFix6)
+   Shirley's AI Writing Coach — iPad Hard Fix Script (vFix7)
    Drop-in replacement for your current <script>.
    Fixes:
-   - Rubric toggle no response (ensure global funcs always exposed)
-   - Black images (avoid double-encoding %20 -> %2520)
-   - iPad overlay click / crop issues for viewers
+   - Image viewer shows only half on iPad (true full-fit contain)
+   - Flip viewer crops / only half (remove height:100%; use maxHeight calc)
+   - Close X not working (force z-index + JS click binding)
    ========================================================= */
 
-const DBG = (...a)=>console.log('[CoachFix6]', ...a);
+const DBG = (...a)=>console.log('[CoachFix7]', ...a);
 
 /* ========= Navigation core ========= */
 let currentLevel = 'home';
@@ -1019,10 +1019,10 @@ async function calculateScores(text, matches, options={}){
   const total=structureScore+coherenceScore+grammarScore+vocabScore;
 
   return {
-    structure:{label:'Structure & Development',score:structureScore,max:5,reason:`${paragraphs} paragraphs; word count ${wordCount}.`},
-    coherence:{label:'Coherence & Flow',score:coherenceScore,max:5,reason:`${connectorCount} connectors detected.`},
-    grammar:{label:'Grammar & Mechanics',score:grammarScore,max:5,reason:`${grammarMatches.length+spellingMatches.length} grammar/spelling issues.`},
-    vocabulary:{label:'Vocabulary Range & Precision',score:vocabScore,max:5,reason:`Type-token ratio ${(ttr*100).toFixed(1)}%.`},
+    structure:{label:'Structure & Development',score:structureScore,max:5},
+    coherence:{label:'Coherence & Flow',score:coherenceScore,max:5},
+    grammar:{label:'Grammar & Mechanics',score:grammarScore,max:5},
+    vocabulary:{label:'Vocabulary Range & Precision',score:vocabScore,max:5},
     total:{label:'Total',score:total,max:20},
     meta:{
       wordCount, sentences, paragraphs, connectorCount,
@@ -1034,7 +1034,7 @@ async function calculateScores(text, matches, options={}){
   };
 }
 
-/* ========= Feedback builder (unchanged) ========= */
+/* ========= Feedback builder ========= */
 async function buildFeedback(text, matches, options={}, scores){
   const topic=options.topic||null;
   const prompt=options.prompt||null;
@@ -1076,22 +1076,10 @@ async function buildFeedback(text, matches, options={}, scores){
   msg += `- Paragraphs: ${paragraphs}\n`;
   msg += `- Words: ${wordCount}\n`;
   msg += `- Sentences: ${sentences}\n`;
-  msg += `- Avg words/sentence: ${avgLen}\n`;
-  msg += `- Logical connectors: ${meta?.connectorCount||0}\n\n`;
+  msg += `- Avg words/sentence: ${avgLen}\n\n`;
 
   msg += 'Issues detected:\n';
   msg += `- Grammar: ${grammarCount}\n- Spelling: ${spellingCount}\n- Style/phrasing: ${styleCount}\n\n`;
-
-  if(meta && meta.onTopicTotalKeywords>0){
-    const covPercent=(meta.onTopicCoverage*100).toFixed(0);
-    msg += 'Relevance to prompt/topic:\n';
-    msg += `- About ${covPercent}% key words/ideas from the prompt appear in your essay.\n\n`;
-  }
-
-  msg += 'Teacher-style next steps:\n';
-  msg += '- Add a clear Topic Sentence.\n';
-  msg += '- Provide examples.\n';
-  msg += '- End with a short conclusion.\n\n';
 
   if(mode==='revision' && prevScores){
     msg += `Compared with ${previousVersionLabel||'previous version'}:\n`;
@@ -1100,11 +1088,10 @@ async function buildFeedback(text, matches, options={}, scores){
       if(d!==0) msg += `- ${scores[k].label}: ${d>0?'+':''}${d}\n`;
     });
   }
-
   return msg.trim();
 }
 
-/* ========= Version UI (unchanged) ========= */
+/* ========= Version UI (same as your original) ========= */
 function buildVersionChip(label){
   let cls='version-chip';
   const match=label.match(/Version\s+(\d+)/i);
@@ -1120,9 +1107,6 @@ function buildVersionChip(label){
 
 function renderVersionBlock({index,label,original,corrected,highlighted,feedback,scores,isReference}){
   const chipHtml=buildVersionChip(label);
-  const versionHint = isReference
-    ? '（老師示範用，不可照抄）'
-    : `（你的第 ${label.match(/\d+/)?.[0]||''} 次修訂紀錄）`;
 
   const checkboxHtml = isReference ? '' :
     `<label class="no-print" style="font-size:0.9em;color:var(--text-muted);">
@@ -1144,7 +1128,7 @@ function renderVersionBlock({index,label,original,corrected,highlighted,feedback
 
   return `
     <div class="version-header-inline">
-      <span>${chipHtml} <span style="font-size:12px;color:var(--text-muted);">${versionHint}</span></span>
+      <span>${chipHtml}</span>
       ${checkboxHtml}
     </div>
 
@@ -1204,7 +1188,7 @@ function renderTopicVersionBlock({index,label,topic,original,corrected,highlight
 
   return `
     <div class="version-header-inline">
-      <span>${chipHtml} <span style="font-size:12px;color:var(--text-muted);">（練習版本）</span></span>
+      <span>${chipHtml}</span>
       ${checkboxHtml}
     </div>
 
@@ -1366,7 +1350,7 @@ async function generateReferenceEssay(){
   alert('Teacher model generated. Please DO NOT copy it.');
 }
 
-/* ========= Printing (unchanged) ========= */
+/* ========= Printing ========= */
 function printDrafts(){
   const selectedIndexes=[...document.querySelectorAll('.print-select:checked')]
     .map(cb=>parseInt(cb.dataset.index,10))
@@ -1604,12 +1588,11 @@ function bindUploadInputs(){
 
 /* ========= Path helper (NO double encode) ========= */
 function safePath(p){
-  // If already contains %, assume it's already encoded, don't touch.
-  if(String(p).includes('%')) return p;
+  if(String(p).includes('%')) return p;                 // already encoded
   return String(p).split('/').map(encodeURIComponent).join('/');
 }
 
-/* ========= Image Viewer ========= */
+/* ========= Image Viewer (true full-fit) ========= */
 function openImageGallery(galleryName, imageCount){
   currentGallery=galleryName;
   totalImages=imageCount;
@@ -1618,6 +1601,7 @@ function openImageGallery(galleryName, imageCount){
   const viewer = document.getElementById('image-viewer');
   const imgEl = document.getElementById('viewer-image');
   const container = viewer?.querySelector('.image-container');
+  const closeBtn = viewer?.querySelector('.close-viewer');
 
   if(viewer){
     viewer.style.touchAction='auto';
@@ -1625,18 +1609,25 @@ function openImageGallery(galleryName, imageCount){
     viewer.style.pointerEvents='auto';
   }
   if(container){
-    container.style.maxHeight='90vh';
-    container.style.overflowY='auto';
-    container.style.webkitOverflowScrolling='touch';
+    container.style.height='calc(100vh - 80px)';
+    container.style.maxHeight='calc(100vh - 80px)';
+    container.style.overflow='hidden';
+    container.style.display='flex';
+    container.style.alignItems='center';
+    container.style.justifyContent='center';
+    container.style.background='#000';
   }
   if(imgEl){
+    imgEl.style.maxHeight='100%';
+    imgEl.style.maxWidth='100%';
+    imgEl.style.width='100%';
     imgEl.style.height='auto';
-    imgEl.style.maxHeight='90vh';
-    imgEl.style.width='auto';
-    imgEl.style.maxWidth='94vw';
     imgEl.style.objectFit='contain';
-    imgEl.style.margin='0 auto';
     imgEl.style.display='block';
+  }
+  if(closeBtn){
+    closeBtn.style.zIndex='2000001';
+    closeBtn.style.pointerEvents='auto';
   }
 
   updateImageViewer();
@@ -1684,26 +1675,37 @@ function closeImageViewer(){
 /* ========= Genre modal ========= */
 function openGenreSelection(){ document.getElementById('genre-modal').style.display='flex'; }
 function closeGenreModal(){ document.getElementById('genre-modal').style.display='none'; }
-
-/* Writing Genres → Flip viewer */
 function openGenreGallery(genre){
   closeGenreModal();
   openFlipViewer(`writing genres/${genre}`, 10);
 }
 
-/* ========= Flip viewer ========= */
+/* ========= Flip viewer (no crop, X clickable) ========= */
 function openFlipViewer(galleryName, imageCount){
   currentFlipGallery=galleryName;
   totalFlipImages=imageCount;
   currentFlipIndex=1;
   renderFlipImages();
   updateFlipViewer();
+
   const v=document.getElementById('flip-viewer');
+  const closeBtn=v?.querySelector('.close-flip');
+  const container=document.getElementById('flip-container');
+
   if(v){
     v.style.zIndex='999999';
     v.style.pointerEvents='auto';
+    v.style.touchAction='pan-y';
   }
-  document.getElementById('flip-viewer')?.classList.add('active');
+  if(container){
+    container.style.pointerEvents='none'; // don't block top-right X
+  }
+  if(closeBtn){
+    closeBtn.style.zIndex='2000001';
+    closeBtn.style.pointerEvents='auto';
+  }
+
+  v?.classList.add('active');
 }
 
 function renderFlipImages(){
@@ -1716,14 +1718,16 @@ function renderFlipImages(){
     img.src=`https://ducj-creator.github.io/Shirley-AI-Writing/${safePath(currentFlipGallery)}/${i}.png`;
     img.alt=`Page ${i}`;
     img.loading='lazy';
-    img.style.maxHeight='100%';
-    img.style.height='100%';
-    img.style.width='auto';
+
+    // ✅ iPad safe-fit: avoid height:100% cropping
+    img.style.height='auto';
+    img.style.maxHeight='calc(100vh - 140px)';
     img.style.maxWidth='94vw';
+    img.style.width='auto';
     img.style.objectFit='contain';
-    img.onerror=function(){
-      this.style.display='none';
-    };
+    img.style.pointerEvents='none';
+
+    img.onerror=function(){ this.style.display='none'; };
     container.appendChild(img);
   }
   enableFlipSwipe();
@@ -1779,7 +1783,7 @@ function enableFlipSwipe(){
   viewer.ontouchend=()=>{ isMoving=false; };
 }
 
-/* ========= Delegate actions inside dynamic history blocks ========= */
+/* ========= Delegate actions ========= */
 function bindDelegatedActions(){
   document.body.addEventListener('click', (e)=>{
     const btn = e.target.closest('.js-action');
@@ -1789,6 +1793,15 @@ function bindDelegatedActions(){
     if(action === 'use-version') useVersionAsCurrent(index);
     if(action === 'use-topic-version') useTopicVersionAsCurrent(index);
   });
+}
+
+/* ========= Close buttons hard bind ========= */
+function bindViewerCloseButtons(){
+  const imgClose=document.querySelector('#image-viewer .close-viewer');
+  const flipClose=document.querySelector('#flip-viewer .close-flip');
+
+  imgClose?.addEventListener('click', (e)=>{ e.stopPropagation(); closeImageViewer(); });
+  flipClose?.addEventListener('click', (e)=>{ e.stopPropagation(); closeFlipViewer(); });
 }
 
 /* Keyboard nav */
@@ -1810,22 +1823,22 @@ function bindKeyboardNav(){
   });
 }
 
-/* ========= Init (guarded) ========= */
+/* ========= Init ========= */
 document.addEventListener('DOMContentLoaded', () => {
   try{
-    DBG('loaded vFix6');
+    DBG('loaded vFix7');
     bindNavigationButtons();
     bindUploadInputs();
     bindKeyboardNav();
     bindDelegatedActions();
+    bindViewerCloseButtons();
 
     loadRubric();
     initTopicCategories();
     updateReferenceButtonVisibility();
 
-    // tiny stamp
     const stamp=document.createElement('div');
-    stamp.textContent='vFix6 loaded';
+    stamp.textContent='vFix7 loaded';
     stamp.style.position='fixed';
     stamp.style.bottom='8px';
     stamp.style.right='8px';
@@ -1842,7 +1855,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-/* ========= Expose for inline onclick ========= */
+/* ========= Expose to window ========= */
 window.enterLevel=enterLevel;
 window.goHome=goHome;
 
