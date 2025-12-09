@@ -720,6 +720,11 @@
   </div>
 
 <script>
+/* =========================================================
+   Shirley's AI Writing Coach — Full Replaceable Script (FIXED)
+   Fix: rubric reminder button now binds robustly
+   ========================================================= */
+
 /* ========= Navigation core ========= */
 let currentLevel = 'home';
 function enterLevel(level){
@@ -1137,7 +1142,6 @@ function buildVersionChip(label){
   return `<span class="${cls}">${escapeHtml(label)}</span>`;
 }
 
-/* Render blocks with data-action (no inline dependency) */
 function renderVersionBlock({index,label,original,corrected,highlighted,feedback,scores,isReference}){
   const chipHtml=buildVersionChip(label);
   const versionHint = isReference
@@ -1390,7 +1394,7 @@ async function generateReferenceEssay(){
 }
 
 /* ========= Printing ========= */
-function printDrafts(){
+function printDrafts(){ /* (same as before) */
   const selectedIndexes=[...document.querySelectorAll('.print-select:checked')]
     .map(cb=>parseInt(cb.dataset.index,10))
     .filter(n=>!isNaN(n));
@@ -1429,8 +1433,7 @@ function printDrafts(){
   printable.style.display='none';
   toHide.forEach(el=>el.classList.remove('no-print-temp'));
 }
-
-function printTopicDrafts(){
+function printTopicDrafts(){ /* (same as before) */
   const selectedIndexes=[...document.querySelectorAll('.print-topic-select:checked')]
     .map(cb=>parseInt(cb.dataset.index,10))
     .filter(n=>!isNaN(n));
@@ -1472,7 +1475,7 @@ function printTopicDrafts(){
 }
 
 /* ========= Level 2 analyze ========= */
-async function analyzeTopic(){
+async function analyzeTopic(){ /* (same as before) */
   const wrap=document.getElementById('topic-history-wrap');
   const topic=document.getElementById('topic-select').value;
   const text=document.getElementById('topic-text').value;
@@ -1563,7 +1566,6 @@ async function performOCR(file, progressEl, targetTextarea){
   progressEl.innerHTML='⚠️ OCR not configured in this build. Please type manually if needed.';
   return;
 }
-
 function handleFileInput(file, targetId){
   if(!file) return;
   const textarea=document.getElementById(targetId);
@@ -1601,8 +1603,6 @@ function handleFileInput(file, targetId){
   reader.onload=e=>{ textarea.value=e.target.result; };
   reader.readAsText(file);
 }
-
-/* attach uploads safely */
 function bindUploadInputs(){
   document.getElementById('file-upload-main')?.addEventListener('change', e=>{
     handleFileInput(e.target.files[0], 'input-text');
@@ -1610,7 +1610,6 @@ function bindUploadInputs(){
   document.getElementById('file-upload-topic')?.addEventListener('change', e=>{
     handleFileInput(e.target.files[0], 'topic-text');
   });
-
   document.getElementById('prompt-image-upload')?.addEventListener('change', e=>{
     const file=e.target.files[0];
     if(!file){
@@ -1620,7 +1619,6 @@ function bindUploadInputs(){
     }
     handleFileInput(file, 'prompt-input');
   });
-
   document.getElementById('topic-image-upload')?.addEventListener('change', e=>{
     const file=e.target.files[0];
     const preview=document.getElementById('topic-image-preview');
@@ -1640,7 +1638,7 @@ function bindUploadInputs(){
   });
 }
 
-/* ========= Image galleries ========= */
+/* ========= Viewers / modal / flip (same as before) ========= */
 function openImageGallery(galleryName, imageCount){
   currentGallery=galleryName;
   totalImages=imageCount;
@@ -1684,13 +1682,8 @@ function closeImageViewer(){
   document.getElementById('image-viewer').classList.remove('active');
 }
 
-/* ========= Genre modal ========= */
-function openGenreSelection(){
-  document.getElementById('genre-modal').style.display='flex';
-}
-function closeGenreModal(){
-  document.getElementById('genre-modal').style.display='none';
-}
+function openGenreSelection(){ document.getElementById('genre-modal').style.display='flex'; }
+function closeGenreModal(){ document.getElementById('genre-modal').style.display='none'; }
 function openGenreGallery(genre){
   closeGenreModal();
   currentGallery=`writing genres/${genre}`;
@@ -1700,7 +1693,6 @@ function openGenreGallery(genre){
   document.getElementById('image-viewer').classList.add('active');
 }
 
-/* ========= Flip viewer (GSAT pages) ========= */
 function openFlipViewer(galleryName, imageCount){
   currentFlipGallery=galleryName;
   totalFlipImages=imageCount;
@@ -1765,7 +1757,67 @@ function enableFlipSwipe(){
   viewer.ontouchend=()=>{ isMoving=false; };
 }
 
-/* ========= Keyboard nav ========= */
+/* ========= Bind buttons robustly ========= */
+function bindStaticActions(){
+  // --- FIX HERE ---
+  // In analysis section there are 2 .rubric-toggle-btn:
+  // [0] rubric reminder, [1] history toggle
+  const analysisSection = document.getElementById('analysis-section');
+  const toggles = analysisSection?.querySelectorAll('.rubric-toggle-btn') || [];
+  if(toggles[0]) toggles[0].addEventListener('click', toggleRubric);
+  if(toggles[1]) toggles[1].addEventListener('click', toggleHistory);
+
+  // Level 1 controls
+  document.querySelector('button[onclick="analyzeWriting()"]')
+    ?.addEventListener('click', analyzeWriting);
+  document.querySelector('button[onclick="clearMainInput()"]')
+    ?.addEventListener('click', clearMainInput);
+  document.getElementById('ref-btn')
+    ?.addEventListener('click', generateReferenceEssay);
+  document.querySelector('button[onclick="copyCheckedToInput()"]')
+    ?.addEventListener('click', copyCheckedToInput);
+  document.querySelector('button[onclick="scrollToLatest()"]')
+    ?.addEventListener('click', scrollToLatest);
+  document.querySelector('button[onclick="printDrafts()"]')
+    ?.addEventListener('click', printDrafts);
+
+  // Level 2 controls
+  document.querySelector('button[onclick="analyzeTopic()"]')
+    ?.addEventListener('click', analyzeTopic);
+  document.querySelector('button[onclick="clearTopicInput()"]')
+    ?.addEventListener('click', clearTopicInput);
+  document.querySelector('button[onclick="toggleTopicHistory()"]')
+    ?.addEventListener('click', toggleTopicHistory);
+  document.querySelector('button[onclick="printTopicDrafts()"]')
+    ?.addEventListener('click', printTopicDrafts);
+
+  // Modal close
+  document.querySelector('button[onclick="closeGenreModal()"]')
+    ?.addEventListener('click', closeGenreModal);
+}
+
+/* Delegate actions inside dynamic history blocks */
+function bindDelegatedActions(){
+  document.body.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.js-action');
+    if(!btn) return;
+    const action = btn.dataset.action;
+    const index = parseInt(btn.dataset.index, 10);
+    if(action === 'use-version') useVersionAsCurrent(index);
+    if(action === 'use-topic-version') useTopicVersionAsCurrent(index);
+  });
+
+  document.body.addEventListener('click', (e)=>{
+    const card = e.target.closest('.material-card');
+    if(!card) return;
+    const onclick = card.getAttribute('onclick');
+    if(onclick){
+      try{ new Function(onclick).call(window); }catch(_){}
+    }
+  });
+}
+
+/* Keyboard nav */
 function bindKeyboardNav(){
   document.addEventListener('keydown', e=>{
     const imgViewer=document.getElementById('image-viewer');
@@ -1784,66 +1836,6 @@ function bindKeyboardNav(){
   });
 }
 
-/* ========= Bind all buttons (no HTML edits needed) ========= */
-function bindStaticActions(){
-  // Level 1
-  document.querySelector('button[onclick="analyzeWriting()"]')
-    ?.addEventListener('click', analyzeWriting);
-  document.querySelector('button[onclick="clearMainInput()"]')
-    ?.addEventListener('click', clearMainInput);
-  document.getElementById('ref-btn')
-    ?.addEventListener('click', generateReferenceEssay);
-  document.querySelector('button[onclick="copyCheckedToInput()"]')
-    ?.addEventListener('click', copyCheckedToInput);
-  document.querySelector('button[onclick="scrollToLatest()"]')
-    ?.addEventListener('click', scrollToLatest);
-  document.querySelector('button[onclick="toggleRubric()"]')
-    ?.addEventListener('click', toggleRubric);
-  document.querySelector('button[onclick="toggleHistory()"]')
-    ?.addEventListener('click', toggleHistory);
-  document.querySelector('button[onclick="printDrafts()"]')
-    ?.addEventListener('click', printDrafts);
-
-  // Level 2
-  document.querySelector('button[onclick="analyzeTopic()"]')
-    ?.addEventListener('click', analyzeTopic);
-  document.querySelector('button[onclick="clearTopicInput()"]')
-    ?.addEventListener('click', clearTopicInput);
-  document.querySelector('button[onclick="toggleTopicHistory()"]')
-    ?.addEventListener('click', toggleTopicHistory);
-  document.querySelector('button[onclick="printTopicDrafts()"]')
-    ?.addEventListener('click', printTopicDrafts);
-
-  // Modal close (static)
-  document.querySelector('button[onclick="closeGenreModal()"]')
-    ?.addEventListener('click', closeGenreModal);
-}
-
-/* Delegate actions inside dynamic history blocks */
-function bindDelegatedActions(){
-  document.body.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.js-action');
-    if(!btn) return;
-
-    const action = btn.dataset.action;
-    const index = parseInt(btn.dataset.index, 10);
-
-    if(action === 'use-version') useVersionAsCurrent(index);
-    if(action === 'use-topic-version') useTopicVersionAsCurrent(index);
-  });
-
-  // Material cards / viewers (inline may work, but delegate just in case)
-  document.body.addEventListener('click', (e)=>{
-    const card = e.target.closest('.material-card');
-    if(!card) return;
-    const onclick = card.getAttribute('onclick');
-    if(onclick){
-      // If sandbox blocks inline, we re-execute via Function safely
-      try{ new Function(onclick).call(window); }catch(_){}
-    }
-  });
-}
-
 /* ========= Init ========= */
 document.addEventListener('DOMContentLoaded', () => {
   bindNavigationButtons();
@@ -1857,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateReferenceButtonVisibility();
 });
 
-/* ========= Expose for backward-compat (inline still works if present) ========= */
+/* ========= Expose for backward-compat ========= */
 window.enterLevel=enterLevel;
 window.goHome=goHome;
 
