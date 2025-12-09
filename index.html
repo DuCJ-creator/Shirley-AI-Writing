@@ -720,16 +720,15 @@
   </div>
 <script>
 /* =========================================================
-   Shirley's AI Writing Coach — iPad Hard Fix Script (vFix5)
+   Shirley's AI Writing Coach — iPad Hard Fix Script (vFix6)
    Drop-in replacement for your current <script>.
-   No HTML/CSS changes required.
    Fixes:
-   1) Rubric/History toggle not responding
-   2) Flip/Image viewer cropped + cannot close on iPad
-   3) Writing Genres must scroll vertically
+   - Rubric toggle no response (ensure global funcs always exposed)
+   - Black images (avoid double-encoding %20 -> %2520)
+   - iPad overlay click / crop issues for viewers
    ========================================================= */
 
-const DBG = (...a)=>console.log('[CoachFix5]', ...a);
+const DBG = (...a)=>console.log('[CoachFix6]', ...a);
 
 /* ========= Navigation core ========= */
 let currentLevel = 'home';
@@ -825,7 +824,7 @@ function scrollToLatest(){
   wrap.firstChild.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-/* ========= Rubric ========= */
+/* ========= Rubric loading ========= */
 async function loadRubric(){
   if(rubricText) return rubricText;
   rubricText = `
@@ -847,8 +846,7 @@ Vocabulary (5): Range + precision, avoid repetition.
 function toggleRubric(){
   const el = document.getElementById('rubric-reminder');
   if(!el) return;
-  const isHidden = (el.style.display==='none' || !el.style.display);
-  el.style.display = isHidden ? 'block' : 'none';
+  el.style.display = (el.style.display==='none' || !el.style.display) ? 'block' : 'none';
 }
 function toggleHistory(){
   document.getElementById('history-wrap')?.classList.toggle('active');
@@ -857,12 +855,13 @@ function toggleTopicHistory(){
   document.getElementById('topic-history-wrap')?.classList.toggle('active');
 }
 
-/* ========= LanguageTool ========= */
+/* ========= LanguageTool checker ========= */
 async function checkWithLanguageTool(text){
   const url = 'https://api.languagetool.org/v2/check';
   const params = new URLSearchParams();
   params.append('text', text);
   params.append('language', 'en-US');
+
   const res = await fetch(url, {
     method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
@@ -876,6 +875,7 @@ function findCapitalizationMatches(text){
   const matches = [];
   const sentences = text.split(/([.!?]\s+)/);
   let cursor = 0;
+
   for(let i=0;i<sentences.length;i++){
     const seg = sentences[i];
     if(!seg) continue;
@@ -883,7 +883,8 @@ function findCapitalizationMatches(text){
     if(/[A-Za-z]/.test(trimmed[0]) && trimmed[0] === trimmed[0].toLowerCase()){
       const start = cursor + seg.search(/[A-Za-z]/);
       matches.push({
-        offset:start, length:1,
+        offset:start,
+        length:1,
         message:'Sentence should start with a capital letter.',
         replacements:[{value: trimmed[0].toUpperCase()}],
         rule:{issueType:'grammar', description:'Capitalization'}
@@ -919,15 +920,16 @@ function buildHighlightedHtml(text, matches, highlightClass='err'){
     const suggestion=(m.replacements&&m.replacements[0])
       ? ' → '+m.replacements[0].value
       : '';
+    const tip=escapeHtml(tipBase+suggestion);
     result += escapeHtml(text.slice(cursor,start));
-    result += `<span class="${highlightClass}" title="${escapeHtml(tipBase+suggestion)}">${escapeHtml(original)}</span>`;
+    result += `<span class="${highlightClass}" title="${tip}">${escapeHtml(original)}</span>`;
     cursor=end;
   }
   result += escapeHtml(text.slice(cursor));
   return result;
 }
 
-/* ========= Prompt coverage ========= */
+/* ========= Chinese prompt helpers ========= */
 function isChinesePrompt(s){ return /[\u4e00-\u9fff]/.test(s||''); }
 function translateChinesePrompt(chinesePrompt){
   const translationMap = {
@@ -952,6 +954,7 @@ async function computePromptCoverage(text, promptOrTopic){
   if(isChinesePrompt(promptOrTopic)){
     processedPrompt = translateChinesePrompt(promptOrTopic);
   }
+
   const stop = new Set([
     'this','that','these','those','there','their','about','because','should',
     'would','could','which','when','where','while','what','your','have','has',
@@ -959,8 +962,11 @@ async function computePromptCoverage(text, promptOrTopic){
     'most','many','much','some','such','other','another','every','each'
   ]);
   const stem = w => w.replace(/(ing|ed|ly|s)$/i,'');
+
   const keywordCandidates=(processedPrompt.toLowerCase().match(/[a-z]{3,}/g)||[])
-    .map(stem).filter(w=>!stop.has(w));
+    .map(stem)
+    .filter(w=>!stop.has(w));
+
   const uniqueKeywords=Array.from(new Set(keywordCandidates));
   const lowerText=text.toLowerCase();
   let matched=0, matchedWords=[];
@@ -968,6 +974,7 @@ async function computePromptCoverage(text, promptOrTopic){
     const re=new RegExp('\\b'+w+'\\b','i');
     if(re.test(lowerText)){ matched++; matchedWords.push(w); }
   });
+
   const coverage=uniqueKeywords.length? matched/uniqueKeywords.length : 1;
   return {
     coverage, matchedKeywords:matchedWords, totalKeywords:uniqueKeywords.length,
@@ -975,7 +982,7 @@ async function computePromptCoverage(text, promptOrTopic){
   };
 }
 
-/* ========= Scoring / Feedback (same as yours) ========= */
+/* ========= Scoring ========= */
 async function calculateScores(text, matches, options={}){
   const wordTokens=text.trim().split(/\s+/).filter(Boolean);
   const wordCount=wordTokens.length;
@@ -1017,7 +1024,8 @@ async function calculateScores(text, matches, options={}){
     grammar:{label:'Grammar & Mechanics',score:grammarScore,max:5,reason:`${grammarMatches.length+spellingMatches.length} grammar/spelling issues.`},
     vocabulary:{label:'Vocabulary Range & Precision',score:vocabScore,max:5,reason:`Type-token ratio ${(ttr*100).toFixed(1)}%.`},
     total:{label:'Total',score:total,max:20},
-    meta:{ wordCount, sentences, paragraphs, connectorCount,
+    meta:{
+      wordCount, sentences, paragraphs, connectorCount,
       onTopicCoverage:cov,
       onTopicMatchedKeywords:coverageInfo.matchedKeywords,
       onTopicTotalKeywords:coverageInfo.totalKeywords,
@@ -1026,9 +1034,10 @@ async function calculateScores(text, matches, options={}){
   };
 }
 
+/* ========= Feedback builder (unchanged) ========= */
 async function buildFeedback(text, matches, options={}, scores){
-  const prompt=options.prompt||null;
   const topic=options.topic||null;
+  const prompt=options.prompt||null;
   const mode=options.mode||'first';
   const prevScores=options.prevScores||null;
   const previousVersionLabel=options.previousVersionLabel||null;
@@ -1054,12 +1063,14 @@ async function buildFeedback(text, matches, options={}, scores){
   }
   if(topic) msg += `Topic:\n"${topic}"\n\n`;
 
-  msg += '=== Rubric Scores (out of 5) ===\n';
-  msg += `- ${scores.structure.label}: ${scores.structure.score}/5\n`;
-  msg += `- ${scores.coherence.label}: ${scores.coherence.score}/5\n`;
-  msg += `- ${scores.grammar.label}: ${scores.grammar.score}/5\n`;
-  msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score}/5\n\n`;
-  msg += `>>> TOTAL SCORE: ${scores.total.score} / 20 <<<\n\n`;
+  if(scores){
+    msg += '=== Rubric Scores (out of 5) ===\n';
+    msg += `- ${scores.structure.label}: ${scores.structure.score}/${scores.structure.max}\n`;
+    msg += `- ${scores.coherence.label}: ${scores.coherence.score}/${scores.coherence.max}\n`;
+    msg += `- ${scores.grammar.label}: ${scores.grammar.score}/${scores.grammar.max}\n`;
+    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score}/${scores.vocabulary.max}\n\n`;
+    msg += `>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
+  }
 
   msg += 'GSAT Writing Snapshot:\n';
   msg += `- Paragraphs: ${paragraphs}\n`;
@@ -1078,8 +1089,8 @@ async function buildFeedback(text, matches, options={}, scores){
   }
 
   msg += 'Teacher-style next steps:\n';
-  msg += '- Add a clear Topic Sentence at the start of each paragraph.\n';
-  msg += '- Provide at least one concrete example.\n';
+  msg += '- Add a clear Topic Sentence.\n';
+  msg += '- Provide examples.\n';
   msg += '- End with a short conclusion.\n\n';
 
   if(mode==='revision' && prevScores){
@@ -1089,10 +1100,11 @@ async function buildFeedback(text, matches, options={}, scores){
       if(d!==0) msg += `- ${scores[k].label}: ${d>0?'+':''}${d}\n`;
     });
   }
+
   return msg.trim();
 }
 
-/* ========= Version UI (same behavior) ========= */
+/* ========= Version UI (unchanged) ========= */
 function buildVersionChip(label){
   let cls='version-chip';
   const match=label.match(/Version\s+(\d+)/i);
@@ -1122,12 +1134,12 @@ function renderVersionBlock({index,label,original,corrected,highlighted,feedback
     <div class="scores-block">
       <strong>Rubric scores (out of 5)</strong>
       <ul>
-        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/5</strong></li>
-        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/5</strong></li>
-        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/5</strong></li>
-        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/5</strong></li>
+        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
       </ul>
-      <div><strong>Total: ${scores.total.score} / 20</strong></div>
+      <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
     </div>` : '';
 
   return `
@@ -1171,6 +1183,7 @@ function renderVersionBlock({index,label,original,corrected,highlighted,feedback
 
 function renderTopicVersionBlock({index,label,topic,original,corrected,highlighted,feedback,scores}){
   const chipHtml=buildVersionChip(label);
+
   const checkboxHtml =
     `<label class="no-print" style="font-size:0.9em;color:var(--text-muted);">
       <input type="checkbox" class="print-topic-select" data-index="${index}">
@@ -1181,12 +1194,12 @@ function renderTopicVersionBlock({index,label,topic,original,corrected,highlight
     <div class="scores-block">
       <strong>Rubric scores (out of 5)</strong>
       <ul>
-        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/5</strong></li>
-        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/5</strong></li>
-        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/5</strong></li>
-        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/5</strong></li>
+        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
       </ul>
-      <div><strong>Total: ${scores.total.score} / 20</strong></div>
+      <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
     </div>` : '';
 
   return `
@@ -1253,11 +1266,12 @@ function updateReferenceButtonVisibility(){
   btn.style.display = realDraftCount>=1 ? 'inline-flex' : 'none';
 }
 
-/* ========= Analyze Level 1 ========= */
+/* ========= Level 1 analyze ========= */
 async function analyzeWriting(){
   const wrap=document.getElementById('history-wrap');
   const text=document.getElementById('input-text').value;
   const prompt=document.getElementById('prompt-input').value;
+
   if(!text.trim()){
     alert('Please enter text.');
     return;
@@ -1286,8 +1300,10 @@ async function analyzeWriting(){
     const highlighted=buildHighlightedHtml(text, allMatches, highlightClass);
     const scores=await calculateScores(text, allMatches, {prompt});
     const feedbackText=await buildFeedback(text, allMatches, {
-      prompt, mode:isFirstRealDraft?'first':'revision',
-      prevScores, previousVersionLabel: prevDraft?prevDraft.label:null
+      prompt,
+      mode:isFirstRealDraft?'first':'revision',
+      prevScores,
+      previousVersionLabel: prevDraft?prevDraft.label:null
     }, scores);
 
     realDraftCount++;
@@ -1295,8 +1311,9 @@ async function analyzeWriting(){
     const index=drafts.length;
 
     drafts.push({
-      original:text, corrected, highlighted, feedback:feedbackText,
-      scores, meta:scores.meta, label, isReference:false
+      original:text, corrected, highlighted,
+      feedback:feedbackText, scores, meta:scores.meta,
+      label, isReference:false
     });
 
     document.getElementById('checked-text').value=corrected;
@@ -1312,7 +1329,7 @@ async function analyzeWriting(){
   }
 }
 
-/* ========= Reference ========= */
+/* ========= Reference essay ========= */
 async function generateReferenceEssay(){
   const text=document.getElementById('input-text').value.trim();
   if(!text){
@@ -1349,7 +1366,7 @@ async function generateReferenceEssay(){
   alert('Teacher model generated. Please DO NOT copy it.');
 }
 
-/* ========= Printing ========= */
+/* ========= Printing (unchanged) ========= */
 function printDrafts(){
   const selectedIndexes=[...document.querySelectorAll('.print-select:checked')]
     .map(cb=>parseInt(cb.dataset.index,10))
@@ -1361,7 +1378,7 @@ function printDrafts(){
   const selected=selectedIndexes.map(i=>drafts[i]).filter(Boolean);
 
   const printable=document.getElementById('printable-drafts');
-  printable.innerHTML = `
+  printable.innerHTML=`
     <div class="printable">
       <h1>Shirley's AI Writing Coach</h1>
       <p>Selected Drafts</p><hr/>
@@ -1396,7 +1413,7 @@ function printTopicDrafts(){
   const selected=selectedIndexes.map(i=>topicDrafts[i]).filter(Boolean);
 
   const printable=document.getElementById('printable-drafts');
-  printable.innerHTML = `
+  printable.innerHTML=`
     <div class="printable">
       <h1>Shirley's AI Writing Coach</h1>
       <p>Selected Topic Drafts</p><hr/>
@@ -1421,7 +1438,7 @@ function printTopicDrafts(){
   toHide.forEach(el=>el.classList.remove('no-print-temp'));
 }
 
-/* ========= Analyze Level 2 ========= */
+/* ========= Level 2 analyze ========= */
 async function analyzeTopic(){
   const wrap=document.getElementById('topic-history-wrap');
   const topic=document.getElementById('topic-select').value;
@@ -1454,8 +1471,10 @@ async function analyzeTopic(){
     const highlighted=buildHighlightedHtml(text, allMatches, 'err err-topic');
     const scores=await calculateScores(text, allMatches, {topic});
     const feedbackText=await buildFeedback(text, allMatches, {
-      topic, mode:isFirstTopicDraft?'first':'revision',
-      prevScores, previousVersionLabel: prevTopicDraft?prevTopicDraft.label:null
+      topic,
+      mode:isFirstTopicDraft?'first':'revision',
+      prevScores,
+      previousVersionLabel: prevTopicDraft?prevTopicDraft.label:null
     }, scores);
 
     document.getElementById('topic-checked-text').value=corrected;
@@ -1463,7 +1482,10 @@ async function analyzeTopic(){
     const label=`Topic Version ${topicRealDraftCount}`;
     const index=topicDrafts.length;
 
-    topicDrafts.push({ topic, original:text, corrected, highlighted, feedback:feedbackText, scores, label });
+    topicDrafts.push({
+      topic, original:text, corrected, highlighted,
+      feedback:feedbackText, scores, label
+    });
     topicReport={topic, corrected, highlighted, feedback:feedbackText, scores};
 
     tempDiv.innerHTML=renderTopicVersionBlock({
@@ -1477,7 +1499,7 @@ async function analyzeTopic(){
   }
 }
 
-/* ========= Topic categories ========= */
+/* ========= Topic categories init ========= */
 function initTopicCategories(){
   const catSelect=document.getElementById('topic-category-select');
   const topicSelect=document.getElementById('topic-select');
@@ -1503,9 +1525,10 @@ function initTopicCategories(){
   });
 }
 
-/* ========= Upload inputs ========= */
+/* ========= File upload / OCR hooks ========= */
 async function performOCR(file, progressEl, targetTextarea){
-  progressEl.innerHTML='⚠️ OCR not configured. Please type manually.';
+  progressEl.innerHTML='⚠️ OCR not configured in this build. Please type manually if needed.';
+  return;
 }
 function handleFileInput(file, targetId){
   if(!file) return;
@@ -1520,7 +1543,10 @@ function handleFileInput(file, targetId){
     progress.style.color='var(--text-muted)';
     progress.innerHTML='🔄 Extracting text from image…';
     textarea.parentNode.insertBefore(progress, textarea.nextSibling);
-    performOCR(file, progress, textarea).then(()=>setTimeout(()=>progress.remove(), 3000));
+
+    performOCR(file, progress, textarea).then(()=>{
+      setTimeout(()=>progress.remove(), 3000);
+    });
 
     const reader=new FileReader();
     reader.onload = e=>{
@@ -1529,7 +1555,9 @@ function handleFileInput(file, targetId){
         document.getElementById('prompt-preview-img').src=e.target.result;
         document.getElementById('prompt-image-preview').style.display='block';
       }
-      if(targetId==='topic-text'){ topicImageBase64=e.target.result; }
+      if(targetId==='topic-text'){
+        topicImageBase64=e.target.result;
+      }
     };
     reader.readAsDataURL(file);
     return;
@@ -1574,13 +1602,14 @@ function bindUploadInputs(){
   });
 }
 
-/* ========= URL helper (fix spaces) ========= */
+/* ========= Path helper (NO double encode) ========= */
 function safePath(p){
-  // keep slashes, encode each segment
-  return p.split('/').map(encodeURIComponent).join('/');
+  // If already contains %, assume it's already encoded, don't touch.
+  if(String(p).includes('%')) return p;
+  return String(p).split('/').map(encodeURIComponent).join('/');
 }
 
-/* ========= Image Viewer (hard iPad fix) ========= */
+/* ========= Image Viewer ========= */
 function openImageGallery(galleryName, imageCount){
   currentGallery=galleryName;
   totalImages=imageCount;
@@ -1613,25 +1642,39 @@ function openImageGallery(galleryName, imageCount){
   updateImageViewer();
   viewer?.classList.add('active');
 }
+
 function updateImageViewer(){
-  const url=`https://ducj-creator.github.io/Shirley-AI-Writing/${safePath(currentGallery)}/${currentImageIndex}.png`;
+  const imageUrl=`https://ducj-creator.github.io/Shirley-AI-Writing/${safePath(currentGallery)}/${currentImageIndex}.png`;
   const viewerImage=document.getElementById('viewer-image');
   const counter=document.getElementById('image-counter');
   if(!viewerImage || !counter) return;
 
+  viewerImage.style.opacity='0.3';
   counter.textContent=`Loading… (${currentImageIndex}/${totalImages})`;
+
   const img=new Image();
   img.onload=()=>{
-    viewerImage.src=url;
+    viewerImage.src=imageUrl;
+    viewerImage.style.opacity='1';
     counter.textContent=`${currentImageIndex} / ${totalImages}`;
   };
-  img.onerror=()=>{ counter.textContent=`${currentImageIndex}/${totalImages} - failed`; };
-  img.src=url;
+  img.onerror=()=>{
+    viewerImage.alt='Failed to load image.';
+    viewerImage.style.opacity='1';
+    counter.textContent=`${currentImageIndex}/${totalImages} - failed`;
+  };
+  img.src=imageUrl;
 }
+
 function changeImage(direction){
-  currentImageIndex += direction;
-  if(currentImageIndex<1) currentImageIndex=totalImages;
-  if(currentImageIndex>totalImages) currentImageIndex=1;
+  const newIndex=currentImageIndex+direction;
+  if(newIndex>=1 && newIndex<=totalImages){
+    currentImageIndex=newIndex;
+  }else if(newIndex<1){
+    currentImageIndex=totalImages;
+  }else{
+    currentImageIndex=1;
+  }
   updateImageViewer();
 }
 function closeImageViewer(){
@@ -1642,34 +1685,27 @@ function closeImageViewer(){
 function openGenreSelection(){ document.getElementById('genre-modal').style.display='flex'; }
 function closeGenreModal(){ document.getElementById('genre-modal').style.display='none'; }
 
-/* ✅ Genres → Flip Viewer */
+/* Writing Genres → Flip viewer */
 function openGenreGallery(genre){
   closeGenreModal();
   openFlipViewer(`writing genres/${genre}`, 10);
 }
 
-/* ========= Flip Viewer (hard iPad fix) ========= */
+/* ========= Flip viewer ========= */
 function openFlipViewer(galleryName, imageCount){
   currentFlipGallery=galleryName;
   totalFlipImages=imageCount;
   currentFlipIndex=1;
-
-  const viewer=document.getElementById('flip-viewer');
-  const container=document.getElementById('flip-container');
-  if(viewer){
-    viewer.style.zIndex='999999';
-    viewer.style.pointerEvents='auto';
-  }
-  if(container){
-    container.style.height='calc(100vh - 120px)';
-    container.style.overflow='hidden';
-    container.style.pointerEvents='none'; // so fixed buttons always clickable
-  }
-
   renderFlipImages();
   updateFlipViewer();
-  viewer?.classList.add('active');
+  const v=document.getElementById('flip-viewer');
+  if(v){
+    v.style.zIndex='999999';
+    v.style.pointerEvents='auto';
+  }
+  document.getElementById('flip-viewer')?.classList.add('active');
 }
+
 function renderFlipImages(){
   const container=document.getElementById('flip-container');
   if(!container) return;
@@ -1680,40 +1716,51 @@ function renderFlipImages(){
     img.src=`https://ducj-creator.github.io/Shirley-AI-Writing/${safePath(currentFlipGallery)}/${i}.png`;
     img.alt=`Page ${i}`;
     img.loading='lazy';
-
-    // hard fit
     img.style.maxHeight='100%';
     img.style.height='100%';
     img.style.width='auto';
     img.style.maxWidth='94vw';
     img.style.objectFit='contain';
-    img.style.pointerEvents='auto'; // image itself can be tapped if needed
-
-    img.onerror=function(){ this.style.display='none'; };
+    img.onerror=function(){
+      this.style.display='none';
+    };
     container.appendChild(img);
   }
   enableFlipSwipe();
 }
+
 function updateFlipViewer(){
-  document.querySelectorAll('.flip-image').forEach((img, idx)=>{
+  const images=document.querySelectorAll('.flip-image');
+  images.forEach((img, idx)=>{
     img.classList.toggle('active', idx+1===currentFlipIndex);
   });
-  const counter=document.getElementById('flip-counter');
-  if(counter) counter.textContent=`${currentFlipIndex} / ${totalFlipImages}`;
+  const counter = document.getElementById('flip-counter');
+  if(counter){
+    counter.textContent = `${currentFlipIndex} / ${totalFlipImages}`;
+  }
 }
+
 function changeFlipPage(direction){
-  currentFlipIndex += direction;
-  if(currentFlipIndex<1) currentFlipIndex=totalFlipImages;
-  if(currentFlipIndex>totalFlipImages) currentFlipIndex=1;
+  const newIndex=currentFlipIndex+direction;
+  if(newIndex>=1 && newIndex<=totalFlipImages){
+    currentFlipIndex=newIndex;
+  }else if(newIndex<1){
+    currentFlipIndex=totalFlipImages;
+  }else{
+    currentFlipIndex=1;
+  }
   updateFlipViewer();
 }
+
 function closeFlipViewer(){
   document.getElementById('flip-viewer')?.classList.remove('active');
 }
+
 function enableFlipSwipe(){
   const viewer=document.getElementById('flip-viewer');
   if(!viewer) return;
   let startX=0, startY=0, isMoving=false;
+
   viewer.ontouchstart=e=>{
     if(!viewer.classList.contains('active')) return;
     const t=e.touches[0];
@@ -1722,7 +1769,8 @@ function enableFlipSwipe(){
   viewer.ontouchmove=e=>{
     if(!isMoving) return;
     const t=e.touches[0];
-    const dx=t.clientX-startX, dy=t.clientY-startY;
+    const dx=t.clientX-startX;
+    const dy=t.clientY-startY;
     if(Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)){
       isMoving=false;
       changeFlipPage(dx<0?1:-1);
@@ -1731,60 +1779,7 @@ function enableFlipSwipe(){
   viewer.ontouchend=()=>{ isMoving=false; };
 }
 
-/* ========= Robust bindings (no inline reliance) ========= */
-function bindStaticActions(){
-  // Rubric + history buttons (by class order in analysis panel)
-  const analysisSection=document.getElementById('analysis-section');
-  if(analysisSection){
-    const toggles=[...analysisSection.querySelectorAll('.rubric-toggle-btn')];
-    toggles[0]?.addEventListener('click', toggleRubric);
-    toggles[1]?.addEventListener('click', toggleHistory);
-  }
-
-  // Level 1 buttons
-  document.querySelector('#analysis-section .controls .btn')?.addEventListener('click', analyzeWriting);
-  document.querySelector('#analysis-section .controls .btn-ghost')?.addEventListener('click', clearMainInput);
-  document.getElementById('ref-btn')?.addEventListener('click', generateReferenceEssay);
-  document.querySelector('button[onclick*="copyCheckedToInput"]')?.addEventListener('click', copyCheckedToInput);
-  document.querySelector('button[onclick*="scrollToLatest"]')?.addEventListener('click', scrollToLatest);
-  document.querySelector('button[onclick*="printDrafts"]')?.addEventListener('click', printDrafts);
-
-  // Level 2 buttons
-  document.querySelector('button[onclick*="analyzeTopic"]')?.addEventListener('click', analyzeTopic);
-  document.querySelector('button[onclick*="clearTopicInput"]')?.addEventListener('click', clearTopicInput);
-  document.querySelector('button[onclick*="toggleTopicHistory"]')?.addEventListener('click', toggleTopicHistory);
-  document.querySelector('button[onclick*="printTopicDrafts"]')?.addEventListener('click', printTopicDrafts);
-
-  // Modal buttons
-  document.querySelector('div.material-card[onclick*="openGenreSelection"]')?.addEventListener('click', openGenreSelection);
-  document.querySelector('button[onclick*="closeGenreModal"]')?.addEventListener('click', closeGenreModal);
-
-  // Viewer buttons (force z-index + pointer events)
-  const imgClose=document.querySelector('#image-viewer .close-viewer');
-  const imgPrev=document.querySelector('#image-viewer .image-nav.prev');
-  const imgNext=document.querySelector('#image-viewer .image-nav.next');
-  [imgClose,imgPrev,imgNext].forEach(b=>{
-    if(!b) return;
-    b.style.zIndex='1000000';
-    b.style.pointerEvents='auto';
-  });
-  imgClose?.addEventListener('click', closeImageViewer);
-  imgPrev?.addEventListener('click', ()=>changeImage(-1));
-  imgNext?.addEventListener('click', ()=>changeImage(1));
-
-  const flipClose=document.querySelector('#flip-viewer .close-flip');
-  const flipPrev=document.querySelector('#flip-viewer .flip-nav.prev');
-  const flipNext=document.querySelector('#flip-viewer .flip-nav.next');
-  [flipClose,flipPrev,flipNext].forEach(b=>{
-    if(!b) return;
-    b.style.zIndex='1000000';
-    b.style.pointerEvents='auto';
-  });
-  flipClose?.addEventListener('click', closeFlipViewer);
-  flipPrev?.addEventListener('click', ()=>changeFlipPage(-1));
-  flipNext?.addEventListener('click', ()=>changeFlipPage(1));
-}
-
+/* ========= Delegate actions inside dynamic history blocks ========= */
 function bindDelegatedActions(){
   document.body.addEventListener('click', (e)=>{
     const btn = e.target.closest('.js-action');
@@ -1796,10 +1791,12 @@ function bindDelegatedActions(){
   });
 }
 
+/* Keyboard nav */
 function bindKeyboardNav(){
   document.addEventListener('keydown', e=>{
     const imgViewer=document.getElementById('image-viewer');
     const flipViewer=document.getElementById('flip-viewer');
+
     if(imgViewer?.classList.contains('active')){
       if(e.key==='ArrowLeft') changeImage(-1);
       if(e.key==='ArrowRight') changeImage(1);
@@ -1813,54 +1810,64 @@ function bindKeyboardNav(){
   });
 }
 
-/* ========= Init ========= */
-document.addEventListener('DOMContentLoaded', async () => {
-  DBG('loaded vFix5');
-  bindNavigationButtons();
-  bindUploadInputs();
-  bindKeyboardNav();
-  bindStaticActions();
-  bindDelegatedActions();
+/* ========= Init (guarded) ========= */
+document.addEventListener('DOMContentLoaded', () => {
+  try{
+    DBG('loaded vFix6');
+    bindNavigationButtons();
+    bindUploadInputs();
+    bindKeyboardNav();
+    bindDelegatedActions();
 
-  await loadRubric();
-  initTopicCategories();
-  updateReferenceButtonVisibility();
+    loadRubric();
+    initTopicCategories();
+    updateReferenceButtonVisibility();
 
-  // small on-screen stamp so you KNOW this file loaded
-  const stamp=document.createElement('div');
-  stamp.textContent='vFix5 loaded';
-  stamp.style.position='fixed';
-  stamp.style.bottom='8px';
-  stamp.style.right='8px';
-  stamp.style.fontSize='11px';
-  stamp.style.padding='4px 8px';
-  stamp.style.borderRadius='999px';
-  stamp.style.background='rgba(0,0,0,0.6)';
-  stamp.style.color='white';
-  stamp.style.zIndex='2000000';
-  stamp.style.pointerEvents='none';
-  document.body.appendChild(stamp);
+    // tiny stamp
+    const stamp=document.createElement('div');
+    stamp.textContent='vFix6 loaded';
+    stamp.style.position='fixed';
+    stamp.style.bottom='8px';
+    stamp.style.right='8px';
+    stamp.style.fontSize='11px';
+    stamp.style.padding='4px 8px';
+    stamp.style.borderRadius='999px';
+    stamp.style.background='rgba(0,0,0,0.6)';
+    stamp.style.color='white';
+    stamp.style.zIndex='2000000';
+    stamp.style.pointerEvents='none';
+    document.body.appendChild(stamp);
+  }catch(e){
+    console.error('Init failed but globals exposed', e);
+  }
 });
 
-/* ========= Expose ========= */
+/* ========= Expose for inline onclick ========= */
 window.enterLevel=enterLevel;
 window.goHome=goHome;
+
 window.analyzeWriting=analyzeWriting;
 window.generateReferenceEssay=generateReferenceEssay;
+window.useVersionAsCurrent=useVersionAsCurrent;
 window.toggleRubric=toggleRubric;
 window.toggleHistory=toggleHistory;
 window.printDrafts=printDrafts;
+
 window.analyzeTopic=analyzeTopic;
-window.toggleTopicHistory=toggleTopicHistory;
+window.useTopicVersionAsCurrent=useTopicVersionAsCurrent;
 window.printTopicDrafts=printTopicDrafts;
+window.toggleTopicHistory=toggleTopicHistory;
+
 window.openImageGallery=openImageGallery;
 window.openGenreSelection=openGenreSelection;
 window.openGenreGallery=openGenreGallery;
 window.closeGenreModal=closeGenreModal;
-window.openFlipViewer=openFlipViewer;
-window.closeFlipViewer=closeFlipViewer;
 window.changeImage=changeImage;
+window.closeImageViewer=closeImageViewer;
+
+window.openFlipViewer=openFlipViewer;
 window.changeFlipPage=changeFlipPage;
+window.closeFlipViewer=closeFlipViewer;
 </script>
 </body>
 </html>
