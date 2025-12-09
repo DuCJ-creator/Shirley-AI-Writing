@@ -721,8 +721,11 @@
 
 <script>
 /* =========================================================
-   Shirley's AI Writing Coach — Full Replaceable Script (FIXED)
-   Fix: rubric reminder button now binds robustly
+   Shirley's AI Writing Coach — Full Replaceable Script (vFix3)
+   Fixes:
+   1) Rubric button always works (text-based binding)
+   2) Image viewer full-fit + close/prev/next binding
+   3) Writing Genres use Flip Viewer (no vertical scroll)
    ========================================================= */
 
 /* ========= Navigation core ========= */
@@ -804,7 +807,6 @@ function escapeHtml(str){
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#039;');
 }
-
 function clearMainInput(){
   document.getElementById('input-text').value='';
   document.getElementById('checked-text').value='';
@@ -1394,7 +1396,7 @@ async function generateReferenceEssay(){
 }
 
 /* ========= Printing ========= */
-function printDrafts(){ /* (same as before) */
+function printDrafts(){
   const selectedIndexes=[...document.querySelectorAll('.print-select:checked')]
     .map(cb=>parseInt(cb.dataset.index,10))
     .filter(n=>!isNaN(n));
@@ -1433,7 +1435,8 @@ function printDrafts(){ /* (same as before) */
   printable.style.display='none';
   toHide.forEach(el=>el.classList.remove('no-print-temp'));
 }
-function printTopicDrafts(){ /* (same as before) */
+
+function printTopicDrafts(){
   const selectedIndexes=[...document.querySelectorAll('.print-topic-select:checked')]
     .map(cb=>parseInt(cb.dataset.index,10))
     .filter(n=>!isNaN(n));
@@ -1475,7 +1478,7 @@ function printTopicDrafts(){ /* (same as before) */
 }
 
 /* ========= Level 2 analyze ========= */
-async function analyzeTopic(){ /* (same as before) */
+async function analyzeTopic(){
   const wrap=document.getElementById('topic-history-wrap');
   const topic=document.getElementById('topic-select').value;
   const text=document.getElementById('topic-text').value;
@@ -1638,18 +1641,35 @@ function bindUploadInputs(){
   });
 }
 
-/* ========= Viewers / modal / flip (same as before) ========= */
+/* ========= Image Viewer (FIXED full-fit + close works) ========= */
 function openImageGallery(galleryName, imageCount){
   currentGallery=galleryName;
   totalImages=imageCount;
   currentImageIndex=1;
+
+  // Force iPad-friendly full-fit
+  const viewer = document.getElementById('image-viewer');
+  if(viewer){
+    viewer.style.touchAction = 'auto'; // allow scroll/click
+  }
+  const imgEl = document.getElementById('viewer-image');
+  if(imgEl){
+    imgEl.style.maxHeight = '90vh';
+    imgEl.style.width = 'auto';
+    imgEl.style.objectFit = 'contain';
+    imgEl.style.display = 'block';
+    imgEl.style.margin = '0 auto';
+  }
+
   updateImageViewer();
-  document.getElementById('image-viewer').classList.add('active');
+  viewer?.classList.add('active');
 }
+
 function updateImageViewer(){
   const imageUrl=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex}.png`;
   const viewerImage=document.getElementById('viewer-image');
   const counter=document.getElementById('image-counter');
+  if(!viewerImage || !counter) return;
 
   viewerImage.style.opacity='0.3';
   counter.textContent=`Loading… (${currentImageIndex}/${totalImages})`;
@@ -1667,6 +1687,7 @@ function updateImageViewer(){
   };
   img.src=imageUrl;
 }
+
 function changeImage(direction){
   const newIndex=currentImageIndex+direction;
   if(newIndex>=1 && newIndex<=totalImages){
@@ -1679,30 +1700,32 @@ function changeImage(direction){
   updateImageViewer();
 }
 function closeImageViewer(){
-  document.getElementById('image-viewer').classList.remove('active');
+  document.getElementById('image-viewer')?.classList.remove('active');
 }
 
+/* ========= Genre modal ========= */
 function openGenreSelection(){ document.getElementById('genre-modal').style.display='flex'; }
 function closeGenreModal(){ document.getElementById('genre-modal').style.display='none'; }
+
+/* ✅ FIX 3: Writing Genres use Flip Viewer (no vertical scroll) */
 function openGenreGallery(genre){
   closeGenreModal();
-  currentGallery=`writing genres/${genre}`;
-  totalImages=10;
-  currentImageIndex=1;
-  updateImageViewer();
-  document.getElementById('image-viewer').classList.add('active');
+  openFlipViewer(`writing genres/${genre}`, 10);
 }
 
+/* ========= Flip viewer (GSAT pages / Genres) ========= */
 function openFlipViewer(galleryName, imageCount){
   currentFlipGallery=galleryName;
   totalFlipImages=imageCount;
   currentFlipIndex=1;
   renderFlipImages();
   updateFlipViewer();
-  document.getElementById('flip-viewer').classList.add('active');
+  document.getElementById('flip-viewer')?.classList.add('active');
 }
+
 function renderFlipImages(){
   const container=document.getElementById('flip-container');
+  if(!container) return;
   container.innerHTML='';
   for(let i=1;i<=totalFlipImages;i++){
     const img=document.createElement('img');
@@ -1710,6 +1733,8 @@ function renderFlipImages(){
     img.src=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentFlipGallery}/${i}.png`;
     img.alt=`Page ${i}`;
     img.loading='lazy';
+    img.style.maxHeight='100%';
+    img.style.objectFit='contain';
     img.onerror=function(){
       this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMjIyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2FhYSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
     };
@@ -1717,26 +1742,39 @@ function renderFlipImages(){
   }
   enableFlipSwipe();
 }
+
 function updateFlipViewer(){
   const images=document.querySelectorAll('.flip-image');
   images.forEach((img, idx)=>{
     img.classList.toggle('active', idx+1===currentFlipIndex);
   });
-  document.getElementById('flip-counter').textContent=
-    `${currentFlipIndex} / ${totalFlipImages}`;
+  const counter = document.getElementById('flip-counter');
+  if(counter){
+    counter.textContent = `${currentFlipIndex} / ${totalFlipImages}`;
+  }
 }
+
 function changeFlipPage(direction){
   const newIndex=currentFlipIndex+direction;
   if(newIndex>=1 && newIndex<=totalFlipImages){
     currentFlipIndex=newIndex;
     updateFlipViewer();
+  }else if(newIndex<1){
+    currentFlipIndex=totalFlipImages;
+    updateFlipViewer();
+  }else{
+    currentFlipIndex=1;
+    updateFlipViewer();
   }
 }
+
 function closeFlipViewer(){
-  document.getElementById('flip-viewer').classList.remove('active');
+  document.getElementById('flip-viewer')?.classList.remove('active');
 }
+
 function enableFlipSwipe(){
   const viewer=document.getElementById('flip-viewer');
+  if(!viewer) return;
   let startX=0, startY=0, isMoving=false;
 
   viewer.ontouchstart=e=>{
@@ -1759,13 +1797,20 @@ function enableFlipSwipe(){
 
 /* ========= Bind buttons robustly ========= */
 function bindStaticActions(){
-  // --- FIX HERE ---
-  // In analysis section there are 2 .rubric-toggle-btn:
-  // [0] rubric reminder, [1] history toggle
+  /* ✅ FIX 1: rubric/history bind by button TEXT, not onclick or order */
   const analysisSection = document.getElementById('analysis-section');
-  const toggles = analysisSection?.querySelectorAll('.rubric-toggle-btn') || [];
-  if(toggles[0]) toggles[0].addEventListener('click', toggleRubric);
-  if(toggles[1]) toggles[1].addEventListener('click', toggleHistory);
+  if(analysisSection){
+    const btns = [...analysisSection.querySelectorAll('button')];
+    btns.forEach(b=>{
+      const t = (b.textContent||'').toLowerCase();
+      if(t.includes('rubric') && t.includes('reminder')){
+        b.addEventListener('click', toggleRubric);
+      }
+      if(t.includes('history') && t.includes('show')){
+        b.addEventListener('click', toggleHistory);
+      }
+    });
+  }
 
   // Level 1 controls
   document.querySelector('button[onclick="analyzeWriting()"]')
@@ -1791,9 +1836,26 @@ function bindStaticActions(){
   document.querySelector('button[onclick="printTopicDrafts()"]')
     ?.addEventListener('click', printTopicDrafts);
 
-  // Modal close
+  // Modal open/close
+  document.querySelector('div.material-card[onclick="openGenreSelection()"]')
+    ?.addEventListener('click', openGenreSelection);
   document.querySelector('button[onclick="closeGenreModal()"]')
     ?.addEventListener('click', closeGenreModal);
+
+  /* ✅ FIX 2: bind viewer buttons via JS (inline may die) */
+  document.querySelector('#image-viewer .close-viewer')
+    ?.addEventListener('click', closeImageViewer);
+  document.querySelector('#image-viewer .image-nav.prev')
+    ?.addEventListener('click', ()=>changeImage(-1));
+  document.querySelector('#image-viewer .image-nav.next')
+    ?.addEventListener('click', ()=>changeImage(1));
+
+  document.querySelector('#flip-viewer .close-flip')
+    ?.addEventListener('click', closeFlipViewer);
+  document.querySelector('#flip-viewer .flip-nav.prev')
+    ?.addEventListener('click', ()=>changeFlipPage(-1));
+  document.querySelector('#flip-viewer .flip-nav.next')
+    ?.addEventListener('click', ()=>changeFlipPage(1));
 }
 
 /* Delegate actions inside dynamic history blocks */
@@ -1805,15 +1867,6 @@ function bindDelegatedActions(){
     const index = parseInt(btn.dataset.index, 10);
     if(action === 'use-version') useVersionAsCurrent(index);
     if(action === 'use-topic-version') useTopicVersionAsCurrent(index);
-  });
-
-  document.body.addEventListener('click', (e)=>{
-    const card = e.target.closest('.material-card');
-    if(!card) return;
-    const onclick = card.getAttribute('onclick');
-    if(onclick){
-      try{ new Function(onclick).call(window); }catch(_){}
-    }
   });
 }
 
