@@ -735,7 +735,6 @@ function enterLevel(level){
 }
 function goHome(){ enterLevel('home'); }
 
-/* JS-only binding for sandbox safety */
 function bindNavigationButtons(){
   document.querySelectorAll('.js-enter').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -770,7 +769,7 @@ let totalImages = 0;
 let currentFlipGallery = '';
 let totalFlipImages = 0;
 let currentFlipIndex = 1;
-let flipStatus = []; // 'pending' | 'loaded' | 'error'
+let flipStatus = []; // pending|loaded|error
 let flipSwipeBound = false;
 
 const topicCategories = {
@@ -839,19 +838,13 @@ Vocabulary (5): Range + precision, avoid repetition.
   }
   return rubricText;
 }
-
-/* ✅ FIX: click rubric 時先強制載入 */
 async function ensureRubricLoaded(){
   try{ await loadRubric(); }catch(e){ console.error(e); }
 }
-
 async function toggleRubric(){
   const el = document.getElementById('rubric-reminder');
   if(!el) return;
-
-  // 先確保載入，避免卡在 Loading...
   await ensureRubricLoaded();
-
   el.style.display =
     (el.style.display==='none' || !el.style.display) ? 'block' : 'none';
 }
@@ -878,7 +871,6 @@ async function checkWithLanguageTool(text){
   return await res.json();
 }
 
-/* Basic capitalization detection */
 function findCapitalizationMatches(text){
   const matches = [];
   const sentences = text.split(/([.!?]\s+)/);
@@ -954,7 +946,6 @@ function translateChinesePrompt(chinesePrompt){
   return englishPrompt;
 }
 
-/* ========= Improved prompt coverage ========= */
 async function computePromptCoverage(text, promptOrTopic){
   if(!promptOrTopic){
     return { coverage:1, matchedKeywords:[], totalKeywords:0 };
@@ -1650,21 +1641,73 @@ function bindUploadInputs(){
   });
 }
 
+/* ========= ✅ FORCE FULL-FIT STYLES (iOS half-image killer) ========= */
+function forceImageViewerLayout(){
+  const viewer = document.getElementById('image-viewer');
+  const container = viewer?.querySelector('.image-container');
+  const imgEl = document.getElementById('viewer-image');
+  const closeBtn = viewer?.querySelector('.close-viewer');
+
+  if(viewer){
+    viewer.style.display='flex';
+    viewer.style.alignItems='center';
+    viewer.style.justifyContent='center';
+    viewer.style.pointerEvents='auto';
+    viewer.style.touchAction='auto';
+    viewer.style.zIndex='999999';
+  }
+  if(container){
+    container.style.maxWidth='96vw';
+    container.style.maxHeight='96vh';
+    container.style.overflow='hidden';
+    container.style.background='#000';
+  }
+  if(imgEl){
+    imgEl.style.maxWidth='96vw';
+    imgEl.style.maxHeight='96vh';
+    imgEl.style.width='auto';
+    imgEl.style.height='auto';
+    imgEl.style.objectFit='contain';
+    imgEl.style.display='block';
+    imgEl.style.margin='0 auto';
+  }
+  if(closeBtn){
+    closeBtn.style.pointerEvents='auto';
+    closeBtn.style.zIndex='1000000';
+  }
+}
+
+function forceFlipViewerLayout(){
+  const viewer=document.getElementById('flip-viewer');
+  const container=document.getElementById('flip-container');
+  const closeBtn = viewer?.querySelector('.close-flip');
+
+  if(viewer){
+    viewer.style.pointerEvents='auto';
+    viewer.style.touchAction='pan-y';
+    viewer.style.zIndex='999999';
+  }
+  if(container){
+    container.style.height='96vh';
+    container.style.display='grid';
+    container.style.placeItems='center';
+    container.style.overflow='hidden';
+  }
+  if(closeBtn){
+    closeBtn.style.pointerEvents='auto';
+    closeBtn.style.zIndex='1000000';
+  }
+}
+
 /* ========= Image Viewer ========= */
 function openImageGallery(galleryName, imageCount){
   currentGallery=galleryName;
   totalImages=imageCount;
   currentImageIndex=1;
 
-  const viewer = document.getElementById('image-viewer');
-  if(viewer){
-    viewer.style.pointerEvents='auto';
-    viewer.style.touchAction='auto';
-  }
-  document.querySelector('#image-viewer .close-viewer')?.style.setProperty('pointer-events','auto');
-
+  forceImageViewerLayout();
   updateImageViewer();
-  viewer?.classList.add('active');
+  document.getElementById('image-viewer')?.classList.add('active');
 }
 
 function updateImageViewer(){
@@ -1673,7 +1716,8 @@ function updateImageViewer(){
   const counter=document.getElementById('image-counter');
   if(!viewerImage || !counter) return;
 
-  viewerImage.style.opacity='0.3';
+  forceImageViewerLayout();
+  viewerImage.style.opacity='0.25';
   counter.textContent=`Loading… (${currentImageIndex}/${totalImages})`;
 
   const img=new Image();
@@ -1681,6 +1725,7 @@ function updateImageViewer(){
     viewerImage.src=imageUrl;
     viewerImage.style.opacity='1';
     counter.textContent=`${currentImageIndex} / ${totalImages}`;
+    forceImageViewerLayout();
   };
   img.onerror=()=>{
     viewerImage.src='';
@@ -1720,23 +1765,17 @@ function openGenreGallery(genre){
   openFlipViewer(`writing genres/${genre}`, 10);
 }
 
-/* ========= Flip viewer (NO OUT-OF-ORDER) ========= */
+/* ========= Flip viewer ========= */
 function openFlipViewer(galleryName, imageCount){
   currentFlipGallery=galleryName;
   totalFlipImages=imageCount;
   currentFlipIndex=1;
   flipStatus = new Array(totalFlipImages+1).fill('pending');
 
-  const viewer = document.getElementById('flip-viewer');
-  if(viewer){
-    viewer.style.pointerEvents='auto';
-    viewer.style.touchAction='pan-y';
-  }
-  document.querySelector('#flip-viewer .close-flip')?.style.setProperty('pointer-events','auto');
-
+  forceFlipViewerLayout();
   renderFlipImages();
   updateFlipViewer();
-  viewer?.classList.add('active');
+  document.getElementById('flip-viewer')?.classList.add('active');
 }
 
 function renderFlipImages(){
@@ -1751,9 +1790,17 @@ function renderFlipImages(){
 
     const url=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentFlipGallery}/${i}.png`;
 
+    img.style.maxWidth='96vw';
+    img.style.maxHeight='96vh';
+    img.style.width='auto';
+    img.style.height='auto';
+    img.style.objectFit='contain';
+    img.style.display='none';
+
     img.onload=()=>{
       flipStatus[i]='loaded';
       if(i===currentFlipIndex) updateFlipViewer();
+      forceFlipViewerLayout();
     };
     img.onerror=()=>{
       flipStatus[i]='error';
@@ -1780,7 +1827,8 @@ function updateFlipViewer(){
   const images=document.querySelectorAll('.flip-image');
   images.forEach(img=>{
     const idx=parseInt(img.dataset.index,10);
-    img.classList.toggle('active', idx===currentFlipIndex);
+    const active = idx===currentFlipIndex;
+    img.style.display = active ? 'block' : 'none';
   });
   const counter = document.getElementById('flip-counter');
   if(counter){
@@ -1789,6 +1837,7 @@ function updateFlipViewer(){
       ? `${currentFlipIndex} / ${totalFlipImages} (missing)`
       : `${currentFlipIndex} / ${totalFlipImages}`;
   }
+  forceFlipViewerLayout();
 }
 
 function changeFlipPage(direction){
@@ -1839,7 +1888,7 @@ function enableFlipSwipe(){
   viewer.addEventListener('touchend', ()=>{ isMoving=false; });
 }
 
-/* ========= ✅ GLOBAL CLOSE FIX (iPad killer) ========= */
+/* ========= ✅ GLOBAL CLOSE FIX (super hard) ========= */
 function bindGlobalCloseFix(){
   const handler = (e)=>{
     const closeBtn = e.target.closest('.close-viewer, .close-flip');
@@ -1851,7 +1900,6 @@ function bindGlobalCloseFix(){
       return;
     }
 
-    // backdrop click closes too
     const imgViewer = document.getElementById('image-viewer');
     const flipViewer = document.getElementById('flip-viewer');
 
@@ -1865,13 +1913,19 @@ function bindGlobalCloseFix(){
     }
   };
 
-  // capture phase: iOS 事件被遮也抓得到
   ['pointerup','touchend','click'].forEach(evt=>{
     document.addEventListener(evt, handler, true);
   });
+
+  // double tap background closes
+  document.addEventListener('dblclick', (e)=>{
+    const imgViewer = document.getElementById('image-viewer');
+    const flipViewer = document.getElementById('flip-viewer');
+    if(imgViewer?.classList.contains('active') && e.target===imgViewer) closeImageViewer();
+    if(flipViewer?.classList.contains('active') && e.target===flipViewer) closeFlipViewer();
+  }, true);
 }
 
-/* ========= Bind buttons robustly ========= */
 function bindDelegatedActions(){
   document.body.addEventListener('click', (e)=>{
     const btn = e.target.closest('.js-action');
@@ -1883,7 +1937,6 @@ function bindDelegatedActions(){
   });
 }
 
-/* Keyboard nav */
 function bindKeyboardNav(){
   document.addEventListener('keydown', e=>{
     const imgViewer=document.getElementById('image-viewer');
@@ -1910,12 +1963,12 @@ document.addEventListener('DOMContentLoaded', () => {
   bindDelegatedActions();
   bindGlobalCloseFix();
 
-  loadRubric();                 // 先載一次
+  loadRubric();
   initTopicCategories();
   updateReferenceButtonVisibility();
 });
 
-/* ========= Expose for backward-compat ========= */
+/* ========= Expose ========= */
 window.enterLevel=enterLevel;
 window.goHome=goHome;
 
