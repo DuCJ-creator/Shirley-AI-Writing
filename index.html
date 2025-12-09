@@ -1,2482 +1,1888 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shirley's AI Writing Coach</title>
-    <!-- diff / csv parser（全域掛在 window） -->
-    <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <!-- OCR / PDF / DOCX -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <style>
-        :root {
-            --bg-main: #f6efe5;
-            --bg-card: #fbf7f0;
-            --bg-front: #f0e2c9;
-            --accent: #c39a6b;
-            --accent-dark: #8b5e34;
-            --accent-soft: #e2c9a3;
-            --text-main: #4a3b2a;
-            --text-muted: #8a7b6a;
-            --border-soft: #e0d2c3;
-            --error-bg: #ffe9d9;
-            --error-border: #e17055;
-            --info-bg: #e8f4f6;
-            --info-border: #17a2b8;
-        }
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px 20px 60px;
-            background: radial-gradient(circle at top, #fdf7ee 0, #f3eadf 40%, #ebdfd1 100%);
-            color: var(--text-main);
-        }
-        .title {
-            text-align: center;
-            color: var(--accent-dark);
-            font-size: 2.4em;
-            margin-bottom: 8px;
-            letter-spacing: 0.03em;
-        }
-        .subtitle {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 1.05em;
-            margin-bottom: 20px;
-        }
-        .disclaimer {
-            background: #fff7ea;
-            border: 1px solid var(--border-soft);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            color: var(--text-main);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-        }
-        .ocr-disclaimer {
-            background: #fff0f0;
-            border: 1px solid #ffcccc;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-size: 0.9em;
-            color: #8b0000;
-        }
-        .section {
-            display: none;
-            margin-bottom: 40px;
-            border: 1px solid var(--border-soft);
-            padding: 20px;
-            border-radius: 16px;
-            background: var(--bg-card);
-            min-height: 60vh;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.03);
-        }
-        .section.active { display: block; }
-        .front-page {
-            text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #f4e0c2, #e3c59a);
-            color: #4e3424;
-            border-radius: 18px;
-            margin-bottom: 20px;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
-        }
-        .front-page h2 {
-            margin-top: 0;
-            font-size: 1.8em;
-        }
-        .front-page p {
-            max-width: 600px;
-            margin: 8px auto 0;
-        }
-        .front-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 30px;
-        }
-        .front-btn {
-            padding: 14px 30px;
-            border: none;
-            border-radius: 999px;
-            cursor: pointer;
-            font-size: 17px;
-            font-weight: 600;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-            box-shadow: 0 6px 14px rgba(0,0,0,0.12);
-        }
-        .front-btn:hover {
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 0 10px 22px rgba(0,0,0,0.16);
-        }
-        .analysis-btn {
-            background: #c39a6b;
-            color: white;
-        }
-        .gists-btn {
-            background: #f3d9a4;
-            color: #4a3422;
-        }
-        .back-btn {
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            padding: 10px 20px;
-            background: #d5b692;
-            color: #3e2a19;
-            border: none;
-            border-radius: 999px;
-            cursor: pointer;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.18);
-        }
-        .back-btn.active { display: inline-flex; align-items: center; gap: 4px; }
-        textarea,
-        select {
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 10px 12px;
-            border: 1px solid var(--border-soft);
-            border-radius: 10px;
-            font-family: inherit;
-            font-size: 14px;
-            background: #fffdf8;
-            color: var(--text-main);
-        }
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(195,154,107,0.18);
-        }
-        #prompt-input { height: 80px; }
-        #input-text, #topic-text { height: 200px; }
-        #checked-text, #topic-checked-text { height: 200px; }
-        input[type="file"] {
-            margin-bottom: 10px;
-            font-size: 13px;
-        }
-        input[type="text"] {
-            padding: 6px 8px;
-            border-radius: 8px;
-            border: 1px solid var(--border-soft);
-            font-size: 13px;
-            background: #fffdf8;
-            width: 100%;
-        }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(195,154,107,0.18);
-        }
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        button:not(.front-btn):not(.back-btn) {
-            padding: 10px 18px;
-            border: none;
-            border-radius: 999px;
-            cursor: pointer;
-            background: var(--accent);
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-        }
-        button:not(.front-btn):not(.back-btn):hover {
-            background: var(--accent-dark);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 14px rgba(0,0,0,0.18);
-        }
-        .output {
-            margin-top: 16px;
-            padding: 15px;
-            border-radius: 12px;
-            background: #fffdf8;
-            border: 1px solid var(--border-soft);
-        }
-        .analysis-run {
-            border: 1px solid var(--border-soft);
-            background: var(--bg-card);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-        .version-layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1.1fr) auto minmax(0, 1.1fr);
-            gap: 14px;
-        }
-        .version-col h3 {
-            margin-top: 0;
-            font-size: 0.95em;
-            color: var(--text-muted);
-        }
-        .version-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: stretch;
-            justify-content: center;
-            font-size: 0.85em;
-            color: var(--text-muted);
-        }
-        .version-actions small { display: block; text-align: center; }
-        .version-header-inline {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-            color: var(--text-muted);
-        }
-        .diff { margin-top: 10px; }
-        .feedback {
-            background: var(--info-bg);
-            padding: 10px 12px;
-            border-left: 4px solid var(--info-border);
-            margin-top: 14px;
-            border-radius: 8px;
-            font-size: 0.92em;
-        }
-        .scores-block {
-            background: #fff9eb;
-            border: 1px solid var(--accent-soft);
-            border-radius: 10px;
-            padding: 10px 12px;
-            margin-bottom: 10px;
-            font-size: 0.92em;
-        }
-        .scores-block strong {
-            display: inline-block;
-            margin-bottom: 4px;
-        }
-        .scores-block ul {
-            padding-left: 18px;
-            margin: 4px 0 6px;
-        }
-        .gist-area {
-            background: #fff9ef;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border-soft);
-        }
-        #writing-materials { min-height: 100px; }
-        .materials-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-        .material-card {
-            flex: 1 1 260px;
-            background: #ffffff;
-            border: 1px solid var(--border-soft);
-            border-radius: 12px;
-            padding: 12px;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .material-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
-        .material-card h4 { margin-top: 0; }
-        #printable-drafts { display: none; }
-        
-        /* Level 2 圖片瀏覽器樣式 */
-        .image-viewer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        }
-        .image-viewer.active {
-            display: flex;
-        }
-        .image-container {
-            max-width: 90%;
-            max-height: 90%;
-            position: relative;
-        }
-        .image-container img {
-            max-width: 100%;
-            max-height: 90vh;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .image-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255,255,255,0.9);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-        .image-nav:hover {
-            background: white;
-            transform: translateY(-50%) scale(1.1);
-        }
-        .image-nav.prev {
-            left: -70px;
-        }
-        .image-nav.next {
-            right: -70px;
-        }
-        .image-counter {
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 16px;
-        }
-        .close-viewer {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.9);
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* 錯誤高亮共用基底 */
-        .err {
-            background: #ffeaa7;
-            border-bottom: 2px solid #d63031;
-            cursor: help;
-        }
-        /* 不同版本的顏色（Version 1~6 循環使用） */
-        .err-v1 { background: #ffeaa7; border-bottom-color: #d63031; }
-        .err-v2 { background: #d1ffd6; border-bottom-color: #16a085; }
-        .err-v3 { background: #d6e9ff; border-bottom-color: #2980b9; }
-        .err-v4 { background: #f9d1ff; border-bottom-color: #8e44ad; }
-        .err-v5 { background: #ffe6d1; border-bottom-color: #e67e22; }
-        .err-v6 { background: #fff8b3; border-bottom-color: #f1c40f; }
-        /* Level 2（topic 練習）的顏色 */
-        .err-topic { background: #ffd6e0; border-bottom-color: #c0392b; }
-        /* Rubric reminder block（預設收合，由按鈕開啟） */
-        .rubric-reminder {
-            background: #fffdf8;
-            border-radius: 10px;
-            border: 1px dashed var(--accent-soft);
-            padding: 10px 12px;
-            margin-top: 8px;
-            margin-bottom: 4px;
-            font-size: 0.9em;
-            max-height: 260px;
-            overflow-y: auto;
-        }
-        .rubric-reminder h3 {
-            margin: 0 0 6px;
-            font-size: 0.95em;
-            color: var(--accent-dark);
-        }
-        .rubric-toggle-btn {
-            margin-top: 6px;
-            margin-bottom: 4px;
-            font-size: 0.82em;
-            padding: 6px 14px;
-        }
-        /* 原本 sticky 的 class，現在只當一般容器用（取消凍結） */
-        .analysis-sticky {
-            position: static;
-        }
-        /* 版本顏色 legend */
-        .version-legend {
-            margin: 4px 0 10px;
-            font-size: 0.8em;
-            color: var(--text-muted);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 14px;
-        }
-        .version-legend-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .legend-color {
-            display: inline-block;
-            width: 14px;
-            height: 10px;
-            border-radius: 4px;
-            border: 1px solid transparent;
-            vertical-align: middle;
-        }
-        .legend-v1 { background: #ffeaa7; border-color: #d63031; }
-        .legend-v2 { background: #d1ffd6; border-color: #16a085; }
-        .legend-v3 { background: #d6e9ff; border-color: #2980b9; }
-        .legend-v4 { background: #f9d1ff; border-color: #8e44ad; }
-        .legend-v5 { background: #ffe6d1; border-color: #e67e22; }
-        .legend-v6 { background: #fff8b3; border-color: #f1c40f; }
-        .legend-topic { background: #ffd6e0; border-color: #c0392b; }
-        /* 版本標題的小彩色 badge */
-        .version-chip {
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: 0.8em;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-weight: 600;
-        }
-        .version-chip-v1 { background: #fff4d0; border: 1px solid #d63031; color: #6b2b1e; }
-        .version-chip-v2 { background: #ddffea; border: 1px solid #16a085; color: #10624f; }
-        .version-chip-v3 { background: #e1f0ff; border: 1px solid #2980b9; color: #1c496d; }
-        .version-chip-v4 { background: #fbe3ff; border: 1px solid #8e44ad; color: #5a2c73; }
-        .version-chip-v5 { background: #ffe9d6; border: 1px solid #e67e22; color: #8c3f09; }
-        .version-chip-v6 { background: #fffad1; border: 1px solid #f1c40f; color: #8a6d1e; }
-        .version-chip-ref { background: #e6e6e6; border: 1px solid #aaaaaa; color: #444; }
-        /* Prompt + 學生資訊 */
-        .prompt-row {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            margin-top: 8px;
-            margin-bottom: 10px;
-        }
-        .prompt-main {
-            flex: 2 1 0;
-        }
-        .student-info {
-            flex: 1 1 0;
-            font-size: 0.85em;
-            color: var(--text-muted);
-            background: #fffdf8;
-            border-radius: 10px;
-            border: 1px solid var(--border-soft);
-            padding: 8px 10px;
-        }
-        .student-info-title {
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--accent-dark);
-        }
-        .student-info-row {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 4px;
-        }
-        .student-info-row label {
-            min-width: 55px;
-        }
-        .student-info-row input {
-            flex: 1 1 auto;
-        }
-        .ocr-progress {
-            background: var(--info-bg);
-            border: 1px solid var(--info-border);
-            border-radius: 8px;
-            padding: 10px;
-            margin: 8px 0;
-            font-size: 0.9em;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>Shirley's AI Writing Coach</title>
 
-        /* Genre 按鈕樣式 */
-        .genre-btn {
-            padding: 12px;
-            border: 1px solid var(--accent);
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .genre-btn:hover {
-            background: var(--accent-soft);
-            transform: translateY(-2px);
-        }
+  <style>
+    :root{
+      /* ======= NEW: Bright premium academic palette ======= */
+      --bg: #f6f7fb;
+      --bg-soft: #ffffff;
+      --panel: rgba(255,255,255,0.86);
+      --panel-strong: rgba(255,255,255,0.98);
+      --panel-border: rgba(20,30,55,0.10);
 
-       /* ✅ 列印：用 class 控制隱藏，支援 iPad Safari */
-        @media print {
-            .no-print,
-            .no-print-temp {
-                display: none !important;
-            }
+      --text: #0e1630;
+      --text-soft: rgba(14,22,48,0.78);
+      --text-muted: rgba(14,22,48,0.55);
 
-            #printable-drafts {
-                display: block;
-                width: 100%;
-                margin: 0;
-                padding: 0 10mm;
-                box-sizing: border-box;
-                background: #ffffff;
-            }
+      --brand: #3a7bd5;   /* academic blue */
+      --brand-2:#8b6cff;  /* lively violet */
+      --accent:#38cfa5;   /* fresh mint */
+      --warn:#ffb36b;
+      --danger:#ff7a9e;
 
-            .printable {
-                page-break-after: always;
-            }
-        }
+      --radius-xl: 20px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
 
-        @media (max-width: 900px) {
-            .version-layout {
-                grid-template-columns: minmax(0, 1fr);
-            }
-            .version-actions {
-                flex-direction: row;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-        }
-        @media (max-width: 800px) {
-            .prompt-row {
-                flex-direction: column;
-            }
-        }
-        @media (max-width: 600px) {
-            .front-buttons { flex-direction: column; align-items: center; }
-            body { padding: 16px 12px 40px; }
-            .image-nav {
-                width: 40px;
-                height: 40px;
-                font-size: 16px;
-            }
-            .image-nav.prev {
-                left: -50px;
-            }
-            .image-nav.next {
-                right: -50px;
-            }
-        }
-        /* 簡單翻頁瀏覽器樣式 */
-.flip-viewer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.95);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    touch-action: pan-y;
-}
+      --shadow-soft: 0 10px 26px rgba(17,28,60,0.08);
+      --shadow-float: 0 16px 46px rgba(17,28,60,0.12);
 
-.flip-viewer.active {
-    display: flex;
-}
-
-.flip-container {
-    width: 90%;
-    height: 90%;
-    max-width: 1000px;
-    max-height: 700px;
-    position: relative;
-    overflow: hidden;
-}
-
-.flip-image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-    display: none;
-}
-
-.flip-image.active {
-    display: block;
-}
-
-.flip-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255,255,255,0.9);
-    border: none;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-}
-
-.flip-nav:hover {
-    background: white;
-    transform: translateY(-50%) scale(1.1);
-}
-
-.flip-nav.prev {
-    left: 20px;
-}
-
-.flip-nav.next {
-    right: 20px;
-}
-
-.flip-counter {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: white;
-    font-size: 18px;
-    background: rgba(0,0,0,0.5);
-    padding: 8px 16px;
-    border-radius: 20px;
-}
-
-.close-flip {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255,255,255,0.9);
-    border: none;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    font-size: 24px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-@media (max-width: 768px) {
-    .flip-nav {
-        width: 50px;
-        height: 50px;
-        font-size: 20px;
+      --maxw: 1100px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono";
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans";
+      --serif: ui-serif, Georgia, "Times New Roman", serif;
     }
-    
-    .flip-nav.prev {
-        left: 10px;
+
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 700px at 8% -10%, #dfe9ff 0%, transparent 55%),
+        radial-gradient(1000px 800px at 105% -10%, #efe6ff 0%, transparent 60%),
+        radial-gradient(1200px 900px at 50% 120%, #e4fff5 0%, transparent 55%),
+        var(--bg);
+      color:var(--text);
+      font-family:var(--sans);
+      line-height:1.65;
+      letter-spacing:0.2px;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+      padding: clamp(16px, 3vw, 28px);
     }
-    
-    .flip-nav.next {
-        right: 10px;
+
+    h1,h2,h3,h4{ margin:0 0 10px 0; letter-spacing:0.4px; }
+    h1{
+      font-family:var(--serif);
+      font-weight:700;
+      font-size: clamp(28px, 3.6vw, 40px);
+      color:#0b1433;
+      text-shadow:0 6px 18px rgba(58,123,213,0.12);
     }
-}
-    </style>
+    h2{
+      font-family:var(--serif);
+      font-weight:700;
+      font-size: clamp(20px, 2.6vw, 28px);
+      color:#0b1433;
+    }
+    h3{ font-size: clamp(16px, 2.2vw, 19px); }
+    p{ color:var(--text-soft); margin:6px 0 12px 0;}
+
+    .container{
+      width:100%;
+      max-width:var(--maxw);
+      margin:0 auto;
+      position:relative;
+    }
+
+    .title{ text-align:center; margin-top:6px; }
+    .subtitle{
+      text-align:center;
+      color:var(--text-muted);
+      margin-top:4px;
+      font-size:12px;
+      letter-spacing:1px;
+      text-transform:uppercase;
+    }
+
+    .disclaimer{
+      margin:14px auto 18px auto;
+      background: linear-gradient(180deg, rgba(58,123,213,0.06), rgba(139,108,255,0.04));
+      border:1px solid var(--panel-border);
+      padding:12px 14px;
+      border-radius:12px;
+      color:var(--text-soft);
+      max-width:900px;
+      font-size:14px;
+      box-shadow:var(--shadow-soft);
+    }
+
+    .ocr-disclaimer{
+      margin:10px auto 18px auto;
+      background: rgba(255,255,255,0.8);
+      border:1px dashed rgba(20,30,55,0.12);
+      padding:10px 12px;
+      border-radius:12px;
+      color:var(--text-muted);
+      font-size:12px;
+      max-width:900px;
+    }
+
+    .section{ display:none; animation:fadeUp 240ms ease; }
+    .section.active{ display:block; }
+
+    @keyframes fadeUp{
+      from{ opacity:0; transform:translateY(8px); }
+      to{ opacity:1; transform:translateY(0); }
+    }
+
+    .panel{
+      background: var(--panel);
+      border:1px solid var(--panel-border);
+      border-radius:var(--radius-xl);
+      padding: clamp(14px, 2.4vw, 20px);
+      box-shadow:var(--shadow-soft);
+      backdrop-filter: blur(8px);
+    }
+
+    /* ======= Home hero ======= */
+    .front-page{ margin-top:10px; text-align:center; }
+    .front-hero{
+      padding:22px 18px;
+      border-radius:22px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0.85)),
+        radial-gradient(900px 500px at 0% 0%, rgba(58,123,213,0.12), transparent 60%),
+        radial-gradient(900px 600px at 100% 0%, rgba(139,108,255,0.12), transparent 60%);
+      border:1px solid var(--panel-border);
+      box-shadow:var(--shadow-soft);
+      max-width:900px;
+      margin:0 auto 16px auto;
+    }
+
+    .front-buttons{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap:14px;
+      max-width:900px;
+      margin: 14px auto 0 auto;
+    }
+
+    .front-btn{
+      position:relative;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0.85));
+      border:1px solid var(--panel-border);
+      padding:16px 18px;
+      border-radius:16px;
+      color:var(--text);
+      text-align:left;
+      cursor:pointer;
+      transition: transform .18s ease, border .18s ease, background .18s ease, box-shadow .18s ease;
+      box-shadow:var(--shadow-soft);
+      overflow:hidden;
+      min-height:110px;
+    }
+    .front-btn:hover{
+      transform: translateY(-2px);
+      border-color: rgba(58,123,213,0.35);
+      box-shadow:var(--shadow-float);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,1), rgba(240,247,255,0.9));
+    }
+    .front-btn h3{
+      font-family:var(--serif);
+      font-size:18px;
+      margin-bottom:6px;
+    }
+    .front-btn p{ font-size:14px; margin:0; color:var(--text-soft); }
+    .front-btn .tag{
+      position:absolute; right:12px; top:12px;
+      font-size:12px; padding:4px 8px; border-radius:999px;
+      background:rgba(58,123,213,0.08);
+      color:#1c3569; border:1px solid rgba(58,123,213,0.18);
+      font-weight:700;
+    }
+
+    .back-btn{
+      position:sticky; top:10px;
+      display:inline-flex; align-items:center; gap:8px;
+      background: rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+      color:var(--text);
+      padding:8px 12px; border-radius:999px;
+      margin-bottom:10px; cursor:pointer;
+      transition:.18s ease; z-index:10; backdrop-filter:blur(8px);
+      box-shadow:var(--shadow-soft);
+    }
+    .back-btn:hover{ transform:translateY(-1px); border-color:rgba(58,123,213,0.25); }
+
+    .level-header{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+    .level-hint{
+      font-size:14px; color:var(--text-soft);
+      padding:10px 12px; border-radius:12px;
+      background:rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+    }
+
+    textarea{
+      width:100%; min-height:160px; resize:vertical;
+      background: #fbfcff;
+      border:1px solid rgba(20,30,55,0.12);
+      border-radius:12px; padding:12px;
+      color:var(--text); font-size:15px; line-height:1.65; outline:none;
+      transition:border .18s ease, box-shadow .18s ease;
+    }
+    textarea:focus{
+      border-color: rgba(58,123,213,0.55);
+      box-shadow:0 0 0 3px rgba(58,123,213,0.12);
+    }
+
+    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
+
+    .workspace{
+      display:grid; grid-template-columns:1.1fr 0.8fr; gap:12px;
+      align-items:stretch;
+    }
+    @media (max-width:900px){ .workspace{ grid-template-columns:1fr; } }
+
+    .card-title{ font-family:var(--serif); font-size:16px; margin-bottom:6px; }
+
+    .btn{
+      background: linear-gradient(180deg, rgba(58,123,213,0.18), rgba(139,108,255,0.12));
+      border:1px solid rgba(58,123,213,0.35);
+      color:#0b1433; padding:10px 14px; border-radius:12px;
+      cursor:pointer; transition:.18s ease; font-weight:700;
+      letter-spacing:.2px; box-shadow:var(--shadow-soft);
+    }
+    .btn:hover{ transform:translateY(-1px); filter:saturate(1.05); }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+
+    .btn-ghost{
+      background: rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+      color:var(--text);
+    }
+    .btn-warn{
+      background: linear-gradient(180deg, rgba(255,179,107,0.95), rgba(255,179,107,0.75));
+      border-color: rgba(255,179,107,0.95);
+      color:#3b1f00;
+    }
+
+    .controls{
+      display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; align-items:center;
+    }
+
+    #history-wrap .analysis-run{ display:none; }
+    #history-wrap .analysis-run:first-child{ display:block; }
+    #history-wrap.active .analysis-run{ display:block; }
+
+    .rubric-toggle-btn{
+      margin-top:6px;
+      background: rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+      color:var(--text);
+      padding:6px 10px; border-radius:999px;
+      cursor:pointer; font-size:12px; letter-spacing:.3px;
+    }
+
+    .rubric-reminder{
+      margin-top:8px; padding:10px 12px; border-radius:12px;
+      background: rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+      font-size:14px; color:var(--text-soft);
+    }
+
+    .output{ display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+    .analysis-run{
+      background: var(--panel);
+      border:1px solid var(--panel-border);
+      border-radius:16px; padding:12px; box-shadow:var(--shadow-soft);
+    }
+
+    .version-chip{
+      display:inline-flex; align-items:center; gap:6px; font-weight:800;
+      font-size:12px; padding:4px 8px; border-radius:999px;
+      background: rgba(58,123,213,0.10);
+      border:1px solid rgba(58,123,213,0.18);
+      color:#1c3569;
+    }
+    .version-chip-v1{ background:rgba(58,123,213,0.12); }
+    .version-chip-v2{ background:rgba(139,108,255,0.12); color:#3a2a7a; border-color:rgba(139,108,255,0.25);}
+    .version-chip-v3{ background:rgba(56,207,165,0.12); color:#0a5a44; border-color:rgba(56,207,165,0.25);}
+    .version-chip-v4{ background:rgba(255,179,107,0.14); color:#5a2f00; border-color:rgba(255,179,107,0.35);}
+    .version-chip-v5{ background:rgba(255,122,158,0.14); color:#6b1032; border-color:rgba(255,122,158,0.35);}
+    .version-chip-v6{ background:rgba(14,22,48,0.10); color:#0e1630; border-color:rgba(14,22,48,0.2);}
+    .version-chip-ref{ background:rgba(255,255,255,0.8); border-style:dashed; color:var(--text); }
+
+    .version-header-inline{
+      display:flex; justify-content:space-between; align-items:center;
+      gap:10px; flex-wrap:wrap; margin-bottom:8px;
+    }
+
+    .version-layout{
+      display:grid; grid-template-columns:1fr 160px 1fr; gap:10px; align-items:stretch;
+    }
+    @media (max-width:900px){ .version-layout{ grid-template-columns:1fr; } }
+
+    .version-col{
+      background: rgba(255,255,255,0.95);
+      border:1px solid rgba(20,30,55,0.08);
+      border-radius:12px; padding:10px;
+    }
+    .version-col textarea{ min-height:120px; background:#fbfcff; border-radius:10px; }
+
+    .version-actions{
+      display:flex; flex-direction:column; justify-content:center;
+      gap:8px; text-align:center;
+    }
+
+    .scores-block{
+      margin-top:10px; font-size:14px; color:var(--text-soft);
+      background: rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+      padding:10px 12px; border-radius:12px;
+    }
+
+    .diff{
+      font-size:14px; padding:10px 12px; border-radius:12px;
+      background: rgba(255,255,255,0.9);
+      border:1px dashed rgba(20,30,55,0.12);
+      color:var(--text-soft); overflow:auto; max-height:280px;
+    }
+
+    .feedback{
+      margin-top:10px; background: rgba(255,255,255,0.9);
+      border:1px solid var(--panel-border);
+      border-radius:12px; padding:10px 12px;
+      font-size:14px; color:var(--text-soft); white-space:pre-wrap;
+    }
+
+    .err{
+      text-decoration: underline wavy var(--danger);
+      text-underline-offset:2px;
+    }
+    .err-v1{ text-decoration-color:var(--brand); }
+    .err-v2{ text-decoration-color:var(--brand-2); }
+    .err-v3{ text-decoration-color:var(--accent); }
+    .err-v4{ text-decoration-color:var(--warn); }
+    .err-v5{ text-decoration-color:var(--danger); }
+    .err-v6{ text-decoration-color:#111; }
+    .err-topic{ text-decoration-color:var(--brand); }
+
+    .gist-area{ margin-top:16px; }
+    .materials-grid{
+      display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+      gap:12px;
+    }
+    .material-card{
+      background: var(--panel);
+      border:1px solid var(--panel-border);
+      border-radius:16px; padding:14px; cursor:pointer; transition:.18s ease;
+      min-height:120px; box-shadow:var(--shadow-soft);
+    }
+    .material-card:hover{
+      transform:translateY(-2px);
+      border-color: rgba(58,123,213,0.35);
+      background: rgba(240,247,255,0.9);
+      box-shadow:var(--shadow-float);
+    }
+
+    .image-viewer{
+      position:fixed; inset:0; background: rgba(8,10,18,0.9);
+      display:none; z-index:9999; align-items:center; justify-content:center;
+      padding:10px; touch-action: pan-y;
+    }
+    .image-viewer.active{ display:flex; }
+    .image-container{
+      max-width:94vw; max-height:90vh; overflow-y:auto;
+      position:relative; border-radius:12px; background:#000;
+    }
+    .image-container img{ max-width:100%; height:auto; display:block; }
+    .image-counter{
+      position:absolute; bottom:8px; right:8px;
+      background:rgba(0,0,0,0.5); padding:4px 8px;
+      border-radius:999px; font-size:12px; color:white;
+    }
+    .image-nav, .close-viewer{
+      position:fixed; background: rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:white; width:44px; height:44px; border-radius:999px;
+      cursor:pointer; font-size:24px; display:grid; place-items:center;
+    }
+    .close-viewer{ top:12px; right:12px; font-size:22px; }
+    .image-nav.prev{ left:12px; }
+    .image-nav.next{ right:12px; }
+
+    .flip-viewer{
+      position:fixed; inset:0; background: rgba(8,10,18,0.92);
+      display:none; z-index:9999; padding:14px;
+    }
+    .flip-viewer.active{ display:block; }
+    .flip-container{
+      position:relative; height: calc(100vh - 120px);
+      display:grid; place-items:center; overflow:hidden;
+    }
+    .flip-image{
+      max-width:94vw; max-height:100%; object-fit:contain; display:none;
+      border-radius:12px; box-shadow:var(--shadow-float); background:#111;
+    }
+    .flip-image.active{ display:block; }
+    .flip-nav, .close-flip{
+      position:fixed; background: rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:white; width:46px; height:46px; border-radius:999px;
+      cursor:pointer; font-size:26px; display:grid; place-items:center;
+      user-select:none;
+    }
+    .flip-nav.prev{ left:14px; top:50%; transform:translateY(-50%);}
+    .flip-nav.next{ right:14px; top:50%; transform:translateY(-50%);}
+    .close-flip{ top:14px; right:14px; font-size:22px;}
+    .flip-counter{
+      position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,0.55); padding:6px 12px;
+      border-radius:999px; font-size:13px; color:white;
+      border:1px solid rgba(255,255,255,0.2);
+    }
+
+    #genre-modal{
+      display:none; position:fixed; inset:0; background: rgba(8,10,18,0.6);
+      z-index:9999; justify-content:center; align-items:center; padding:16px;
+    }
+    .modal-card{
+      background:#fff; border:1px solid var(--panel-border);
+      padding:18px; border-radius:16px; width:min(520px, 94vw);
+      box-shadow:var(--shadow-float);
+    }
+    .modal-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+    .modal-grid button{ width:100%; }
+
+    .no-print{ display:block; }
+    @media print{
+      body{ background:white; color:black; }
+      .no-print, .no-print-temp, .back-btn { display:none !important; }
+      textarea{ border:1px solid #ccc; color:black; background:white; }
+      .analysis-run, .panel{ box-shadow:none; border:1px solid #ddd; }
+    }
+  </style>
 </head>
+
 <body>
-    
-<!-- 簡單翻頁瀏覽器 -->
-<div class="flip-viewer" id="flip-viewer">
-    <button class="close-flip" onclick="closeFlipViewer()">×</button>
-    <div class="flip-container" id="flip-container">
-        <!-- 圖片會通過JavaScript動態添加 -->
-    </div>
-    <button class="flip-nav prev" onclick="changeFlipPage(-1)">‹</button>
-    <button class="flip-nav next" onclick="changeFlipPage(1)">›</button>
-    <div class="flip-counter" id="flip-counter">1 / 1</div>
-</div>
-    
-    <button class="back-btn" onclick="goHome()">← <span>Back to Home</span></button>
+  <div class="container">
+
     <h1 class="title">Shirley's AI Writing Coach</h1>
-    <p class="subtitle">Educational Practice & Entertainment only </p>
+    <div class="subtitle">educational practice & entertainment only</div>
+
     <div class="disclaimer">
-        <strong>This tool—"Shirley's AI Writing Coach"—is for educational practice and entertainment only.</strong><br>
-        Focus on iterating with the feedback—practice drives progress!
+      <strong>This tool is for learning & practice.</strong><br/>
+      Use feedback to revise step by step. Progress comes from iteration.
     </div>
-    <!-- OCR Disclaimer -->
+
     <div class="ocr-disclaimer no-print">
-        <strong>Disclaimer:</strong><br>
-        Image recognition results are subject to the system's capabilities and the clarity of the input handwriting. In case of errors, please manually input or use alternative tools for assistance.(Writing prompts in English)<br>
-        <strong>圖像識別結果會受到系統識別能力及輸入字跡清晰度的限制。如遇識別錯誤，請手動輸入或使用其他工具輔助。(寫作提示用英文)</strong>
+      <strong>OCR Disclaimer:</strong><br/>
+      Image recognition depends on handwriting clarity. If OCR fails, please type manually.
+      （圖像識別結果會受字跡與系統能力影響，如遇錯誤請手動輸入）
     </div>
-    
-    <!-- 圖片瀏覽器 -->
+
+    <!-- Flip Viewer -->
+    <div class="flip-viewer" id="flip-viewer">
+      <button class="close-flip" onclick="closeFlipViewer()">×</button>
+      <div class="flip-container" id="flip-container"></div>
+      <button class="flip-nav prev" onclick="changeFlipPage(-1)">‹</button>
+      <button class="flip-nav next" onclick="changeFlipPage(1)">›</button>
+      <div class="flip-counter" id="flip-counter">1 / 1</div>
+    </div>
+
+    <!-- Image Viewer -->
     <div class="image-viewer" id="image-viewer">
-        <button class="close-viewer" onclick="closeImageViewer()">×</button>
-        <button class="image-nav prev" onclick="changeImage(-1)">‹</button>
-        <div class="image-container">
-            <img id="viewer-image" src="" alt="">
-            <div class="image-counter" id="image-counter">1 / 1</div>
-        </div>
-        <button class="image-nav next" onclick="changeImage(1)">›</button>
+      <button class="close-viewer" onclick="closeImageViewer()">×</button>
+      <button class="image-nav prev" onclick="changeImage(-1)">‹</button>
+      <div class="image-container">
+        <img id="viewer-image" src="" alt="">
+        <div class="image-counter" id="image-counter">1 / 1</div>
+      </div>
+      <button class="image-nav next" onclick="changeImage(1)">›</button>
     </div>
 
     <!-- Home -->
     <section class="section active front-page" id="home-section">
-        <h2>Welcome! Choose Your Writing Adventure</h2>
-        <p>Press a button below to enter the next level of your writing journey.</p>
-        <div class="front-buttons">
-            <button class="front-btn analysis-btn" onclick="enterLevel('analysis')">Writing Analysis Level</button>
-            <button class="front-btn gists-btn" onclick="enterLevel('gists')">Gists for English Writing Level</button>
-        </div>
+      <div class="front-hero">
+        <h2>Choose your path</h2>
+        <p style="max-width:720px;margin:0 auto;">
+          兩種模式：<strong>交作文批改</strong> or <strong>學測素材/練習</strong>。  
+          進去後照著流程走就好。
+        </p>
+      </div>
+
+      <!-- ✅ NEW: data-level + JS binding (no inline onclick dependency) -->
+      <div class="front-buttons">
+        <button class="front-btn js-enter" data-level="analysis">
+          <div class="tag">Level 1</div>
+          <h3>寫作批改（交作文用）</h3>
+          <p>貼上作文 → Analyze → 看 Checked version + Feedback + 分數。</p>
+        </button>
+
+        <button class="front-btn js-enter" data-level="gists">
+          <div class="tag">Level 2</div>
+          <h3>學測素材／練習（課前課後用）</h3>
+          <p>看要點、範文、歷屆題目；或選題練習得到回饋。</p>
+        </button>
+      </div>
     </section>
 
     <!-- Level 1 -->
     <section class="section" id="analysis-section">
-        <div class="analysis-sticky">
-            <div class="analysis-header-inner">
-                <h2>Level 1: Writing Analysis / Feedback</h2>
-                <p>Paste or upload your writing below. The AI will provide grammar corrections, rubric-based feedback, and scores.<br>
-                   <strong>Important:</strong> Your essay must answer the writing prompt and stay on topic.</p>
-                <button type="button" class="rubric-toggle-btn" onclick="toggleRubric()">
-                    Show / hide rubric reminder
-                </button>
-                <div id="rubric-reminder" class="rubric-reminder" style="display:none;">
-                    <h3>Rubric Reminder (for all drafts)</h3>
-                    <p>Loading rubric...</p>
-                </div>
-                <div class="prompt-row">
-                    <div class="prompt-main">
-                        <label for="prompt-input"><strong>Writing prompt / question:</strong></label>
-                        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;">
-                            <textarea id="prompt-input" placeholder="Enter the writing task or question here..."></textarea>
-                            <div style="flex: 0 0 200px;">
-                                <input type="file" id="prompt-image-upload" accept="image/*" style="font-size:12px;margin-bottom:6px;">
-                                <small>Optional: Add an image to the prompt</small>
-                                <div id="prompt-image-preview" style="margin-top:8px; display:none;">
-                                    <img id="prompt-preview-img" src="" alt="Prompt preview" style="max-width:100%; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="student-info">
-                        <div class="student-info-title">Student Information</div>
-                        <div class="student-info-row">
-                            <label for="student-school">School</label>
-                            <input type="text" id="student-school" placeholder="">
-                        </div>
-                        <div class="student-info-row">
-                            <label for="student-class">Class</label>
-                            <input type="text" id="student-class" placeholder="">
-                        </div>
-                        <div class="student-info-row">
-                            <label for="student-seat">Seat No.</label>
-                            <input type="text" id="student-seat" placeholder="">
-                        </div>
-                        <div class="student-info-row">
-                            <label for="student-name">Name</label>
-                            <input type="text" id="student-name" placeholder="">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="analysis-run">
-                <div class="version-header-inline">
-                    <span><strong>Current Draft Workspace</strong></span>
-                    <span style="font-size:0.85em;">Use this row for each version. History is kept for printing.</span>
-                </div>
-                <div class="version-legend">
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-v1"></span> Version 1 highlight style
-                    </span>
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-v2"></span> Version 2 highlight style
-                    </span>
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-v3"></span> Version 3 highlight style
-                    </span>
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-v4"></span> Version 4 highlight style
-                    </span>
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-v5"></span> Version 5 highlight style
-                    </span>
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-v6"></span> Version 6 highlight style
-                    </span>
-                </div>
-                <div class="version-layout">
-                    <div class="version-col">
-                        <h3>Original text (or OCR result)</h3>
-                        <textarea id="input-text" placeholder="Paste your writing here, or upload a file / image to extract text..."></textarea>
-                        <div id="ocr-progress-main" class="ocr-progress" style="display:none;"></div>
-                    </div>
-                    <div class="version-col version-actions">
-                        <div>
-                            <strong style="font-size:0.9em;">Upload a file</strong>
-                            <input
-                                type="file"
-                                id="file-upload-main"
-                                accept=".txt,.pdf,.doc,.docx,image/*"
-                            >
-                            <small>Supports images (OCR), txt, pdf, doc / docx.</small>
-                        </div>
-                        <button onclick="analyzeWriting()">Analyze &amp; Feedback</button>
-                        <button id="ref-btn" onclick="generateReferenceEssay()" style="display:none;">Generate reference essay</button>
-                    </div>
-                    <div class="version-col">
-                        <h3>Checked version</h3>
-                        <textarea id="checked-text" placeholder="Corrected version will appear here. You can still edit it manually."></textarea>
-                    </div>
-                </div>
-            </div>
+      <button class="back-btn no-print js-home">← Back to Home</button>
+
+      <div class="level-header">
+        <h2>Level 1 · Writing Feedback Studio</h2>
+        <div class="level-hint">
+          ✅ 這裡是「交作文批改區」  
+          <br/>流程：<strong>貼作文 → Analyze → 看修正版與老師式建議</strong>。
         </div>
-        <div id="output" class="output"></div>
-        <div class="controls no-print" style="margin-top:16px;">
-            <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
-                <button onclick="printDrafts()">Print selected versions</button>
-            </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;">
+          <button type="button" class="rubric-toggle-btn no-print" onclick="toggleRubric()">
+            Show / hide rubric reminder
+          </button>
+          <button type="button" class="rubric-toggle-btn no-print" onclick="toggleHistory()">
+            Show / hide history
+          </button>
         </div>
+        <div id="rubric-reminder" class="rubric-reminder" style="display:none;">
+          <h3 class="card-title">Rubric Reminder</h3>
+          <p>Loading rubric…</p>
+        </div>
+
+        <div class="grid-2" style="margin-top:10px;">
+          <div>
+            <label for="prompt-input"><strong>Writing prompt / question</strong></label>
+            <textarea id="prompt-input" placeholder="Enter the writing task or question here."></textarea>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <input type="file" id="prompt-image-upload" accept="image/*" />
+              <small style="color:var(--text-muted);">Optional prompt image (OCR supported)</small>
+            </div>
+            <div id="prompt-image-preview" style="margin-top:8px; display:none;">
+              <img id="prompt-preview-img" src="" alt="Prompt preview"
+                   style="max-width:100%; border-radius:12px; box-shadow:var(--shadow-soft);">
+            </div>
+          </div>
+
+          <div>
+            <label for="input-text"><strong>Your essay (current draft)</strong></label>
+            <textarea id="input-text" placeholder="Paste your essay here."></textarea>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;" class="no-print">
+              <input type="file" id="file-upload-main" accept=".txt,.doc,.docx,.pdf,image/*">
+              <small style="color:var(--text-muted);">Upload file / image</small>
+            </div>
+            <div class="controls no-print">
+              <button class="btn" onclick="analyzeWriting()">Analyze & Feedback</button>
+              <button class="btn btn-ghost" onclick="clearMainInput()">Clear</button>
+              <button id="ref-btn" class="btn btn-warn" onclick="generateReferenceEssay()" style="display:none;">
+                產生老師示範稿（不可照抄）
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="workspace" style="margin-top:14px;">
+          <div class="panel" style="padding:12px;">
+            <h3 class="card-title">Checked version (auto-corrected)</h3>
+            <textarea id="checked-text" placeholder="Corrected version will appear here. You can still edit it manually."></textarea>
+          </div>
+
+          <div class="panel" style="padding:12px;">
+            <h3 class="card-title">Quick actions</h3>
+            <p style="font-size:13px;">把 Checked version 複製回左側可再產生新版本。</p>
+            <button class="btn btn-ghost no-print" onclick="copyCheckedToInput()">Copy Checked → Current Draft</button>
+            <div style="height:10px"></div>
+            <button class="btn btn-ghost no-print" onclick="scrollToLatest()">Scroll to latest feedback</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="history-wrap" class="output"></div>
+
+      <div class="controls no-print" style="justify-content:center;margin-top:14px;">
+        <button class="btn btn-ghost" onclick="printDrafts()">Print selected versions</button>
+      </div>
     </section>
 
     <!-- Level 2 -->
     <section class="section" id="gists-section">
-        <h2>Level 2: Shirley's Gists for English Writing</h2>
-        <p>Enhance your writing skills with these resources.</p>
-        
-        <!-- Writing Tips & Guidelines -->
-        <div class="gist-area">
-            <h3>1) Writing Tips & Guidelines</h3>
-            <div class="materials-grid">
-                <div class="material-card" onclick="openFlipViewer('writing%20gists', 9)">
-                    <h4>📝 Shirley's Gists for Writing</h4>
-                    <p>Essential writing tips and techniques in 9 illustrated guides</p>
-                </div>
-                <div class="material-card" onclick="openGenreSelection()">
-                    <h4>📚 Writing Genres</h4>
-                    <p>Explore different writing styles and formats across 6 genres</p>
-                </div>
+      <button class="back-btn no-print js-home">← Back to Home</button>
+
+      <div class="level-header">
+        <h2>Level 2 · GSAT Writing Lab</h2>
+        <div class="level-hint">
+          📚 這裡是「素材 + 練習區」  
+          <br/>你可以看要點/範文/歷屆題目，或選題練習後獲得回饋。
+        </div>
+      </div>
+
+      <div class="gist-area panel">
+        <h3>1) Writing Tips & Guidelines</h3>
+        <div class="materials-grid">
+          <div class="material-card" onclick="openFlipViewer('writing%20gists', 9)">
+            <h4>📝 Shirley's Gists for Writing</h4>
+            <p>Essential tips and techniques in 9 illustrated guides</p>
+          </div>
+          <div class="material-card" onclick="openGenreSelection()">
+            <h4>📚 Writing Genres</h4>
+            <p>Explore writing styles across major genres</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="gist-area panel">
+        <h3>2) Model Essays & Past Papers</h3>
+        <div class="materials-grid">
+          <div class="material-card" onclick="openFlipViewer('GSAT%20past%20papers', 15)">
+            <h4>🎯 GSAT Past Papers</h4>
+            <p>Swipe / click to flip pages. iPad-friendly.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="gist-area panel">
+        <h3>3) Idea Bank</h3>
+        <div class="materials-grid">
+          <div class="material-card" onclick="window.open('https://ducj-creator.github.io/Shirley-AI-Writing/idea%20bank/index.html', '_blank')">
+            <h4>💡 GSAT Writing Topics</h4>
+            <p>Collection of prompts and topic ideas</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="gist-area panel">
+        <h3>4) Practice a Topic</h3>
+        <div class="grid-2">
+          <div>
+            <label><strong>Category</strong></label>
+            <select id="topic-category-select" style="width:100%;padding:8px;border-radius:10px;background:#fff;color:var(--text);border:1px solid var(--panel-border);"></select>
+
+            <label style="display:block;margin-top:8px;"><strong>Topic</strong></label>
+            <select id="topic-select" style="width:100%;padding:8px;border-radius:10px;background:#fff;color:var(--text);border:1px solid var(--panel-border);"></select>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;" class="no-print">
+              <input type="file" id="topic-image-upload" accept="image/*">
+              <small style="color:var(--text-muted);">Optional topic image</small>
             </div>
+            <div id="topic-image-preview" style="margin-top:8px; display:none;">
+              <img id="topic-preview-img" src="" alt="Topic preview"
+                   style="max-width:100%; border-radius:12px; box-shadow:var(--shadow-soft);">
+            </div>
+          </div>
+
+          <div>
+            <label for="topic-text"><strong>Your essay for this topic</strong></label>
+            <textarea id="topic-text" placeholder="Write your practice essay here."></textarea>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;" class="no-print">
+              <input type="file" id="file-upload-topic" accept=".txt,.doc,.docx,.pdf,image/*">
+              <small style="color:var(--text-muted);">Upload file / image</small>
+            </div>
+
+            <div class="controls no-print">
+              <button class="btn" onclick="analyzeTopic()">Analyze topic essay</button>
+              <button class="btn btn-ghost" onclick="clearTopicInput()">Clear</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Model Essays -->
-        <div class="gist-area">
-            <h3>2) Model Essays</h3>
-            <div class="materials-grid">
-                <div class="material-card" onclick="openImageGallery('GSAT%20past%20papers', 15)">
-                    <h4>🎯 GSAT Past Papers</h4>
-                    <p>Previous years' GSAT writing questions and model answers</p>
-                </div>
-            </div>
+        <div class="workspace" style="margin-top:14px;">
+          <div class="panel" style="padding:12px;">
+            <h3 class="card-title">Checked version (auto-corrected)</h3>
+            <textarea id="topic-checked-text"></textarea>
+          </div>
+          <div class="panel" style="padding:12px;">
+            <h3 class="card-title">Practice history</h3>
+            <p style="font-size:13px;">同一題會累積多次版本。</p>
+            <button class="btn btn-ghost no-print" onclick="toggleTopicHistory()">Show / hide topic history</button>
+          </div>
         </div>
 
-        <!-- Idea Bank -->
-        <div class="gist-area">
-            <h3>3) Idea Bank</h3>
-            <div class="materials-grid">
-                <div class="material-card" onclick="window.open('https://ducj-creator.github.io/Shirley-AI-Writing/idea%20bank/index.html', '_blank')">
-                    <h4>💡 GSAT Writing Topics</h4>
-                    <p>Collection of writing prompts and topic ideas for GSAT preparation</p>
-                </div>
-            </div>
-        </div>
+        <div id="topic-history-wrap" class="output" style="margin-top:12px;"></div>
 
-        <!-- Genre Selection Modal -->
-        <div id="genre-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
-            <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
-                <h3>Select Writing Genre</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;">
-                    <button class="genre-btn" onclick="openGenreFlipViewer('narrative')">Narrative</button>
-                    <button class="genre-btn" onclick="openGenreGallery('descriptive')">Descriptive</button>
-                    <button class="genre-btn" onclick="openGenreGallery('expository')">Expository</button>
-                    <button class="genre-btn" onclick="openGenreGallery('persuasive')">Persuasive</button>
-                    <button class="genre-btn" onclick="openGenreGallery('argumentative')">Argumentative</button>
-                    <button class="genre-btn" onclick="openGenreGallery('creative')">Creative</button>
-                </div>
-                <button onclick="closeGenreModal()" style="width: 100%; padding: 10px; background: #ccc; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
-            </div>
+        <div class="controls no-print" style="justify-content:center;margin-top:14px;">
+          <button class="btn btn-ghost" onclick="printTopicDrafts()">Print selected topic versions</button>
         </div>
+      </div>
 
-        <!-- Topic Practice Section -->
-        <div class="gist-area">
-            <h3>4) Practice with a Topic</h3>
-            <label for="topic-category-select"><strong>Topic Category:</strong></label>
-            <select id="topic-category-select">
-                <option value="">-- Choose a category --</option>
-            </select>
-            <label for="topic-select" style="margin-top:6px;"><strong>Choose a writing topic:</strong></label>
-            <select id="topic-select">
-                <option value="">-- Please choose a topic --</option>
-            </select>
-            
-            <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start;">
-                <div style="flex:1; min-width:300px;">
-                    <label><strong>Optional: Add an image to the topic (for inspiration)</strong></label>
-                    <input type="file" id="topic-image-upload" accept="image/*" style="font-size:12px;margin-top:4px;">
-                </div>
-                <div style="flex:0 0 200px;">
-                    <div id="topic-image-preview" style="margin-top:8px; display:none;">
-                        <img id="topic-preview-img" src="" alt="Topic image preview" style="max-width:100%; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="analysis-run no-print">
-                <div class="version-header-inline">
-                    <span><strong>Topic Practice Workspace</strong></span>
-                    <span style="font-size:0.85em;">Same analysis flow as Level 1 (with file upload).</span>
-                </div>
-                <div class="version-legend">
-                    <span class="version-legend-item">
-                        <span class="legend-color legend-topic"></span> Topic draft highlight style
-                    </span>
-                </div>
-                <div class="version-layout">
-                    <div class="version-col">
-                        <h3>Original text (or OCR result)</h3>
-                        <textarea id="topic-text" placeholder="Write your essay here, or upload a file / image..."></textarea>
-                        <div id="ocr-progress-topic" class="ocr-progress" style="display:none;"></div>
-                    </div>
-                    <div class="version-col version-actions">
-                        <div>
-                            <strong style="font-size:0.9em;">Upload a file</strong>
-                            <input
-                                type="file"
-                                id="file-upload-topic"
-                                accept=".txt,.pdf,.doc,.docx,image/*"
-                            >
-                            <small>Supports images (OCR), txt, pdf, doc / docx.</small>
-                        </div>
-                        <button onclick="analyzeTopic()">Analyze &amp; Feedback</button>
-                    </div>
-                    <div class="version-col">
-                        <h3>Checked version</h3>
-                        <textarea id="topic-checked-text" placeholder="Corrected topic essay will appear here."></textarea>
-                    </div>
-                </div>
-            </div>
-            <div id="topic-output" class="output"></div>
-            <div class="controls no-print" style="margin-top:16px;">
-                <button onclick="printTopicDrafts()">Print selected topic versions</button>
-            </div>
+      <!-- Genre Selection Modal -->
+      <div id="genre-modal">
+        <div class="modal-card">
+          <h3>Select Writing Genre</h3>
+          <div class="modal-grid">
+            <button class="btn btn-ghost" onclick="openGenreGallery('descriptive')">Descriptive</button>
+            <button class="btn btn-ghost" onclick="openGenreGallery('narrative')">Narrative</button>
+            <button class="btn btn-ghost" onclick="openGenreGallery('argumentative')">Argumentative</button>
+            <button class="btn btn-ghost" onclick="openGenreGallery('expository')">Expository</button>
+            <button class="btn btn-ghost" onclick="openGenreGallery('compare-contrast')">Compare/Contrast</button>
+            <button class="btn btn-ghost" onclick="openGenreGallery('problem-solution')">Problem/Solution</button>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+            <button class="btn btn-ghost" onclick="closeGenreModal()">Close</button>
+          </div>
         </div>
+      </div>
     </section>
 
-    <div id="printable-drafts"></div>
+    <div id="printable-drafts" style="display:none;"></div>
+  </div>
 
-    <script>
-        // 全局變量
-        let currentLevel = 'home';
-        let drafts = [];
-        let rubricText = '';
-        let rubricItems = [];
-        let realDraftCount = 0;
-        let topicReport = null;
-        let promptImageBase64 = '';
-        let topicImageBase64 = '';
-        let topicDrafts = [];
-        let topicRealDraftCount = 0;
-        
-        // 圖片瀏覽器變量
-        let currentGallery = '';
-        let currentImageIndex = 0;
-        let totalImages = 0;
-        
-        const topicCategories = {
-            'Descriptive Writing': ['Describe your favorite holiday.', 'Describe your dream house.', 'Describe a memorable place you have visited.'],
-            'Personal Narrative': ['Explain a challenge you have overcome.', 'Share an important lesson you learned.', 'Describe a time you helped someone.'],
-            'Opinion / Argumentative': [
-                'Should students use smartphones in the classroom? Give your opinion and reasons.',
-                'Is homework necessary for learning? Discuss your viewpoint.',
-                'Should school uniforms be mandatory? Present your arguments.'
-            ]
-        };
+<script>
+/* ========= Navigation core ========= */
+let currentLevel = 'home';
+function enterLevel(level){
+  currentLevel = level;
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  if(level === 'analysis'){
+    document.getElementById('analysis-section')?.classList.add('active');
+  }else if(level === 'gists'){
+    document.getElementById('gists-section')?.classList.add('active');
+  }else{
+    document.getElementById('home-section')?.classList.add('active');
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function goHome(){ enterLevel('home'); }
 
-// ---------- Level 2 圖片瀏覽功能 ----------
-function openImageGallery(galleryName, imageCount) {
-    currentGallery = galleryName;
-    totalImages = imageCount;
-    currentImageIndex = 1; // 從 1 開始，因為圖片編號是 1.png, 2.png...
-    updateImageViewer();
-    document.getElementById('image-viewer').classList.add('active');
+/* JS-only binding for sandbox safety */
+function bindNavigationButtons(){
+  document.querySelectorAll('.js-enter').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const level = btn.dataset.level;
+      if(level) enterLevel(level);
+    });
+  });
+  document.querySelectorAll('.js-home').forEach(btn=>{
+    btn.addEventListener('click', goHome);
+  });
 }
 
-function openGenreSelection() {
-    document.getElementById('genre-modal').style.display = 'flex';
-}
+/* ========= Global variables ========= */
+let drafts = [];
+let rubricText = '';
+let rubricItems = [];
+let realDraftCount = 0;
 
-function closeGenreModal() {
-    document.getElementById('genre-modal').style.display = 'none';
-}
+let topicReport = null;
+let topicDrafts = [];
+let topicRealDraftCount = 0;
 
-function openGenreGallery(genre) {
-    closeGenreModal();
-    currentGallery = `writing genres/${genre}`;
-    totalImages = 10; // 每個genre有10張圖片
-    currentImageIndex = 1; // 從 1 開始
-    updateImageViewer();
-    document.getElementById('image-viewer').classList.add('active');
-}
+let promptImageBase64 = '';
+let topicImageBase64 = '';
 
-function updateImageViewer() {
-    // 修正：確保圖片路徑格式正確，從 1 開始編號
-    const imageUrl = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex}.png`;
-    console.log('Loading image:', imageUrl);
-    
-    const viewerImage = document.getElementById('viewer-image');
-    const imageCounter = document.getElementById('image-counter');
-    
-    // 顯示加載狀態
-    viewerImage.style.opacity = '0.3';
-    imageCounter.textContent = `Loading... (${currentImageIndex} / ${totalImages})`;
-    
-    // 預加載圖片
-    const img = new Image();
-    img.onload = function() {
-        viewerImage.src = imageUrl;
-        viewerImage.style.opacity = '1';
-        imageCounter.textContent = `${currentImageIndex} / ${totalImages}`;
-    };
-    
-    img.onerror = function() {
-        console.error('Failed to load image:', imageUrl);
-        viewerImage.alt = '圖片加載失敗，請檢查網路連線';
-        viewerImage.style.opacity = '1';
-        imageCounter.textContent = `${currentImageIndex} / ${totalImages} - 加載失敗`;
-        
-        // 如果圖片加載失敗，嘗試下一個
-        setTimeout(() => {
-            if (currentImageIndex < totalImages) {
-                currentImageIndex++;
-                updateImageViewer();
-            }
-        }, 1000);
-    };
-    
-    img.src = imageUrl;
-}
+// Image viewer vars
+let currentGallery = '';
+let currentImageIndex = 1;
+let totalImages = 0;
 
-function changeImage(direction) {
-    const newIndex = currentImageIndex + direction;
-    
-    // 確保索引在 1 到 totalImages 之間
-    if (newIndex >= 1 && newIndex <= totalImages) {
-        currentImageIndex = newIndex;
-        updateImageViewer();
-    } else if (newIndex < 1) {
-        currentImageIndex = totalImages; // 循環到最後一張
-        updateImageViewer();
-    } else if (newIndex > totalImages) {
-        currentImageIndex = 1; // 循環到第一張
-        updateImageViewer();
-    }
-}
-
-function closeImageViewer() {
-    document.getElementById('image-viewer').classList.remove('active');
-}
-
-// 鍵盤導航支持
-document.addEventListener('keydown', function(e) {
-    const viewer = document.getElementById('image-viewer');
-    if (viewer.classList.contains('active')) {
-        if (e.key === 'ArrowLeft') changeImage(-1);
-        if (e.key === 'ArrowRight') changeImage(1);
-        if (e.key === 'Escape') closeImageViewer();
-    }
-});
-
-        // ---------- Util ----------
-        function escapeHtml(str) {
-            return String(str || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '<')
-                .replace(/>/g, '>')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        // 中文prompt處理
-        function translateChinesePrompt(chinesePrompt) {
-            const translationMap = {
-                '描述': 'describe', '討論': 'discuss', '解釋': 'explain', '分析': 'analyze',
-                '比較': 'compare', '對比': 'contrast', '評價': 'evaluate', '論述': 'discuss',
-                '說明': 'explain', '舉例': 'give examples', '原因': 'reasons', '影響': 'effects',
-                '解決方案': 'solutions', '優點': 'advantages', '缺點': 'disadvantages',
-                '重要性': 'importance', '看法': 'opinion', '觀點': 'viewpoint'
-            };
-            
-            let englishPrompt = chinesePrompt;
-            Object.keys(translationMap).forEach(chineseWord => {
-                const regex = new RegExp(chineseWord, 'g');
-                englishPrompt = englishPrompt.replace(regex, translationMap[chineseWord]);
-            });
-            
-            return englishPrompt;
-        }
-
-        function isChinesePrompt(prompt) {
-            if (!prompt) return false;
-            const chineseCharCount = (prompt.match(/[\u4e00-\u9fff]/g) || []).length;
-            const totalCharCount = prompt.replace(/\s/g, '').length;
-            return totalCharCount > 0 && chineseCharCount / totalCharCount > 0.3;
-        }
-
-        // LanguageTool API
-        async function checkWithLanguageTool(text) {
-            const params = new URLSearchParams();
-            params.append('text', text);
-            params.append('language', 'en-US');
-            const res = await fetch('https://api.languagetool.org/v2/check', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params.toString()
-            });
-            if (!res.ok) throw new Error('LanguageTool error: ' + res.status);
-            return await res.json();
-        }
-
-        function findCapitalizationMatches(text) {
-            const regex = /(^|[.!?]\s+)([a-z])/g;
-            const matches = [];
-            let m;
-            while ((m = regex.exec(text)) !== null) {
-                const offset = m.index + m[1].length;
-                const length = 1;
-                const wrongChar = m[2];
-                matches.push({
-                    offset,
-                    length,
-                    replacements: [{ value: wrongChar.toUpperCase() }],
-                    message: 'Sentence should start with a capital letter.',
-                    rule: {
-                        issueType: 'grammar',
-                        description: 'Capitalization at the beginning of a sentence'
-                    }
-                });
-            }
-            return matches;
-        }
-
-        function buildCorrectedText(text, matches) {
-            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
-            let result = '';
-            let cursor = 0;
-            for (const m of sorted) {
-                const start = m.offset;
-                const end = m.offset + m.length;
-                const replacement = (m.replacements && m.replacements[0])
-                    ? m.replacements[0].value
-                    : text.slice(start, end);
-                result += text.slice(cursor, start) + replacement;
-                cursor = end;
-            }
-            result += text.slice(cursor);
-            return result;
-        }
-
-        // 改進的prompt覆蓋率計算，支援中文prompt
-        async function computePromptCoverage(text, promptOrTopic) {
-            if (!promptOrTopic) {
-                return { coverage: 1, matchedKeywords: [], totalKeywords: 0 };
-            }
-            
-            let processedPrompt = promptOrTopic;
-            
-            // 如果是中文prompt，先翻譯
-            if (isChinesePrompt(promptOrTopic)) {
-                processedPrompt = translateChinesePrompt(promptOrTopic);
-            }
-            
-            const lowerPrompt = processedPrompt.toLowerCase();
-            const keywordCandidates = lowerPrompt.match(/[a-z]{4,}/g) || [];
-            const uniqueKeywords = Array.from(new Set(keywordCandidates));
-            const lowerText = text.toLowerCase();
-            let matched = 0;
-            const matchedWords = [];
-            uniqueKeywords.forEach(w => {
-                if (lowerText.includes(w)) {
-                    matched++;
-                    matchedWords.push(w);
-                }
-            });
-            const coverage = uniqueKeywords.length ? matched / uniqueKeywords.length : 1;
-            return { 
-                coverage, 
-                matchedKeywords: matchedWords, 
-                totalKeywords: uniqueKeywords.length,
-                processedPrompt: processedPrompt
-            };
-        }
-
-        function buildHighlightedHtml(text, matches, highlightClass = 'err') {
-            const sorted = [...matches].sort((a, b) => a.offset - b.offset);
-            let result = '';
-            let cursor = 0;
-            for (const m of sorted) {
-                const start = m.offset;
-                const end = m.offset + m.length;
-                const original = text.slice(start, end);
-                const tipBase = m.message || '';
-                const suggestion = (m.replacements && m.replacements[0])
-                    ? ' → ' + m.replacements[0].value
-                    : '';
-                const tip = escapeHtml(tipBase + suggestion);
-                result += escapeHtml(text.slice(cursor, start));
-                result += `<span class="${highlightClass}" title="${tip}">${escapeHtml(original)}</span>`;
-                cursor = end;
-            }
-            result += escapeHtml(text.slice(cursor));
-            return result;
-        }
-
-        // 改進的評分系統，針對GSAT學測寫作特點
-        async function calculateScores(text, matches, options = {}) {
-            const wordTokens = text.trim().split(/\s+/).filter(Boolean);
-            const wordCount = wordTokens.length;
-            const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const sentences = sentencesArr.length || 1;
-            const paragraphs = text.split(/\n{2,}/).filter(p => p.trim().length > 0).length || 1;
-            const grammarMatches = matches.filter(m =>
-                m.rule && (m.rule.issueType === 'grammar' || m.rule.issueType === 'misspelling')
-            );
-            const spellingMatches = matches.filter(m =>
-                m.rule && m.rule.issueType === 'misspelling'
-            );
-            const styleMatches = matches.filter(m =>
-                m.rule && m.rule.issueType === 'style'
-            );
-            const errorPer100 = wordCount ? (grammarMatches.length / wordCount) * 100 : grammarMatches.length;
-            const promptOrTopic = options.prompt || options.topic || '';
-            
-            // 使用async/await處理可能的中文翻譯
-            const coverageInfo = await computePromptCoverage(text, promptOrTopic);
-            const cov = coverageInfo.coverage;
-
-            // GSAT學測寫作評分標準 - 注重邏輯起承轉合而非三段式
-            let structureScore = 3;
-            if (paragraphs >= 2 && wordCount >= 120) {
-                // 檢查是否有清晰的邏輯結構
-                const hasClearStructure = checkLogicalStructure(text);
-                structureScore = hasClearStructure ? 5 : 4;
-            } else if (paragraphs >= 2 && wordCount >= 80) {
-                structureScore = 3;
-            } else if (paragraphs === 1 && wordCount >= 60) {
-                structureScore = 2;
-            } else {
-                structureScore = 1;
-            }
-
-            // 檢查邏輯連接詞和起承轉合
-            const logicalConnectors = ['however','therefore','in addition','for example','for instance',
-                                     'on the other hand','because','although','since','as a result',
-                                     'first','second','finally','in conclusion','moreover','furthermore',
-                                     'nevertheless','consequently'];
-            const lowerText = text.toLowerCase();
-            let connectorCount = 0;
-            logicalConnectors.forEach(w => {
-                const regex = new RegExp('\\b' + w + '\\b', 'gi');
-                const matches = lowerText.match(regex);
-                if (matches) connectorCount += matches.length;
-            });
-            
-            let coherenceScore = 3;
-            if (connectorCount >= 3 && cov >= 0.6) coherenceScore = 5;
-            else if (connectorCount >= 2 && cov >= 0.4) coherenceScore = 4;
-            else if (connectorCount >= 1) coherenceScore = 3;
-            else coherenceScore = 2;
-
-            let onTopicScore = 5;
-            if (cov < 0.2) onTopicScore = 1;
-            else if (cov < 0.4) onTopicScore = 2;
-            else if (cov < 0.6) onTopicScore = 3;
-            else if (cov < 0.8) onTopicScore = 4;
-
-            // 綜合連貫性與主題相關性
-            coherenceScore = Math.min(coherenceScore, onTopicScore);
-
-            let grammarScore = 3;
-            if (errorPer100 <= 1) grammarScore = 5;
-            else if (errorPer100 <= 3) grammarScore = 4;
-            else if (errorPer100 <= 6) grammarScore = 3;
-            else if (errorPer100 <= 10) grammarScore = 2;
-            else grammarScore = 1;
-
-            const types = new Set(wordTokens.map(w => w.toLowerCase().replace(/[^a-z']/g, '')));
-            const typeTokenRatio = wordCount ? types.size / wordCount : 0;
-            const simpleWords = ['good','nice','very','really','a lot','many','things','stuff'];
-            let simpleCount = 0;
-            simpleWords.forEach(w => {
-                const regex = new RegExp('\\b' + w + '\\b', 'gi');
-                const matches = lowerText.match(regex);
-                if (matches) simpleCount += matches.length;
-            });
-            
-            let vocabScore = 3;
-            if (typeTokenRatio > 0.6 && simpleCount <= 2) vocabScore = 5;
-            else if (typeTokenRatio > 0.45 && simpleCount <= 4) vocabScore = 4;
-            else if (typeTokenRatio > 0.3) vocabScore = 3;
-            else if (typeTokenRatio > 0.2) vocabScore = 2;
-            else vocabScore = 1;
-
-            const total = structureScore + coherenceScore + grammarScore + vocabScore;
-            return {
-                structure: { 
-                    label: 'Structure & Logical Flow', 
-                    score: structureScore, 
-                    max: 5, 
-                    reason: `Paragraphs: ${paragraphs}; Words: ${wordCount}; Logical connectors: ${connectorCount}.` 
-                },
-                coherence: { 
-                    label: 'Coherence & Relevance', 
-                    score: coherenceScore, 
-                    max: 5, 
-                    reason: `Logical connectors: ${connectorCount}; on-topic coverage ≈ ${(cov * 100).toFixed(0)}% of key prompt words.` 
-                },
-                grammar: { 
-                    label: 'Grammar Accuracy', 
-                    score: grammarScore, 
-                    max: 5, 
-                    reason: `Approx. ${grammarMatches.length} grammar/spelling issues (~${errorPer100.toFixed(1)} per 100 words).` 
-                },
-                vocabulary: { 
-                    label: 'Vocabulary Range & Precision', 
-                    score: vocabScore, 
-                    max: 5, 
-                    reason: `Type-token ratio ≈ ${(typeTokenRatio*100).toFixed(1)}%; simple/common words: ${simpleCount}.` 
-                },
-                total: { label: 'Total', score: total, max: 20 },
-                meta: {
-                    wordCount, sentences, paragraphs, grammarMatchesCount: grammarMatches.length,
-                    spellingMatchesCount: spellingMatches.length, styleMatchesCount: styleMatches.length,
-                    connectorCount, onTopicCoverage: cov, onTopicMatchedKeywords: coverageInfo.matchedKeywords,
-                    onTopicTotalKeywords: coverageInfo.totalKeywords,
-                    processedPrompt: coverageInfo.processedPrompt
-                }
-            };
-        }
-
-        // 檢查邏輯結構（針對GSAT兩段式寫作）
-        function checkLogicalStructure(text) {
-            const paragraphs = text.split(/\n{2,}/).filter(p => p.trim().length > 0);
-            
-            if (paragraphs.length < 2) return false;
-            
-            // 檢查是否有清晰的引言和結論跡象
-            const firstPara = paragraphs[0].toLowerCase();
-            const lastPara = paragraphs[paragraphs.length - 1].toLowerCase();
-            
-            const introIndicators = ['first', 'to begin', 'in this essay', 'the topic', 'discuss'];
-            const conclusionIndicators = ['in conclusion', 'to sum up', 'in summary', 'finally', 'overall'];
-            
-            const hasIntro = introIndicators.some(indicator => firstPara.includes(indicator));
-            const hasConclusion = conclusionIndicators.some(indicator => lastPara.includes(indicator));
-            
-            return hasIntro || hasConclusion;
-        }
-
-        // 改進的反饋生成，支援中文prompt
-        async function buildFeedback(text, matches, options = {}, scores) {
-            const topic = options.topic || null;
-            const prompt = options.prompt || null;
-            const mode = options.mode || 'first';
-            const prevScores = options.prevScores || null;
-            const previousVersionLabel = options.previousVersionLabel || null;
-            const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
-            const sentencesArr = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const sentences = sentencesArr.length;
-            const avgLen = sentences ? (wordCount / sentences).toFixed(1) : 'N/A';
-            const paragraphs = text.split(/\n{2,}/).filter(p => p.trim().length > 0).length || 1;
-            const grammarCount = matches.filter(m => m.rule && m.rule.issueType === 'grammar').length;
-            const spellingCount = matches.filter(m => m.rule && m.rule.issueType === 'misspelling').length;
-            const styleCount = matches.filter(m => m.rule && m.rule.issueType === 'style').length;
-            const meta = scores && scores.meta ? scores.meta : null;
-            
-            let msg = '';
-            
-            // 顯示處理後的prompt（如果是中文翻譯的）
-            if (prompt && meta && meta.processedPrompt && meta.processedPrompt !== prompt) {
-                msg += `Original prompt (Chinese): "${prompt}"\n`;
-                msg += `Processed prompt (English): "${meta.processedPrompt}"\n\n`;
-            } else if (prompt) {
-                msg += `Writing prompt:\n"${prompt}"\n\n`;
-            }
-            
-            if (topic) msg += `Topic:\n"${topic}"\n\n`;
-            
-            if (mode === 'first' || !prevScores) {
-                if (scores) {
-                    msg += '=== Rubric Scores (out of 5) ===\n';
-                    msg += `- ${scores.structure.label}: ${scores.structure.score} / ${scores.structure.max}\n`;
-                    msg += `  Reason: ${scores.structure.reason}\n`;
-                    msg += `- ${scores.coherence.label}: ${scores.coherence.score} / ${scores.coherence.max}\n`;
-                    msg += `  Reason: ${scores.coherence.reason}\n`;
-                    msg += `- ${scores.grammar.label}: ${scores.grammar.score} / ${scores.grammar.max}\n`;
-                    msg += `  Reason: ${scores.grammar.reason}\n`;
-                    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score} / ${scores.vocabulary.max}\n`;
-                    msg += `  Reason: ${scores.vocabulary.reason}\n\n`;
-                    msg += `>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
-                }
-                
-                msg += `GSAT Writing Analysis:\n`;
-                msg += `- Paragraphs: ${paragraphs} (GSAT typically expects 2 well-developed paragraphs)\n`;
-                msg += `- Words: ${wordCount}\n`;
-                msg += `- Sentences: ${sentences}\n`;
-                msg += `- Average words per sentence: ${avgLen}\n`;
-                msg += `- Logical connectors used: ${meta?.connectorCount || 0}\n\n`;
-                
-                msg += `Issues detected:\n`;
-                msg += `- Grammar: ${grammarCount}\n`;
-                msg += `- Spelling: ${spellingCount}\n`;
-                msg += `- Style / phrasing: ${styleCount}\n\n`;
-                
-                if (meta && meta.onTopicTotalKeywords > 0) {
-                    const covPercent = (meta.onTopicCoverage * 100).toFixed(0);
-                    msg += `Relevance to prompt/topic:\n`;
-                    msg += `- About ${covPercent}% of key words/ideas from the prompt appear in your essay.\n`;
-                    if (meta.onTopicCoverage < 0.3) {
-                        msg += `- Your essay seems partly off-topic. Make sure you address the main question directly.\n`;
-                    } else if (meta.onTopicCoverage < 0.6) {
-                        msg += `- You're on the right track, but could strengthen the connection to the prompt.\n`;
-                    } else {
-                        msg += `- Good relevance to the topic. Your essay stays focused on the main question.\n`;
-                    }
-                }
-                
-                const exampleLines = [];
-                matches.slice(0, 5).forEach(m => {
-                    const snippet = text.slice(m.offset, m.offset + m.length);
-                    const repl = (m.replacements && m.replacements[0]) ? m.replacements[0].value : null;
-                    const rule = m.rule && (m.rule.description || m.rule.issueType || '');
-                    if (repl) {
-                        exampleLines.push(`- "${snippet}" → "${repl}" (${rule})`);
-                    } else {
-                        exampleLines.push(`- "${snippet}" (${rule})`);
-                    }
-                });
-                
-                if (exampleLines.length > 0) {
-                    msg += `\nExample grammar / wording issues:\n`;
-                    msg += exampleLines.join('\n') + '\n';
-                }
-                
-                msg += `\nGSAT Writing Suggestions:\n`;
-                msg += `- Focus on developing 2 strong paragraphs with clear logical flow\n`;
-                msg += `- Use logical connectors (however, therefore, for example) to show relationships between ideas\n`;
-                msg += `- Make sure each paragraph has a clear main idea and supporting details\n`;
-                msg += `- End with a thoughtful conclusion that summarizes your main points\n`;
-                
-                if (prompt || topic) {
-                    msg += `- Ensure every sentence contributes to answering the prompt/question directly\n`;
-                }
-                
-                msg += '\nLanguage Improvement Tips:\n';
-                msg += `- Review highlighted grammar and spelling errors\n`;
-                msg += `- Replace simple words with more precise academic vocabulary\n`;
-                msg += `- Vary your sentence structure for better readability\n`;
-            } else {
-                // 修訂版本的反饋
-                msg += `=== Targeted Feedback for This Version ===\n`;
-                if (previousVersionLabel) msg += `(Compared with ${previousVersionLabel})\n\n`;
-                
-                const dims = ['structure','coherence','grammar','vocabulary'];
-                const prettyNames = { 
-                    structure: 'Structure & Logical Flow', 
-                    coherence: 'Coherence & Relevance', 
-                    grammar: 'Grammar', 
-                    vocabulary: 'Vocabulary' 
-                };
-                const improvements = [], regressions = [], unchanged = [];
-                
-                dims.forEach(key => {
-                    const newS = scores[key].score;
-                    const oldS = prevScores[key].score;
-                    if (newS > oldS) improvements.push(`${prettyNames[key]}: ${oldS} → ${newS}`);
-                    else if (newS < oldS) regressions.push(`${prettyNames[key]}: ${oldS} → ${newS}`);
-                    else unchanged.push(`${prettyNames[key]}: still at ${newS}`);
-                });
-                
-                if (improvements.length) {
-                    msg += `Areas of improvement:\n`;
-                    improvements.forEach(line => msg += `- ${line}\n`);
-                    msg += '\n';
-                }
-                
-                if (regressions.length) {
-                    msg += `Areas slightly weaker than last time:\n`;
-                    regressions.forEach(line => msg += `- ${line}\n`);
-                    msg += '\n';
-                }
-                
-                const prevMeta = prevScores.meta || null;
-                const metaNow = scores.meta || null;
-                
-                if (metaNow && prevMeta) {
-                    const prevErrors = prevMeta.grammarMatchesCount + prevMeta.spellingMatchesCount;
-                    const nowErrors = metaNow.grammarMatchesCount + metaNow.spellingMatchesCount;
-                    const diff = prevErrors - nowErrors;
-                    
-                    msg += `Grammar & spelling progress:\n`;
-                    msg += `- Previous errors: ${prevErrors}\n`;
-                    msg += `- Current errors: ${nowErrors}\n`;
-                    if (diff > 0) msg += `→ Nice! You reduced about ${diff} grammar/spelling issues.\n`;
-                    else if (diff < 0) msg += `→ Be careful: there are slightly more issues than the last draft.\n`;
-                    else msg += `→ Number of issues is similar. Focus on correcting the highlighted ones.\n`;
-                    msg += '\n';
-                    
-                    if (metaNow.onTopicTotalKeywords > 0) {
-                        const prevCov = (prevMeta.onTopicCoverage * 100).toFixed(0);
-                        const nowCov = (metaNow.onTopicCoverage * 100).toFixed(0);
-                        msg += `Relevance to prompt/topic:\n`;
-                        msg += `- Previous on-topic coverage: ~${prevCov}% of key prompt words.\n`;
-                        msg += `- Current on-topic coverage: ~${nowCov}%.\n`;
-                        if (metaNow.onTopicCoverage > prevMeta.onTopicCoverage) {
-                            msg += `→ Better connection to the prompt. Keep making each paragraph answer the question.\n`;
-                        } else if (metaNow.onTopicCoverage < prevMeta.onTopicCoverage) {
-                            msg += `→ Some parts may drift away from the prompt. Re-check each paragraph against the question.\n`;
-                        } else {
-                            msg += `→ Similar level of relevance. Make sure new details still support your main point.\n`;
-                        }
-                        msg += '\n';
-                    }
-                }
-                
-                const needWork = ['structure','coherence','grammar','vocabulary'].filter(d => scores[d].score < 4);
-                if (needWork.length) {
-                    msg += `Key areas to focus on next:\n`;
-                    needWork.forEach(key => {
-                        const sc = scores[key];
-                        msg += `- ${sc.label}: now ${sc.score}/${sc.max}. ${sc.reason}\n`;
-                    });
-                    msg += '\n';
-                }
-                
-                msg += `GSAT Writing Checklist for your next revision:\n`;
-                msg += `- Re-read the writing prompt and underline the key requirements\n`;
-                msg += `- Ensure you have 2 well-developed paragraphs with logical flow\n`;
-                msg += `- Add 1-2 logical connectors to show relationships between ideas\n`;
-                msg += `- Fix the remaining highlighted grammar and spelling errors\n`;
-                msg += `- Replace simple words with more academic vocabulary where appropriate\n`;
-            }
-            
-            return msg;
-        }
-
-        async function loadRubric() {
-            if (rubricText) return;
-            try {
-                const response = await fetch('https://ducj-creator.github.io/Shirley-AI-Writing/writing%20rubric.csv');
-                const csv = await response.text();
-                const parsed = Papa.parse(csv, { header: true }).data;
-                rubricItems = [];
-                parsed.forEach(row => {
-                    const crit = (row['Criteria'] || '').trim();
-                    if (!crit) return;
-                    const levels = {
-                        1: (row['1 Point'] || '').trim(),
-                        2: (row['2 Points'] || '').trim(),
-                        3: (row['3 Points'] || '').trim(),
-                        4: (row['4 Points'] || '').trim(),
-                        5: (row['5 Points'] || '').trim()
-                    };
-                    rubricItems.push({ criteria: crit, levels });
-                });
-                if (rubricItems.length === 0) throw new Error('Empty rubric after parsing');
-                rubricText = rubricItems.map(item => {
-                    const lv3 = item.levels[3] ? `3 pts: ${item.levels[3]}` : '';
-                    const lv4 = item.levels[4] ? `4 pts: ${item.levels[4]}` : '';
-                    const lv5 = item.levels[5] ? `5 pts: ${item.levels[5]}` : '';
-                    const parts = [lv3, lv4, lv5].filter(Boolean).join('\n');
-                    return `- ${item.criteria}:\n${parts}`;
-                }).join('\n');
-                const rubricDiv = document.getElementById('rubric-reminder');
-                if (rubricDiv) {
-                    rubricDiv.innerHTML = `
-                        <h3>Rubric Reminder (for all drafts)</h3>
-                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
-                    `;
-                }
-            } catch (e) {
-                console.warn('Rubric parse failed, using default.', e);
-                rubricItems = [
-                    { criteria: 'Essay Structure', levels: { 3: 'Clear introduction, body, and conclusion.' } },
-                    { criteria: 'Coherence & Cohesion', levels: { 3: 'Logical order and basic transitions.' } },
-                    { criteria: 'Grammar Accuracy', levels: { 3: 'Some minor errors but meaning is clear.' } },
-                    { criteria: 'Vocabulary Range & Precision', levels: { 3: 'Adequate vocabulary with some variety.' } }
-                ];
-                rubricText = rubricItems.map(i => `- ${i.criteria}: ${Object.values(i.levels)[0]}`).join('\n');
-                const rubricDiv = document.getElementById('rubric-reminder');
-                if (rubricDiv) {
-                    rubricDiv.innerHTML = `
-                        <h3>Rubric Reminder (default)</h3>
-                        <pre style="white-space: pre-wrap; font-size:0.9em;">${escapeHtml(rubricText)}</pre>
-                    `;
-                }
-            }
-        }
-
-        function toggleRubric() {
-            const div = document.getElementById('rubric-reminder');
-            if (!div) return;
-            div.style.display = div.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function enterLevel(level) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            const target = document.getElementById(level + '-section');
-            if (target) target.classList.add('active');
-            document.querySelector('.back-btn').classList.add('active');
-            currentLevel = level;
-            if (level === 'gists') {
-                initTopicCategories();
-            }
-            if (level === 'analysis') loadRubric();
-        }
-
-        function goHome() {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById('home-section').classList.add('active');
-            document.querySelector('.back-btn').classList.remove('active');
-            currentLevel = 'home';
-        }
-
-        function updateReferenceButtonVisibility() {
-            const btn = document.getElementById('ref-btn');
-            if (!btn) return;
-            btn.style.display = realDraftCount >= 2 ? 'inline-block' : 'none';
-        }
-
-        if (window['pdfjsLib']) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-
-        // OCR功能
-        async function performOCR(file, progressElement, targetTextarea) {
-            if (!file) return;
-            
-            progressElement.style.display = 'block';
-            progressElement.innerHTML = '🔄 Starting OCR...';
-            
-            try {
-                const worker = await Tesseract.createWorker('eng+chi_sim', 1, {
-                    logger: m => {
-                        if (m.status === 'recognizing text') {
-                            progressElement.innerHTML = `🔍 Recognizing text... ${Math.round(m.progress * 100)}%`;
-                        }
-                    }
-                });
-                
-                progressElement.innerHTML = '🔍 Processing image...';
-                
-                const { data: { text } } = await worker.recognize(file);
-                
-                const cleanedText = text
-                    .replace(/\n\s*\n/g, '\n\n')
-                    .replace(/[^\S\r\n]+/g, ' ')
-                    .trim();
-                
-                targetTextarea.value = cleanedText;
-                progressElement.innerHTML = '✅ OCR completed successfully!';
-                
-                const wordCount = cleanedText.split(/\s+/).filter(word => word.length > 0).length;
-                progressElement.innerHTML += `<br>📝 Word count: ${wordCount}`;
-                
-                setTimeout(() => {
-                    progressElement.style.display = 'none';
-                }, 3000);
-                
-                await worker.terminate();
-                
-            } catch (error) {
-                console.error('OCR Error:', error);
-                progressElement.innerHTML = '❌ OCR failed. Please try another image or paste text manually.';
-                progressElement.style.background = 'var(--error-bg)';
-                progressElement.style.borderColor = 'var(--error-border)';
-            }
-        }
-
-        // 文件上傳處理
-        function handleFileInput(file, targetTextareaId) {
-            if (!file) return;
-            const name = file.name.toLowerCase();
-            const textarea = document.getElementById(targetTextareaId);
-            const progressElement = document.getElementById(`ocr-progress-${targetTextareaId.includes('topic') ? 'topic' : 'main'}`);
-            
-            if (!textarea) return;
-
-            if (file.type.startsWith('image/')) {
-                performOCR(file, progressElement, textarea);
-            } else if (name.endsWith('.txt')) {
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    textarea.value = ev.target.result;
-                };
-                reader.readAsText(file);
-            } else if (name.endsWith('.pdf')) {
-                progressElement.style.display = 'block';
-                progressElement.innerHTML = '📄 Processing PDF...';
-                
-                const reader = new FileReader();
-                reader.onload = async ev => {
-                    try {
-                        const typedArray = new Uint8Array(ev.target.result);
-                        const pdf = await pdfjsLib.getDocument({ typedArray }).promise;
-                        const page = await pdf.getPage(1);
-                        const content = await page.getTextContent();
-                        const strings = content.items.map(item => item.str);
-                        textarea.value = strings.join(' ');
-                        progressElement.innerHTML = '✅ PDF processed successfully!';
-                        
-                        setTimeout(() => {
-                            progressElement.style.display = 'none';
-                        }, 3000);
-                    } catch (e) {
-                        console.error(e);
-                        textarea.value = '';
-                        progressElement.innerHTML = '❌ Unable to extract text from this PDF.';
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            } else if (name.endsWith('.docx')) {
-                progressElement.style.display = 'block';
-                progressElement.innerHTML = '📄 Processing DOCX...';
-                
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    const arrayBuffer = ev.target.result;
-                    mammoth.extractRawText({ arrayBuffer })
-                        .then(result => {
-                            textarea.value = result.value || '';
-                            progressElement.innerHTML = '✅ DOCX processed successfully!';
-                            
-                            setTimeout(() => {
-                                progressElement.style.display = 'none';
-                            }, 3000);
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            textarea.value = '';
-                            progressElement.innerHTML = '❌ Unable to extract text from this DOCX.';
-                        });
-                };
-                reader.readAsArrayBuffer(file);
-            } else if (name.endsWith('.doc')) {
-                alert('Legacy .doc files are not fully supported in this browser-only version. Please convert to .docx or .pdf first.');
-            } else {
-                alert('Unsupported file type. Please use image / txt / pdf / doc / docx.');
-            }
-        }
-
-        function getLastRealDraft() {
-            for (let i = drafts.length - 1; i >= 0; i--) {
-                if (!drafts[i].isReference) return drafts[i];
-            }
-            return null;
-        }
-
-        // ========== 圖片上傳處理 ==========
-        document.getElementById('prompt-image-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('prompt-image-preview');
-            const img = document.getElementById('prompt-preview-img');
-            const promptTextarea = document.getElementById('prompt-input');
-            
-            if (!file) {
-                promptImageBase64 = '';
-                preview.style.display = 'none';
-                return;
-            }
-            
-            // 如果是圖片，進行 OCR 提取文字
-            if (file.type.startsWith('image/')) {
-                const progressElement = document.createElement('div');
-                progressElement.className = 'ocr-progress';
-                progressElement.innerHTML = '🔄 Extracting text from prompt image...';
-                preview.parentNode.insertBefore(progressElement, preview);
-                
-                performOCR(file, progressElement, promptTextarea).then(() => {
-                    setTimeout(() => {
-                        progressElement.remove();
-                    }, 3000);
-                });
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const result = event.target.result;
-                promptImageBase64 = result;
-                img.src = result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        document.getElementById('topic-image-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('topic-image-preview');
-            const img = document.getElementById('topic-preview-img');
-            if (!file) {
-                topicImageBase64 = '';
-                preview.style.display = 'none';
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const result = event.target.result;
-                topicImageBase64 = result;
-                img.src = result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // ========== Level 1 ==========
-        async function analyzeWriting() {
-            const container = document.getElementById('output');
-            const text = document.getElementById('input-text').value;
-            const prompt = document.getElementById('prompt-input').value;
-            if (!text.trim()) {
-                alert('Please enter text.');
-                return;
-            }
-            const tempDiv = document.createElement('div');
-            tempDiv.className = 'analysis-run';
-            tempDiv.innerHTML = '<em>Checking your writing... (grammar, capitalization, relevance to the prompt, rubric scores)</em>';
-            container.prepend(tempDiv);
-            try {
-                await loadRubric();
-                const result = await checkWithLanguageTool(text);
-                const matchesLT = result.matches || [];
-                const capMatches = findCapitalizationMatches(text);
-                const allMatches = [...matchesLT, ...capMatches];
-                const isFirstRealDraft = !getLastRealDraft();
-                const prevDraft = isFirstRealDraft ? null : getLastRealDraft();
-                const prevScores = prevDraft ? prevDraft.scores : null;
-                const upcomingRealVersion = realDraftCount + 1;
-                const colorIndex = ((upcomingRealVersion - 1) % 6) + 1;
-                const highlightClass = `err err-v${colorIndex}`;
-                const corrected = buildCorrectedText(text, allMatches);
-                const highlighted = buildHighlightedHtml(text, allMatches, highlightClass);
-                const scores = await calculateScores(text, allMatches, { prompt });
-                const feedbackText = await buildFeedback(
-                    text,
-                    allMatches,
-                    {
-                        prompt,
-                        mode: isFirstRealDraft ? 'first' : 'revision',
-                        prevScores,
-                        previousVersionLabel: prevDraft ? prevDraft.label : null
-                    },
-                    scores
-                );
-                realDraftCount += 1;
-                const label = `Version ${realDraftCount}`;
-                const index = drafts.length;
-                drafts.push({
-                    original: text,
-                    corrected,
-                    highlighted,
-                    feedback: feedbackText,
-                    scores,
-                    meta: scores.meta,
-                    label,
-                    isReference: false
-                });
-                document.getElementById('checked-text').value = corrected;
-                tempDiv.innerHTML = renderVersionBlock({
-                    index,
-                    label,
-                    original: text,
-                    corrected,
-                    highlighted,
-                    feedback: feedbackText,
-                    scores,
-                    isReference: false
-                });
-                updateReferenceButtonVisibility();
-            } catch (err) {
-                console.error(err);
-                tempDiv.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
-            }
-        }
-
-        function buildVersionChip(label) {
-            let cls = 'version-chip';
-            const match = label.match(/Version\s+(\d+)/i);
-            if (match) {
-                const n = parseInt(match[1], 10);
-                const idx = ((n - 1) % 6) + 1;
-                cls += ' version-chip-v' + idx;
-            } else if (/Reference Essay/i.test(label)) {
-                cls += ' version-chip-ref';
-            }
-            return `<span class="${cls}">${escapeHtml(label)}</span>`;
-        }
-
-        function renderVersionBlock({ index, label, original, corrected, highlighted, feedback, scores, isReference }) {
-            const scoreHtml = scores ? `
-                <div class="scores-block">
-                    <strong>Rubric scores (out of 5)</strong>
-                    <ul>
-                        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
-                        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
-                        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
-                        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
-                    </ul>
-                    <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
-                </div>
-            ` : '';
-            const chipHtml = buildVersionChip(label);
-            const checkboxHtml = isReference
-                ? ''
-                : `<label class="no-print" style="font-size:0.9em;">
-                        <input type="checkbox" class="print-select" data-index="${index}">
-                        Select this version for printing
-                   </label>`;
-            return `
-                <div class="version-header-inline">
-                    <span>${chipHtml}</span>
-                    ${checkboxHtml}
-                </div>
-                <div class="version-layout">
-                    <div class="version-col">
-                        <h3>Original text</h3>
-                        <textarea>${escapeHtml(original)}</textarea>
-                    </div>
-                    <div class="version-col version-actions">
-                        <small>You can copy this text into the current workspace to create a new version.</small>
-                        <button onclick="useVersionAsCurrent(${index})">Use as current draft</button>
-                    </div>
-                    <div class="version-col">
-                        <h3>Checked version</h3>
-                        <textarea>${escapeHtml(corrected)}</textarea>
-                    </div>
-                </div>
-                ${scoreHtml}
-                <h3 style="margin-top:16px;font-size:0.95em;">Original with highlighted issues:</h3>
-                <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
-                <div class="feedback">
-                    <h3 style="margin-top:0;font-size:1em;">Feedback &amp; suggestions:</h3>
-                    <pre style="white-space: pre-wrap;">${escapeHtml(feedback)}</pre>
-                </div>
-            `;
-        }
-
-        function useVersionAsCurrent(idx) {
-            const draft = drafts[idx];
-            if (!draft) return;
-            document.getElementById('input-text').value = draft.corrected;
-            document.getElementById('checked-text').value = '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function generateReferenceEssay() {
-            const lastRealDraft = getLastRealDraft();
-            if (!lastRealDraft) {
-                alert('Please run analysis at least once first.');
-                return;
-            }
-            const container = document.getElementById('output');
-            Array.from(container.querySelectorAll('.analysis-run[data-ref="true"]'))
-                .forEach(el => el.remove());
-            drafts = drafts.filter(d => !d.isReference);
-            const div = document.createElement('div');
-            div.className = 'analysis-run';
-            div.dataset.ref = 'true';
-            const referenceText =
-                'This is a polished reference version based on your latest corrected draft:\n' +
-                lastRealDraft.corrected;
-            const feedbackText =
-                'Reference essay notes:\n' +
-                '- Use this version only as a model. Do NOT copy it directly.\n' +
-                '- Compare it with your own draft and highlight what has improved in grammar, vocabulary, and structure.\n' +
-                '- Try to write your OWN final version after reading this reference.\n';
-            const index = drafts.length;
-            const label = `Reference Essay (based on ${lastRealDraft.label})`;
-            const scores = lastRealDraft.scores || null;
-            drafts.push({
-                original: lastRealDraft.corrected,
-                corrected: referenceText,
-                highlighted: escapeHtml(lastRealDraft.corrected),
-                feedback: feedbackText,
-                scores,
-                meta: scores ? scores.meta : null,
-                label,
-                isReference: true
-            });
-            div.innerHTML = renderVersionBlock({
-                index,
-                label,
-                original: lastRealDraft.corrected,
-                corrected: referenceText,
-                highlighted: escapeHtml(lastRealDraft.corrected),
-                feedback: feedbackText,
-                scores,
-                isReference: true
-            });
-            container.prepend(div);
-        }
-
-        function printDrafts() {
-            const allCheckboxes = Array.from(document.querySelectorAll('.print-select:checked'));
-            if (allCheckboxes.length === 0) {
-                alert('Please select at least one version to print.');
-                return;
-            }
-            const selectedDrafts = allCheckboxes
-                .map(cb => {
-                    const idx = parseInt(cb.getAttribute('data-index'), 10);
-                    return drafts[idx];
-                })
-                .filter(d => d && !d.isReference);
-            if (selectedDrafts.length === 0) {
-                alert('Reference essays are not included in the report. Please select at least one actual draft version.');
-                return;
-            }
-            const school = document.getElementById('student-school')?.value || '';
-            const klass = document.getElementById('student-class')?.value || '';
-            const seat = document.getElementById('student-seat')?.value || '';
-            const name = document.getElementById('student-name')?.value || '';
-            const prompt = document.getElementById('prompt-input')?.value || '';
-            const schoolEsc = escapeHtml(school || '________');
-            const classEsc = escapeHtml(klass || '________');
-            const seatEsc = escapeHtml(seat || '________');
-            const nameEsc = escapeHtml(name || '________');
-            const promptEsc = escapeHtml(prompt || '____________________________________________');
-            const promptImageHtml = promptImageBase64
-                ? `<p><img src="${promptImageBase64}" alt="Prompt illustration" style="max-width:100%; margin-top:10px; border-radius:6px;"></p>`
-                : '';
-            const headerHtml = `
-                <div class="print-header">
-                    <h1>A Writing Progress &amp; Product Report Generated by Shirley's AI Writing Coach</h1>
-                    <p>School: ${schoolEsc} &nbsp;&nbsp; Class: ${classEsc} &nbsp;&nbsp; Seat No.: ${seatEsc} &nbsp;&nbsp; Name: ${nameEsc}</p>
-                    <p><strong>Writing Prompt:</strong> ${promptEsc}</p>
-                    ${promptImageHtml}
-                </div>
-            `;
-            const draftsHtml = selectedDrafts.map(draft => {
-                return `
-                    <div class="printable">
-                        <h2>${escapeHtml(draft.label || '')}</h2>
-                        <h3>Original with highlighted issues:</h3>
-                        <p>${draft.highlighted.replace(/\n/g, '<br>')}</p>
-                        <h3>Feedback:</h3>
-                        <pre style="white-space: pre-wrap;">${escapeHtml(draft.feedback)}</pre>
-                    </div>
-                `;
-            }).join('');
-            let topicHtml = '';
-            if (topicReport && topicReport.topic && topicReport.highlighted) {
-                const topicImageHtml = topicImageBase64
-                    ? `<p><img src="${topicImageBase64}" alt="Topic illustration" style="max-width:100%; margin-top:10px; border-radius:6px;"></p>`
-                    : '';
-                topicHtml = `
-                    <div class="printable">
-                        <h2>Topic Practice Essay</h2>
-                        <p><strong>Topic:</strong> ${escapeHtml(topicReport.topic)}</p>
-                        ${topicImageHtml}
-                        <h3>Original with highlighted issues:</h3>
-                        <p>${topicReport.highlighted.replace(/\n/g, '<br>')}</p>
-                        <h3>Feedback:</h3>
-                        <pre style="white-space: pre-wrap;">${escapeHtml(topicReport.feedback)}</pre>
-                    </div>
-                `;
-            }
-            const printable = document.getElementById('printable-drafts');
-            printable.innerHTML = headerHtml + draftsHtml + topicHtml;
-            const bodyChildren = Array.from(document.body.children);
-            const toHide = bodyChildren.filter(el => el !== printable);
-            toHide.forEach(el => el.classList.add('no-print-temp'));
-            printable.style.display = 'block';
-            window.print();
-            printable.style.display = 'none';
-            toHide.forEach(el => el.classList.remove('no-print-temp'));
-        }
-
-        // ========== Level 2 ==========
-        async function analyzeTopic() {
-            const output = document.getElementById('topic-output');
-            const topic = document.getElementById('topic-select').value;
-            const text = document.getElementById('topic-text').value;
-            if (!topic.trim() || !text.trim()) {
-                alert('Please choose a topic and enter your essay.');
-                return;
-            }
-            const tempDiv = document.createElement('div');
-            tempDiv.className = 'analysis-run';
-            tempDiv.innerHTML = '<em>Checking your essay for this topic (grammar, capitalization, relevance, rubric scores)...</em>';
-            output.prepend(tempDiv);
-            try {
-                await loadRubric();
-                const result = await checkWithLanguageTool(text);
-                const matchesLT = result.matches || [];
-                const capMatches = findCapitalizationMatches(text);
-                const allMatches = [...matchesLT, ...capMatches];
-                let prevTopicDraft = null;
-                for (let i = topicDrafts.length - 1; i >= 0; i--) {
-                    if (topicDrafts[i].topic === topic) {
-                        prevTopicDraft = topicDrafts[i];
-                        break;
-                    }
-                }
-                const isFirstTopicDraft = !prevTopicDraft;
-                const prevScores = prevTopicDraft ? prevTopicDraft.scores : null;
-                const corrected = buildCorrectedText(text, allMatches);
-                const highlighted = buildHighlightedHtml(text, allMatches, 'err err-topic');
-                const scores = await calculateScores(text, allMatches, { topic });
-                const feedbackText = await buildFeedback(
-                    text,
-                    allMatches,
-                    {
-                        topic,
-                        mode: isFirstTopicDraft ? 'first' : 'revision',
-                        prevScores,
-                        previousVersionLabel: prevTopicDraft ? prevTopicDraft.label : null
-                    },
-                    scores
-                );
-                document.getElementById('topic-checked-text').value = corrected;
-                topicRealDraftCount += 1;
-                const label = `Topic Version ${topicRealDraftCount}`;
-                const index = topicDrafts.length;
-                topicDrafts.push({
-                    topic,
-                    original: text,
-                    corrected,
-                    highlighted,
-                    feedback: feedbackText,
-                    scores,
-                    label
-                });
-                topicReport = {
-                    topic,
-                    corrected,
-                    highlighted,
-                    feedback: feedbackText,
-                    scores
-                };
-                tempDiv.innerHTML = renderTopicVersionBlock({
-                    index,
-                    label,
-                    topic,
-                    original: text,
-                    corrected,
-                    highlighted,
-                    feedback: feedbackText,
-                    scores
-                });
-            } catch (err) {
-                console.error(err);
-                tempDiv.innerHTML = '<p style="color:red;">Error while calling grammar checker. Please try again later.</p>';
-            }
-        }
-
-        function renderTopicVersionBlock({ index, label, topic, original, corrected, highlighted, feedback, scores }) {
-            const scoreHtml = scores ? `
-                <div class="scores-block">
-                    <strong>Rubric scores (out of 5)</strong>
-                    <ul>
-                        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
-                        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
-                        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
-                        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
-                    </ul>
-                    <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
-                </div>
-            ` : '';
-            const chipHtml = buildVersionChip(label);
-            return `
-                <div class="version-header-inline">
-                    <span>
-                        ${chipHtml}
-                        &nbsp;
-                        <span style="font-size:0.85em;color:var(--text-muted);">
-                            Topic: ${escapeHtml(topic)}
-                        </span>
-                    </span>
-                    <label class="no-print" style="font-size:0.9em;">
-                        <input type="checkbox" class="topic-print-select" data-index="${index}">
-                        Select this topic version for printing
-                    </label>
-                </div>
-                <div class="version-layout">
-                    <div class="version-col">
-                        <h3>Original text</h3>
-                        <textarea>${escapeHtml(original)}</textarea>
-                    </div>
-                    <div class="version-col version-actions">
-                        <small>You can copy this text into the current topic workspace to create a new version.</small>
-                        <button onclick="useTopicVersionAsCurrent(${index})">Use as current topic draft</button>
-                    </div>
-                    <div class="version-col">
-                        <h3>Checked version</h3>
-                        <textarea>${escapeHtml(corrected)}</textarea>
-                    </div>
-                </div>
-                ${scoreHtml}
-                <h3 style="margin-top:16px;font-size:0.95em;">Original with highlighted issues:</h3>
-                <div class="diff">${highlighted.replace(/\n/g, '<br>')}</div>
-                <div class="feedback">
-                    <h3 style="margin-top:0;font-size:1em;">Feedback &amp; suggestions for this topic:</h3>
-                    <pre style="white-space: pre-wrap;">${escapeHtml(feedback)}</pre>
-                </div>
-            `;
-        }
-
-        function useTopicVersionAsCurrent(idx) {
-            const draft = topicDrafts[idx];
-            if (!draft) return;
-            document.getElementById('topic-text').value = draft.corrected;
-            document.getElementById('topic-checked-text').value = '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function printTopicDrafts() {
-            const allCheckboxes = Array.from(document.querySelectorAll('.topic-print-select:checked'));
-            if (allCheckboxes.length === 0) {
-                alert('Please select at least one topic version to print.');
-                return;
-            }
-            const selected = allCheckboxes
-                .map(cb => {
-                    const idx = parseInt(cb.getAttribute('data-index'), 10);
-                    return topicDrafts[idx];
-                })
-                .filter(Boolean);
-            if (selected.length === 0) {
-                alert('No valid topic versions selected.');
-                return;
-            }
-            const school = document.getElementById('student-school')?.value || '';
-            const klass = document.getElementById('student-class')?.value || '';
-            const seat = document.getElementById('student-seat')?.value || '';
-            const name = document.getElementById('student-name')?.value || '';
-            const schoolEsc = escapeHtml(school || '________');
-            const classEsc = escapeHtml(klass || '________');
-            const seatEsc = escapeHtml(seat || '________');
-            const nameEsc = escapeHtml(name || '________');
-            const topic = selected[0].topic || '';
-            const topicEsc = escapeHtml(topic || '');
-            const topicImageHtml = topicImageBase64
-                ? `<p><img src="${topicImageBase64}" alt="Topic illustration" style="max-width:100%; margin-top:10px; border-radius:6px;"></p>`
-                : '';
-            const headerHtml = `
-                <div class="print-header">
-                    <h1>A Writing Progress &amp; Product Report Generated by Shirley's AI Writing Coach</h1>
-                    <p>School: ${schoolEsc} &nbsp;&nbsp; Class: ${classEsc} &nbsp;&nbsp; Seat No.: ${seatEsc} &nbsp;&nbsp; Name: ${nameEsc}</p>
-                    <p><strong>Level 2: Topic Practice</strong></p>
-                    <p><strong>Topic:</strong> ${topicEsc}</p>
-                    ${topicImageHtml}
-                </div>
-            `;
-            const bodyHtml = selected.map(d => {
-                return `
-                    <div class="printable">
-                        <h2>${escapeHtml(d.label || '')}</h2>
-                        <h3>Original with highlighted issues:</h3>
-                        <p>${d.highlighted.replace(/\n/g, '<br>')}</p>
-                        <h3>Feedback:</h3>
-                        <pre style="white-space: pre-wrap;">${escapeHtml(d.feedback)}</pre>
-                    </div>
-                `;
-            }).join('');
-            const printable = document.getElementById('printable-drafts');
-            printable.innerHTML = headerHtml + bodyHtml;
-            const bodyChildren = Array.from(document.body.children);
-            const toHide = bodyChildren.filter(el => el !== printable);
-            toHide.forEach(el => el.classList.add('no-print-temp'));
-            printable.style.display = 'block';
-            window.print();
-            printable.style.display = 'none';
-            toHide.forEach(el => el.classList.remove('no-print-temp'));
-        }
-
-        function initTopicCategories() {
-            const catSelect = document.getElementById('topic-category-select');
-            const topicSelect = document.getElementById('topic-select');
-            if (!catSelect || !topicSelect) return;
-            catSelect.innerHTML = '<option value="">-- Choose a category --</option>';
-            Object.keys(topicCategories).forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = cat;
-                catSelect.appendChild(opt);
-            });
-            topicSelect.innerHTML = '<option value="">-- Please choose a topic --</option>';
-            catSelect.addEventListener('change', () => {
-                const cat = catSelect.value;
-                topicSelect.innerHTML = '<option value="">-- Please choose a topic --</option>';
-                if (!cat || !topicCategories[cat]) return;
-                topicCategories[cat].forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t;
-                    opt.textContent = t;
-                    topicSelect.appendChild(opt);
-                });
-            });
-        }
-
-        // ========== 設置文件上傳事件監聽器 ==========
-        document.getElementById('file-upload-main').addEventListener('change', e => {
-            const file = e.target.files[0];
-            handleFileInput(file, 'input-text');
-        });
-        document.getElementById('file-upload-topic').addEventListener('change', e => {
-            const file = e.target.files[0];
-            handleFileInput(file, 'topic-text');
-        });
-
-        // Expose functions to global scope
-        window.enterLevel = enterLevel;
-        window.goHome = goHome;
-        window.analyzeWriting = analyzeWriting;
-        window.printDrafts = printDrafts;
-        window.analyzeTopic = analyzeTopic;
-        window.generateReferenceEssay = generateReferenceEssay;
-        window.useVersionAsCurrent = useVersionAsCurrent;
-        window.toggleRubric = toggleRubric;
-        window.useTopicVersionAsCurrent = useTopicVersionAsCurrent;
-        window.printTopicDrafts = printTopicDrafts;
-        window.openImageGallery = openImageGallery;
-        window.openGenreSelection = openGenreSelection;
-        window.openGenreGallery = openGenreGallery;
-        window.closeGenreModal = closeGenreModal;
-        window.changeImage = changeImage;
-        window.closeImageViewer = closeImageViewer;
-
-        // Init on load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadRubric();
-            initTopicCategories();
-        });
-        // 簡單翻頁瀏覽器變量
+// Flip viewer vars
 let currentFlipGallery = '';
 let totalFlipImages = 0;
 let currentFlipIndex = 1;
 
-// 打開翻頁瀏覽器
-function openFlipViewer(galleryName, imageCount) {
-    currentFlipGallery = galleryName;
-    totalFlipImages = imageCount;
-    currentFlipIndex = 1;
-    
-    renderFlipImages();
-    updateFlipViewer();
-    document.getElementById('flip-viewer').classList.add('active');
+const topicCategories = {
+  'Descriptive Writing': [
+    'Describe your favorite holiday.',
+    'Describe your dream house.',
+    'Describe a memorable place you have visited.'
+  ],
+  'Personal Narrative': [
+    'Explain a challenge you have overcome.',
+    'Share an important lesson you learned.',
+    'Describe a time you helped someone.'
+  ],
+  'Opinion / Argumentative': [
+    'Should students use smartphones in the classroom? Give your opinion and reasons.',
+    'Is homework necessary for learning? Discuss your viewpoint.',
+    'Should school uniforms be mandatory? Present your arguments.'
+  ]
+};
+
+/* ========= Utilities ========= */
+function escapeHtml(str){
+  return String(str || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
 }
 
-function openGenreFlipViewer(genre) {
-    closeGenreModal();
-    openFlipViewer(`writing genres/${genre}`, 8);
+function clearMainInput(){
+  document.getElementById('input-text').value='';
+  document.getElementById('checked-text').value='';
+}
+function clearTopicInput(){
+  document.getElementById('topic-text').value='';
+  document.getElementById('topic-checked-text').value='';
+}
+function copyCheckedToInput(){
+  document.getElementById('input-text').value =
+    document.getElementById('checked-text').value;
+}
+function scrollToLatest(){
+  const wrap = document.getElementById('history-wrap');
+  if(!wrap.firstChild) return;
+  wrap.firstChild.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// 渲染所有圖片
-function renderFlipImages() {
-    const container = document.getElementById('flip-container');
-    container.innerHTML = '';
-    
-    for (let i = 1; i <= totalFlipImages; i++) {
-        const img = document.createElement('img');
-        img.className = 'flip-image';
-        img.src = `https://ducj-creator.github.io/Shirley-AI-Writing/${currentFlipGallery}/${i}.png`;
-        img.alt = `第 ${i} 頁`;
-        img.loading = 'lazy';
-        
-        img.onerror = function() {
-            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
-        };
-        
-        container.appendChild(img);
+/* ========= Rubric loading ========= */
+async function loadRubric(){
+  if(rubricText) return rubricText;
+  rubricText = `
+Structure (5): Clear 2-paragraph GSAT format, topic sentence + support.
+Coherence (5): Smooth flow, connectors, logical development.
+Grammar (5): Accurate tense, agreement, spelling, punctuation.
+Vocabulary (5): Range + precision, avoid repetition.
+`;
+  rubricItems = rubricText.split('\n').filter(Boolean);
+  const el = document.getElementById('rubric-reminder');
+  if(el) el.innerHTML = `
+    <h3 class="card-title">Rubric Reminder</h3>
+    <ul>${rubricItems.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul>`;
+  return rubricText;
+}
+function toggleRubric(){
+  const el = document.getElementById('rubric-reminder');
+  if(!el) return;
+  el.style.display = (el.style.display==='none' || !el.style.display) ? 'block' : 'none';
+}
+function toggleHistory(){
+  document.getElementById('history-wrap')?.classList.toggle('active');
+}
+function toggleTopicHistory(){
+  document.getElementById('topic-history-wrap')?.classList.toggle('active');
+}
+
+/* ========= LanguageTool checker ========= */
+async function checkWithLanguageTool(text){
+  const url = 'https://api.languagetool.org/v2/check';
+  const params = new URLSearchParams();
+  params.append('text', text);
+  params.append('language', 'en-US');
+
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: params.toString()
+  });
+  if(!res.ok) throw new Error('LanguageTool error');
+  return await res.json();
+}
+
+/* Basic capitalization detection */
+function findCapitalizationMatches(text){
+  const matches = [];
+  const sentences = text.split(/([.!?]\s+)/);
+  let cursor = 0;
+
+  for(let i=0;i<sentences.length;i++){
+    const seg = sentences[i];
+    if(!seg) continue;
+    const trimmed = seg.trim();
+    if(/[A-Za-z]/.test(trimmed[0]) && trimmed[0] === trimmed[0].toLowerCase()){
+      const start = cursor + seg.search(/[A-Za-z]/);
+      matches.push({
+        offset:start,
+        length:1,
+        message:'Sentence should start with a capital letter.',
+        replacements:[{value: trimmed[0].toUpperCase()}],
+        rule:{issueType:'grammar', description:'Capitalization'}
+      });
     }
+    cursor += seg.length;
+  }
+  return matches;
 }
 
-// 更新瀏覽器顯示
-function updateFlipViewer() {
-    const images = document.querySelectorAll('.flip-image');
-    images.forEach((img, index) => {
-        img.classList.remove('active');
-        if (index + 1 === currentFlipIndex) {
-            img.classList.add('active');
-        }
+function buildCorrectedText(text, matches){
+  const sorted = [...matches].sort((a,b)=>a.offset-b.offset);
+  let result='', cursor=0;
+  for(const m of sorted){
+    const start=m.offset, end=m.offset+m.length;
+    const replacement = (m.replacements && m.replacements[0])
+      ? m.replacements[0].value
+      : text.slice(start,end);
+    result += text.slice(cursor,start) + replacement;
+    cursor=end;
+  }
+  result += text.slice(cursor);
+  return result;
+}
+
+function buildHighlightedHtml(text, matches, highlightClass='err'){
+  const sorted=[...matches].sort((a,b)=>a.offset-b.offset);
+  let result='', cursor=0;
+  for(const m of sorted){
+    const start=m.offset, end=m.offset+m.length;
+    const original=text.slice(start,end);
+    const tipBase=m.message||'';
+    const suggestion=(m.replacements&&m.replacements[0])
+      ? ' → '+m.replacements[0].value
+      : '';
+    const tip=escapeHtml(tipBase+suggestion);
+    result += escapeHtml(text.slice(cursor,start));
+    result += `<span class="${highlightClass}" title="${tip}">${escapeHtml(original)}</span>`;
+    cursor=end;
+  }
+  result += escapeHtml(text.slice(cursor));
+  return result;
+}
+
+/* ========= Chinese prompt helpers ========= */
+function isChinesePrompt(s){ return /[\u4e00-\u9fff]/.test(s||''); }
+function translateChinesePrompt(chinesePrompt){
+  const translationMap = {
+    '描述':'describe','討論':'discuss','解釋':'explain','分析':'analyze',
+    '比較':'compare','對比':'contrast','評價':'evaluate','論述':'discuss',
+    '說明':'explain','舉例':'give examples','原因':'reasons','影響':'effects',
+    '解決方案':'solutions','優點':'advantages','缺點':'disadvantages',
+    '重要性':'importance','看法':'opinion','觀點':'viewpoint'
+  };
+  let englishPrompt=chinesePrompt;
+  Object.keys(translationMap).forEach(cw=>{
+    englishPrompt = englishPrompt.replace(new RegExp(cw,'g'), translationMap[cw]);
+  });
+  return englishPrompt;
+}
+
+/* ========= Improved prompt coverage ========= */
+async function computePromptCoverage(text, promptOrTopic){
+  if(!promptOrTopic){
+    return { coverage:1, matchedKeywords:[], totalKeywords:0 };
+  }
+  let processedPrompt = promptOrTopic;
+  if(isChinesePrompt(promptOrTopic)){
+    processedPrompt = translateChinesePrompt(promptOrTopic);
+  }
+
+  const stop = new Set([
+    'this','that','these','those','there','their','about','because','should',
+    'would','could','which','when','where','while','what','your','have','has',
+    'with','from','into','them','then','than','also','very','really','more',
+    'most','many','much','some','such','other','another','every','each'
+  ]);
+  const stem = w => w.replace(/(ing|ed|ly|s)$/i,'');
+
+  const keywordCandidates=(processedPrompt.toLowerCase().match(/[a-z]{3,}/g)||[])
+    .map(stem)
+    .filter(w=>!stop.has(w));
+
+  const uniqueKeywords=Array.from(new Set(keywordCandidates));
+  const lowerText=text.toLowerCase();
+  let matched=0, matchedWords=[];
+  uniqueKeywords.forEach(w=>{
+    const re=new RegExp('\\b'+w+'\\b','i');
+    if(re.test(lowerText)){ matched++; matchedWords.push(w); }
+  });
+
+  const coverage=uniqueKeywords.length? matched/uniqueKeywords.length : 1;
+  return {
+    coverage, matchedKeywords:matchedWords, totalKeywords:uniqueKeywords.length,
+    processedPrompt
+  };
+}
+
+/* ========= Scoring ========= */
+async function calculateScores(text, matches, options={}){
+  const wordTokens=text.trim().split(/\s+/).filter(Boolean);
+  const wordCount=wordTokens.length;
+  const sentencesArr=text.split(/[.!?]+/).filter(s=>s.trim().length>0);
+  const sentences=sentencesArr.length || 1;
+  const paragraphs=text.split(/\n{2,}/).filter(p=>p.trim()).length || 1;
+
+  const grammarMatches=matches.filter(m=>m.rule && m.rule.issueType==='grammar');
+  const spellingMatches=matches.filter(m=>m.rule && m.rule.issueType==='misspelling');
+  const styleMatches=matches.filter(m=>m.rule && m.rule.issueType==='style');
+
+  const connectors=[
+    'however','therefore','moreover','in addition','besides','on the other hand',
+    'as a result','for example','for instance','in conclusion','to sum up'
+  ];
+  const lower=text.toLowerCase();
+  const connectorCount=connectors.reduce((a,c)=> a+(lower.includes(c)?1:0),0);
+
+  const prompt=options.prompt || options.topic || '';
+  const coverageInfo = await computePromptCoverage(text, prompt);
+  const cov=coverageInfo.coverage;
+
+  let structureScore=5;
+  if(paragraphs<2) structureScore=3;
+  if(wordCount<80) structureScore=Math.min(structureScore,3);
+
+  let coherenceScore= Math.min(5, 2 + connectorCount);
+  let grammarScore= Math.max(1, 5 - Math.ceil((grammarMatches.length+spellingMatches.length)/4));
+  let vocabScore=4;
+  const unique=new Set(wordTokens.map(w=>w.toLowerCase()));
+  const ttr=unique.size/(wordCount||1);
+  if(ttr<0.35) vocabScore=3;
+  if(ttr<0.25) vocabScore=2;
+
+  const total=structureScore+coherenceScore+grammarScore+vocabScore;
+
+  return {
+    structure:{label:'Structure & Development',score:structureScore,max:5,reason:`${paragraphs} paragraphs; word count ${wordCount}.`},
+    coherence:{label:'Coherence & Flow',score:coherenceScore,max:5,reason:`${connectorCount} connectors detected.`},
+    grammar:{label:'Grammar & Mechanics',score:grammarScore,max:5,reason:`${grammarMatches.length+spellingMatches.length} grammar/spelling issues.`},
+    vocabulary:{label:'Vocabulary Range & Precision',score:vocabScore,max:5,reason:`Type-token ratio ${(ttr*100).toFixed(1)}%.`},
+    total:{label:'Total',score:total,max:20},
+    meta:{
+      wordCount, sentences, paragraphs,
+      grammarMatchesCount:grammarMatches.length,
+      spellingMatchesCount:spellingMatches.length,
+      styleMatchesCount:styleMatches.length,
+      connectorCount,
+      onTopicCoverage:cov,
+      onTopicMatchedKeywords:coverageInfo.matchedKeywords,
+      onTopicTotalKeywords:coverageInfo.totalKeywords,
+      processedPrompt:coverageInfo.processedPrompt
+    }
+  };
+}
+
+/* ========= Feedback builder ========= */
+async function buildFeedback(text, matches, options={}, scores){
+  const topic=options.topic||null;
+  const prompt=options.prompt||null;
+  const mode=options.mode||'first';
+  const prevScores=options.prevScores||null;
+  const previousVersionLabel=options.previousVersionLabel||null;
+
+  const wordCount=text.trim().split(/\s+/).filter(Boolean).length;
+  const sentencesArr=text.split(/[.!?]+/).filter(s=>s.trim());
+  const sentences=sentencesArr.length;
+  const avgLen=sentences? (wordCount/sentences).toFixed(1) : 'N/A';
+  const paragraphs=text.split(/\n{2,}/).filter(p=>p.trim()).length || 1;
+
+  const grammarCount=matches.filter(m=>m.rule&&m.rule.issueType==='grammar').length;
+  const spellingCount=matches.filter(m=>m.rule&&m.rule.issueType==='misspelling').length;
+  const styleCount=matches.filter(m=>m.rule&&m.rule.issueType==='style').length;
+
+  const meta=scores?.meta || null;
+  let msg='';
+
+  if(prompt && meta?.processedPrompt && meta.processedPrompt !== prompt){
+    msg += `Original prompt (Chinese): "${prompt}"\n`;
+    msg += `Processed prompt (English): "${meta.processedPrompt}"\n\n`;
+  }else if(prompt){
+    msg += `Writing prompt:\n"${prompt}"\n\n`;
+  }
+  if(topic) msg += `Topic:\n"${topic}"\n\n`;
+
+  if(scores){
+    msg += '=== Rubric Scores (out of 5) ===\n';
+    msg += `- ${scores.structure.label}: ${scores.structure.score}/${scores.structure.max}\n  Reason: ${scores.structure.reason}\n`;
+    msg += `- ${scores.coherence.label}: ${scores.coherence.score}/${scores.coherence.max}\n  Reason: ${scores.coherence.reason}\n`;
+    msg += `- ${scores.grammar.label}: ${scores.grammar.score}/${scores.grammar.max}\n  Reason: ${scores.grammar.reason}\n`;
+    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score}/${scores.vocabulary.max}\n  Reason: ${scores.vocabulary.reason}\n\n`;
+    msg += `>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
+  }
+
+  msg += 'GSAT Writing Snapshot:\n';
+  msg += `- Paragraphs: ${paragraphs} (GSAT expects 2 developed paragraphs)\n`;
+  msg += `- Words: ${wordCount}\n`;
+  msg += `- Sentences: ${sentences}\n`;
+  msg += `- Avg words/sentence: ${avgLen}\n`;
+  msg += `- Logical connectors: ${meta?.connectorCount||0}\n\n`;
+
+  msg += 'Issues detected:\n';
+  msg += `- Grammar: ${grammarCount}\n- Spelling: ${spellingCount}\n- Style/phrasing: ${styleCount}\n\n`;
+
+  if(meta && meta.onTopicTotalKeywords>0){
+    const covPercent=(meta.onTopicCoverage*100).toFixed(0);
+    msg += 'Relevance to prompt/topic:\n';
+    msg += `- About ${covPercent}% key words/ideas from the prompt appear in your essay.\n`;
+    if(meta.onTopicCoverage<0.3){
+      msg += '- Your essay seems partly off-topic. Address the main question more directly.\n';
+    }else if(meta.onTopicCoverage<0.6){
+      msg += '- You are on track, but strengthen the link to the prompt.\n';
+    }else{
+      msg += '- Good focus. The essay stays on topic.\n';
+    }
+    msg += '\n';
+  }
+
+  const exampleLines=[];
+  matches.slice(0,5).forEach(m=>{
+    const snippet=text.slice(m.offset,m.offset+m.length);
+    const repl=(m.replacements&&m.replacements[0])? m.replacements[0].value:null;
+    const rule=m.rule&&(m.rule.description||m.rule.issueType||'');
+    if(repl) exampleLines.push(`- "${snippet}" → "${repl}" (${rule})`);
+  });
+  if(exampleLines.length){
+    msg += 'Examples to fix:\n' + exampleLines.join('\n') + '\n\n';
+  }
+
+  msg += 'Teacher-style next steps:\n';
+  msg += '- Add a clear Topic Sentence at the start of each paragraph.\n';
+  msg += '- Provide at least one concrete example or mini-scenario.\n';
+  msg += '- End with a short conclusion that echoes your main point.\n\n';
+
+  if(mode==='revision' && prevScores){
+    msg += `Compared with ${previousVersionLabel||'previous version'}:\n`;
+    const fields=['structure','coherence','grammar','vocabulary'];
+    fields.forEach(k=>{
+      const d = (scores[k].score - prevScores[k].score);
+      if(d>0) msg += `- ${scores[k].label}: +${d}\n`;
+      if(d<0) msg += `- ${scores[k].label}: ${d}\n`;
     });
-    
-    document.getElementById('flip-counter').textContent = 
-        `${currentFlipIndex} / ${totalFlipImages}`;
+  }
+
+  return msg.trim();
 }
 
-// 翻頁
-function changeFlipPage(direction) {
-    const newIndex = currentFlipIndex + direction;
-    if (newIndex >= 1 && newIndex <= totalFlipImages) {
-        currentFlipIndex = newIndex;
-        updateFlipViewer();
-    }
+/* ========= Version UI ========= */
+function buildVersionChip(label){
+  let cls='version-chip';
+  const match=label.match(/Version\s+(\d+)/i);
+  if(match){
+    const n=parseInt(match[1],10);
+    const idx=((n-1)%6)+1;
+    cls += ' version-chip-v'+idx;
+  }else if(/Reference Essay/i.test(label)){
+    cls+=' version-chip-ref';
+  }
+  return `<span class="${cls}">${escapeHtml(label)}</span>`;
 }
 
-// 關閉瀏覽器
-function closeFlipViewer() {
-    document.getElementById('flip-viewer').classList.remove('active');
+/* Render blocks with data-action (no inline dependency) */
+function renderVersionBlock({index,label,original,corrected,highlighted,feedback,scores,isReference}){
+  const chipHtml=buildVersionChip(label);
+  const versionHint = isReference
+    ? '（老師示範用，不可照抄）'
+    : `（你的第 ${label.match(/\d+/)?.[0]||''} 次修訂紀錄）`;
+
+  const checkboxHtml = isReference ? '' :
+    `<label class="no-print" style="font-size:0.9em;color:var(--text-muted);">
+      <input type="checkbox" class="print-select" data-index="${index}">
+      Select for printing
+    </label>`;
+
+  const scoreHtml = scores ? `
+    <div class="scores-block">
+      <strong>Rubric scores (out of 5)</strong>
+      <ul>
+        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
+      </ul>
+      <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
+    </div>` : '';
+
+  return `
+    <div class="version-header-inline">
+      <span>${chipHtml} <span style="font-size:12px;color:var(--text-muted);">${versionHint}</span></span>
+      ${checkboxHtml}
+    </div>
+
+    <div class="version-layout">
+      <div class="version-col">
+        <h3>Original text</h3>
+        <textarea>${escapeHtml(original)}</textarea>
+      </div>
+
+      <div class="version-col version-actions">
+        <small style="color:var(--text-muted);">Copy to workspace to create a new version.</small>
+        ${isReference ? '' : `
+        <button class="btn btn-ghost no-print js-action"
+                data-action="use-version" data-index="${index}">
+          Use as current draft
+        </button>`}
+      </div>
+
+      <div class="version-col">
+        <h3>Checked version</h3>
+        <textarea>${escapeHtml(corrected)}</textarea>
+      </div>
+    </div>
+
+    ${scoreHtml}
+
+    <h3 style="margin-top:12px;">Original with highlighted issues</h3>
+    <div class="diff">${highlighted.replace(/\n/g,'<br>')}</div>
+
+    <div class="feedback" style="margin-top:10px;">
+      <h3 style="margin-top:0;">Feedback</h3>
+      ${escapeHtml(feedback)}
+    </div>
+  `;
 }
 
-// 觸控和滑鼠拖動支持
-let startX = 0;
-let startY = 0;
+function renderTopicVersionBlock({index,label,topic,original,corrected,highlighted,feedback,scores}){
+  const chipHtml=buildVersionChip(label);
 
-document.getElementById('flip-container').addEventListener('touchstart', function(e) {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-});
+  const checkboxHtml =
+    `<label class="no-print" style="font-size:0.9em;color:var(--text-muted);">
+      <input type="checkbox" class="print-topic-select" data-index="${index}">
+      Select for printing
+    </label>`;
 
-document.getElementById('flip-container').addEventListener('touchend', function(e) {
-    if (!startX) return;
-    
-    const endX = e.changedTouches[0].clientX;
-    const endY = e.changedTouches[0].clientY;
-    const diffX = startX - endX;
-    const diffY = startY - endY;
-    
-    // 只有水平移動距離大於垂直移動距離時才翻頁
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-        if (diffX > 0) {
-            changeFlipPage(1); // 向左滑動，下一頁
-        } else {
-            changeFlipPage(-1); // 向右滑動，上一頁
-        }
+  const scoreHtml = scores ? `
+    <div class="scores-block">
+      <strong>Rubric scores (out of 5)</strong>
+      <ul>
+        <li>${escapeHtml(scores.structure.label)}: <strong>${scores.structure.score}/${scores.structure.max}</strong></li>
+        <li>${escapeHtml(scores.coherence.label)}: <strong>${scores.coherence.score}/${scores.coherence.max}</strong></li>
+        <li>${escapeHtml(scores.grammar.label)}: <strong>${scores.grammar.score}/${scores.grammar.max}</strong></li>
+        <li>${escapeHtml(scores.vocabulary.label)}: <strong>${scores.vocabulary.score}/${scores.vocabulary.max}</strong></li>
+      </ul>
+      <div><strong>Total: ${scores.total.score} / ${scores.total.max}</strong></div>
+    </div>` : '';
+
+  return `
+    <div class="version-header-inline">
+      <span>${chipHtml} <span style="font-size:12px;color:var(--text-muted);">（練習版本）</span></span>
+      ${checkboxHtml}
+    </div>
+
+    <p style="margin-top:0.2em;"><strong>Topic:</strong> ${escapeHtml(topic)}</p>
+
+    <div class="version-layout">
+      <div class="version-col">
+        <h3>Original text</h3>
+        <textarea>${escapeHtml(original)}</textarea>
+      </div>
+
+      <div class="version-col version-actions">
+        <small style="color:var(--text-muted);">Copy to workspace to revise.</small>
+        <button class="btn btn-ghost no-print js-action"
+                data-action="use-topic-version" data-index="${index}">
+          Use as current draft
+        </button>
+      </div>
+
+      <div class="version-col">
+        <h3>Checked version</h3>
+        <textarea>${escapeHtml(corrected)}</textarea>
+      </div>
+    </div>
+
+    ${scoreHtml}
+
+    <h3 style="margin-top:12px;">Original with highlighted issues</h3>
+    <div class="diff">${highlighted.replace(/\n/g,'<br>')}</div>
+
+    <div class="feedback" style="margin-top:10px;">
+      <h3 style="margin-top:0;">Feedback</h3>
+      ${escapeHtml(feedback)}
+    </div>
+  `;
+}
+
+function getLastRealDraft(){
+  for(let i=drafts.length-1;i>=0;i--){
+    if(!drafts[i].isReference) return drafts[i];
+  }
+  return null;
+}
+
+function useVersionAsCurrent(index){
+  const d=drafts[index];
+  if(!d) return;
+  document.getElementById('input-text').value=d.corrected||d.original||'';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function useTopicVersionAsCurrent(index){
+  const d=topicDrafts[index];
+  if(!d) return;
+  document.getElementById('topic-text').value=d.corrected||d.original||'';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateReferenceButtonVisibility(){
+  const btn=document.getElementById('ref-btn');
+  if(!btn) return;
+  btn.style.display = realDraftCount>=1 ? 'inline-flex' : 'none';
+}
+
+/* ========= Level 1 analyze ========= */
+async function analyzeWriting(){
+  const wrap=document.getElementById('history-wrap');
+  const text=document.getElementById('input-text').value;
+  const prompt=document.getElementById('prompt-input').value;
+
+  if(!text.trim()){
+    alert('Please enter text.');
+    return;
+  }
+  const tempDiv=document.createElement('div');
+  tempDiv.className='analysis-run';
+  tempDiv.innerHTML='<em>Checking your writing…</em>';
+  wrap.prepend(tempDiv);
+
+  try{
+    await loadRubric();
+    const result=await checkWithLanguageTool(text);
+    const matchesLT=result.matches||[];
+    const capMatches=findCapitalizationMatches(text);
+    const allMatches=[...matchesLT,...capMatches];
+
+    const isFirstRealDraft=!getLastRealDraft();
+    const prevDraft=isFirstRealDraft?null:getLastRealDraft();
+    const prevScores=prevDraft?prevDraft.scores:null;
+
+    const upcomingRealVersion=realDraftCount+1;
+    const colorIndex=((upcomingRealVersion-1)%6)+1;
+    const highlightClass=`err err-v${colorIndex}`;
+
+    const corrected=buildCorrectedText(text, allMatches);
+    const highlighted=buildHighlightedHtml(text, allMatches, highlightClass);
+    const scores=await calculateScores(text, allMatches, {prompt});
+    const feedbackText=await buildFeedback(text, allMatches, {
+      prompt,
+      mode:isFirstRealDraft?'first':'revision',
+      prevScores,
+      previousVersionLabel: prevDraft?prevDraft.label:null
+    }, scores);
+
+    realDraftCount++;
+    const label=`Version ${realDraftCount}`;
+    const index=drafts.length;
+
+    drafts.push({
+      original:text, corrected, highlighted,
+      feedback:feedbackText, scores, meta:scores.meta,
+      label, isReference:false
+    });
+
+    document.getElementById('checked-text').value=corrected;
+    tempDiv.innerHTML=renderVersionBlock({
+      index,label,original:text,corrected,highlighted,
+      feedback:feedbackText,scores,isReference:false
+    });
+
+    updateReferenceButtonVisibility();
+  }catch(err){
+    console.error(err);
+    tempDiv.innerHTML='<p style="color:#ff9fb3;">Error while calling grammar checker. Please try again later.</p>';
+  }
+}
+
+/* ========= Reference essay ========= */
+async function generateReferenceEssay(){
+  const text=document.getElementById('input-text').value.trim();
+  if(!text){
+    alert('Please write at least one draft first.');
+    return;
+  }
+
+  const ref = [
+    "Reference Essay (Teacher's Model):",
+    "",
+    "Paragraph 1: State your position / main idea clearly.",
+    "Paragraph 2: Provide 1–2 strong supporting reasons + a concrete example.",
+    "Conclusion: Echo the main point and end neatly."
+  ].join("\n");
+
+  const index=drafts.length;
+  const label="Reference Essay";
+  const highlighted=escapeHtml(ref);
+  const scores=null;
+  const feedback="This is a teacher-style model outline. Do NOT copy; use it to learn structure.";
+
+  drafts.push({
+    original:ref, corrected:ref, highlighted,
+    feedback, scores, meta:null, label, isReference:true
+  });
+
+  const wrap=document.getElementById('history-wrap');
+  const block=document.createElement('div');
+  block.className='analysis-run';
+  block.innerHTML=renderVersionBlock({
+    index,label,original:ref,corrected:ref,highlighted,
+    feedback,scores,isReference:true
+  });
+  wrap.prepend(block);
+  alert('Teacher model generated. Please DO NOT copy it.');
+}
+
+/* ========= Printing ========= */
+function printDrafts(){
+  const selectedIndexes=[...document.querySelectorAll('.print-select:checked')]
+    .map(cb=>parseInt(cb.dataset.index,10))
+    .filter(n=>!isNaN(n));
+  if(!selectedIndexes.length){
+    alert('Please select at least one version.');
+    return;
+  }
+  const selected=selectedIndexes.map(i=>drafts[i]).filter(Boolean);
+
+  const headerHtml=`
+    <div class="printable">
+      <h1>Shirley's AI Writing Coach</h1>
+      <p>Selected Drafts</p>
+      <hr/>
+    </div>`;
+
+  const bodyHtml=selected.map(d=>`
+    <div class="printable">
+      <h2>${escapeHtml(d.label||'')}</h2>
+      <h3>Original with highlighted issues:</h3>
+      <p>${d.highlighted.replace(/\n/g,'<br>')}</p>
+      <h3>Feedback:</h3>
+      <pre style="white-space:pre-wrap;">${escapeHtml(d.feedback)}</pre>
+    </div>`).join('');
+
+  const printable=document.getElementById('printable-drafts');
+  printable.innerHTML=headerHtml+bodyHtml;
+
+  const bodyChildren=Array.from(document.body.children);
+  const toHide=bodyChildren.filter(el=>el!==printable);
+  toHide.forEach(el=>el.classList.add('no-print-temp'));
+  printable.style.display='block';
+
+  window.print();
+
+  printable.style.display='none';
+  toHide.forEach(el=>el.classList.remove('no-print-temp'));
+}
+
+function printTopicDrafts(){
+  const selectedIndexes=[...document.querySelectorAll('.print-topic-select:checked')]
+    .map(cb=>parseInt(cb.dataset.index,10))
+    .filter(n=>!isNaN(n));
+  if(!selectedIndexes.length){
+    alert('Please select at least one topic version.');
+    return;
+  }
+  const selected=selectedIndexes.map(i=>topicDrafts[i]).filter(Boolean);
+
+  const headerHtml=`
+    <div class="printable">
+      <h1>Shirley's AI Writing Coach</h1>
+      <p>Selected Topic Drafts</p>
+      <hr/>
+    </div>`;
+
+  const bodyHtml=selected.map(d=>`
+    <div class="printable">
+      <h2>${escapeHtml(d.label||'')}</h2>
+      <p><strong>Topic:</strong> ${escapeHtml(d.topic||'')}</p>
+      <h3>Original with highlighted issues:</h3>
+      <p>${d.highlighted.replace(/\n/g,'<br>')}</p>
+      <h3>Feedback:</h3>
+      <pre style="white-space:pre-wrap;">${escapeHtml(d.feedback)}</pre>
+    </div>`).join('');
+
+  const printable=document.getElementById('printable-drafts');
+  printable.innerHTML=headerHtml+bodyHtml;
+
+  const bodyChildren=Array.from(document.body.children);
+  const toHide=bodyChildren.filter(el=>el!==printable);
+  toHide.forEach(el=>el.classList.add('no-print-temp'));
+  printable.style.display='block';
+
+  window.print();
+
+  printable.style.display='none';
+  toHide.forEach(el=>el.classList.remove('no-print-temp'));
+}
+
+/* ========= Level 2 analyze ========= */
+async function analyzeTopic(){
+  const wrap=document.getElementById('topic-history-wrap');
+  const topic=document.getElementById('topic-select').value;
+  const text=document.getElementById('topic-text').value;
+  if(!topic.trim() || !text.trim()){
+    alert('Please choose a topic and enter your essay.');
+    return;
+  }
+
+  const tempDiv=document.createElement('div');
+  tempDiv.className='analysis-run';
+  tempDiv.innerHTML='<em>Checking your essay…</em>';
+  wrap.prepend(tempDiv);
+
+  try{
+    await loadRubric();
+    const result=await checkWithLanguageTool(text);
+    const matchesLT=result.matches||[];
+    const capMatches=findCapitalizationMatches(text);
+    const allMatches=[...matchesLT,...capMatches];
+
+    let prevTopicDraft=null;
+    for(let i=topicDrafts.length-1;i>=0;i--){
+      if(topicDrafts[i].topic===topic){ prevTopicDraft=topicDrafts[i]; break; }
     }
-    
-    startX = 0;
-    startY = 0;
+    const isFirstTopicDraft=!prevTopicDraft;
+    const prevScores=prevTopicDraft?prevTopicDraft.scores:null;
+
+    const corrected=buildCorrectedText(text, allMatches);
+    const highlighted=buildHighlightedHtml(text, allMatches, 'err err-topic');
+    const scores=await calculateScores(text, allMatches, {topic});
+    const feedbackText=await buildFeedback(text, allMatches, {
+      topic,
+      mode:isFirstTopicDraft?'first':'revision',
+      prevScores,
+      previousVersionLabel: prevTopicDraft?prevTopicDraft.label:null
+    }, scores);
+
+    document.getElementById('topic-checked-text').value=corrected;
+    topicRealDraftCount++;
+    const label=`Topic Version ${topicRealDraftCount}`;
+    const index=topicDrafts.length;
+
+    topicDrafts.push({
+      topic, original:text, corrected, highlighted,
+      feedback:feedbackText, scores, label
+    });
+    topicReport={topic, corrected, highlighted, feedback:feedbackText, scores};
+
+    tempDiv.innerHTML=renderTopicVersionBlock({
+      index,label,topic,original:text,corrected,highlighted,
+      feedback:feedbackText,scores
+    });
+
+  }catch(err){
+    console.error(err);
+    tempDiv.innerHTML='<p style="color:#ff9fb3;">Error while calling grammar checker. Please try again later.</p>';
+  }
+}
+
+/* ========= Topic categories init ========= */
+function initTopicCategories(){
+  const catSelect=document.getElementById('topic-category-select');
+  const topicSelect=document.getElementById('topic-select');
+  if(!catSelect||!topicSelect) return;
+
+  catSelect.innerHTML='<option value="">-- Choose a category --</option>';
+  Object.keys(topicCategories).forEach(cat=>{
+    const opt=document.createElement('option');
+    opt.value=cat; opt.textContent=cat;
+    catSelect.appendChild(opt);
+  });
+
+  topicSelect.innerHTML='<option value="">-- Please choose a topic --</option>';
+  catSelect.addEventListener('change',()=>{
+    const cat=catSelect.value;
+    topicSelect.innerHTML='<option value="">-- Please choose a topic --</option>';
+    if(!cat||!topicCategories[cat]) return;
+    topicCategories[cat].forEach(t=>{
+      const opt=document.createElement('option');
+      opt.value=t; opt.textContent=t;
+      topicSelect.appendChild(opt);
+    });
+  });
+}
+
+/* ========= File upload / OCR hooks ========= */
+async function performOCR(file, progressEl, targetTextarea){
+  progressEl.innerHTML='⚠️ OCR not configured in this build. Please type manually if needed.';
+  return;
+}
+
+function handleFileInput(file, targetId){
+  if(!file) return;
+  const textarea=document.getElementById(targetId);
+  if(!textarea) return;
+
+  if(file.type.startsWith('image/')){
+    const progress=document.createElement('div');
+    progress.className='ocr-progress';
+    progress.style.marginTop='6px';
+    progress.style.fontSize='12px';
+    progress.style.color='var(--text-muted)';
+    progress.innerHTML='🔄 Extracting text from image…';
+    textarea.parentNode.insertBefore(progress, textarea.nextSibling);
+
+    performOCR(file, progress, textarea).then(()=>{
+      setTimeout(()=>progress.remove(), 3000);
+    });
+
+    const reader=new FileReader();
+    reader.onload = e=>{
+      if(targetId==='prompt-input'){
+        promptImageBase64=e.target.result;
+        document.getElementById('prompt-preview-img').src=e.target.result;
+        document.getElementById('prompt-image-preview').style.display='block';
+      }
+      if(targetId==='topic-text'){
+        topicImageBase64=e.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+
+  const reader=new FileReader();
+  reader.onload=e=>{ textarea.value=e.target.result; };
+  reader.readAsText(file);
+}
+
+/* attach uploads safely */
+function bindUploadInputs(){
+  document.getElementById('file-upload-main')?.addEventListener('change', e=>{
+    handleFileInput(e.target.files[0], 'input-text');
+  });
+  document.getElementById('file-upload-topic')?.addEventListener('change', e=>{
+    handleFileInput(e.target.files[0], 'topic-text');
+  });
+
+  document.getElementById('prompt-image-upload')?.addEventListener('change', e=>{
+    const file=e.target.files[0];
+    if(!file){
+      promptImageBase64='';
+      document.getElementById('prompt-image-preview').style.display='none';
+      return;
+    }
+    handleFileInput(file, 'prompt-input');
+  });
+
+  document.getElementById('topic-image-upload')?.addEventListener('change', e=>{
+    const file=e.target.files[0];
+    const preview=document.getElementById('topic-image-preview');
+    const img=document.getElementById('topic-preview-img');
+    if(!file){
+      topicImageBase64='';
+      preview.style.display='none';
+      return;
+    }
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      topicImageBase64=ev.target.result;
+      img.src=ev.target.result;
+      preview.style.display='block';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ========= Image galleries ========= */
+function openImageGallery(galleryName, imageCount){
+  currentGallery=galleryName;
+  totalImages=imageCount;
+  currentImageIndex=1;
+  updateImageViewer();
+  document.getElementById('image-viewer').classList.add('active');
+}
+function updateImageViewer(){
+  const imageUrl=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex}.png`;
+  const viewerImage=document.getElementById('viewer-image');
+  const counter=document.getElementById('image-counter');
+
+  viewerImage.style.opacity='0.3';
+  counter.textContent=`Loading… (${currentImageIndex}/${totalImages})`;
+
+  const img=new Image();
+  img.onload=()=>{
+    viewerImage.src=imageUrl;
+    viewerImage.style.opacity='1';
+    counter.textContent=`${currentImageIndex} / ${totalImages}`;
+  };
+  img.onerror=()=>{
+    viewerImage.alt='Failed to load image.';
+    viewerImage.style.opacity='1';
+    counter.textContent=`${currentImageIndex}/${totalImages} - failed`;
+  };
+  img.src=imageUrl;
+}
+function changeImage(direction){
+  const newIndex=currentImageIndex+direction;
+  if(newIndex>=1 && newIndex<=totalImages){
+    currentImageIndex=newIndex;
+  }else if(newIndex<1){
+    currentImageIndex=totalImages;
+  }else{
+    currentImageIndex=1;
+  }
+  updateImageViewer();
+}
+function closeImageViewer(){
+  document.getElementById('image-viewer').classList.remove('active');
+}
+
+/* ========= Genre modal ========= */
+function openGenreSelection(){
+  document.getElementById('genre-modal').style.display='flex';
+}
+function closeGenreModal(){
+  document.getElementById('genre-modal').style.display='none';
+}
+function openGenreGallery(genre){
+  closeGenreModal();
+  currentGallery=`writing genres/${genre}`;
+  totalImages=10;
+  currentImageIndex=1;
+  updateImageViewer();
+  document.getElementById('image-viewer').classList.add('active');
+}
+
+/* ========= Flip viewer (GSAT pages) ========= */
+function openFlipViewer(galleryName, imageCount){
+  currentFlipGallery=galleryName;
+  totalFlipImages=imageCount;
+  currentFlipIndex=1;
+  renderFlipImages();
+  updateFlipViewer();
+  document.getElementById('flip-viewer').classList.add('active');
+}
+function renderFlipImages(){
+  const container=document.getElementById('flip-container');
+  container.innerHTML='';
+  for(let i=1;i<=totalFlipImages;i++){
+    const img=document.createElement('img');
+    img.className='flip-image';
+    img.src=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentFlipGallery}/${i}.png`;
+    img.alt=`Page ${i}`;
+    img.loading='lazy';
+    img.onerror=function(){
+      this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMjIyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2FhYSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+    };
+    container.appendChild(img);
+  }
+  enableFlipSwipe();
+}
+function updateFlipViewer(){
+  const images=document.querySelectorAll('.flip-image');
+  images.forEach((img, idx)=>{
+    img.classList.toggle('active', idx+1===currentFlipIndex);
+  });
+  document.getElementById('flip-counter').textContent=
+    `${currentFlipIndex} / ${totalFlipImages}`;
+}
+function changeFlipPage(direction){
+  const newIndex=currentFlipIndex+direction;
+  if(newIndex>=1 && newIndex<=totalFlipImages){
+    currentFlipIndex=newIndex;
+    updateFlipViewer();
+  }
+}
+function closeFlipViewer(){
+  document.getElementById('flip-viewer').classList.remove('active');
+}
+function enableFlipSwipe(){
+  const viewer=document.getElementById('flip-viewer');
+  let startX=0, startY=0, isMoving=false;
+
+  viewer.ontouchstart=e=>{
+    if(!viewer.classList.contains('active')) return;
+    const t=e.touches[0];
+    startX=t.clientX; startY=t.clientY; isMoving=true;
+  };
+  viewer.ontouchmove=e=>{
+    if(!isMoving) return;
+    const t=e.touches[0];
+    const dx=t.clientX-startX;
+    const dy=t.clientY-startY;
+    if(Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)){
+      isMoving=false;
+      changeFlipPage(dx<0?1:-1);
+    }
+  };
+  viewer.ontouchend=()=>{ isMoving=false; };
+}
+
+/* ========= Keyboard nav ========= */
+function bindKeyboardNav(){
+  document.addEventListener('keydown', e=>{
+    const imgViewer=document.getElementById('image-viewer');
+    const flipViewer=document.getElementById('flip-viewer');
+
+    if(imgViewer?.classList.contains('active')){
+      if(e.key==='ArrowLeft') changeImage(-1);
+      if(e.key==='ArrowRight') changeImage(1);
+      if(e.key==='Escape') closeImageViewer();
+    }
+    if(flipViewer?.classList.contains('active')){
+      if(e.key==='ArrowLeft') changeFlipPage(-1);
+      if(e.key==='ArrowRight') changeFlipPage(1);
+      if(e.key==='Escape') closeFlipViewer();
+    }
+  });
+}
+
+/* ========= Bind all buttons (no HTML edits needed) ========= */
+function bindStaticActions(){
+  // Level 1
+  document.querySelector('button[onclick="analyzeWriting()"]')
+    ?.addEventListener('click', analyzeWriting);
+  document.querySelector('button[onclick="clearMainInput()"]')
+    ?.addEventListener('click', clearMainInput);
+  document.getElementById('ref-btn')
+    ?.addEventListener('click', generateReferenceEssay);
+  document.querySelector('button[onclick="copyCheckedToInput()"]')
+    ?.addEventListener('click', copyCheckedToInput);
+  document.querySelector('button[onclick="scrollToLatest()"]')
+    ?.addEventListener('click', scrollToLatest);
+  document.querySelector('button[onclick="toggleRubric()"]')
+    ?.addEventListener('click', toggleRubric);
+  document.querySelector('button[onclick="toggleHistory()"]')
+    ?.addEventListener('click', toggleHistory);
+  document.querySelector('button[onclick="printDrafts()"]')
+    ?.addEventListener('click', printDrafts);
+
+  // Level 2
+  document.querySelector('button[onclick="analyzeTopic()"]')
+    ?.addEventListener('click', analyzeTopic);
+  document.querySelector('button[onclick="clearTopicInput()"]')
+    ?.addEventListener('click', clearTopicInput);
+  document.querySelector('button[onclick="toggleTopicHistory()"]')
+    ?.addEventListener('click', toggleTopicHistory);
+  document.querySelector('button[onclick="printTopicDrafts()"]')
+    ?.addEventListener('click', printTopicDrafts);
+
+  // Modal close (static)
+  document.querySelector('button[onclick="closeGenreModal()"]')
+    ?.addEventListener('click', closeGenreModal);
+}
+
+/* Delegate actions inside dynamic history blocks */
+function bindDelegatedActions(){
+  document.body.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.js-action');
+    if(!btn) return;
+
+    const action = btn.dataset.action;
+    const index = parseInt(btn.dataset.index, 10);
+
+    if(action === 'use-version') useVersionAsCurrent(index);
+    if(action === 'use-topic-version') useTopicVersionAsCurrent(index);
+  });
+
+  // Material cards / viewers (inline may work, but delegate just in case)
+  document.body.addEventListener('click', (e)=>{
+    const card = e.target.closest('.material-card');
+    if(!card) return;
+    const onclick = card.getAttribute('onclick');
+    if(onclick){
+      // If sandbox blocks inline, we re-execute via Function safely
+      try{ new Function(onclick).call(window); }catch(_){}
+    }
+  });
+}
+
+/* ========= Init ========= */
+document.addEventListener('DOMContentLoaded', () => {
+  bindNavigationButtons();
+  bindUploadInputs();
+  bindKeyboardNav();
+  bindStaticActions();
+  bindDelegatedActions();
+
+  loadRubric();
+  initTopicCategories();
+  updateReferenceButtonVisibility();
 });
 
-// 滑鼠點擊翻頁
-document.getElementById('flip-container').addEventListener('click', function(e) {
-    const rect = this.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const width = rect.width;
-    
-    if (clickX < width / 3) {
-        changeFlipPage(-1); // 點擊左側，上一頁
-    } else if (clickX > width * 2 / 3) {
-        changeFlipPage(1); // 點擊右側，下一頁
-    }
-    // 點擊中間區域不做任何事
-});
+/* ========= Expose for backward-compat (inline still works if present) ========= */
+window.enterLevel=enterLevel;
+window.goHome=goHome;
 
-// 鍵盤導航
-document.addEventListener('keydown', function(e) {
-    const viewer = document.getElementById('flip-viewer');
-    if (viewer.classList.contains('active')) {
-        if (e.key === 'ArrowLeft') changeFlipPage(-1);
-        if (e.key === 'ArrowRight') changeFlipPage(1);
-        if (e.key === 'Escape') closeFlipViewer();
-    }
-});
-    </script>
+window.analyzeWriting=analyzeWriting;
+window.generateReferenceEssay=generateReferenceEssay;
+window.useVersionAsCurrent=useVersionAsCurrent;
+window.toggleRubric=toggleRubric;
+window.toggleHistory=toggleHistory;
+window.printDrafts=printDrafts;
+
+window.analyzeTopic=analyzeTopic;
+window.useTopicVersionAsCurrent=useTopicVersionAsCurrent;
+window.printTopicDrafts=printTopicDrafts;
+window.toggleTopicHistory=toggleTopicHistory;
+
+window.openImageGallery=openImageGallery;
+window.openGenreSelection=openGenreSelection;
+window.openGenreGallery=openGenreGallery;
+window.closeGenreModal=closeGenreModal;
+window.changeImage=changeImage;
+window.closeImageViewer=closeImageViewer;
+
+window.openFlipViewer=openFlipViewer;
+window.changeFlipPage=changeFlipPage;
+window.closeFlipViewer=closeFlipViewer;
+</script>
 </body>
 </html>
