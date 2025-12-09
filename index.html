@@ -719,17 +719,6 @@
     <div id="printable-drafts" style="display:none;"></div>
   </div>
 <script>
-/* =========================================================
-   Shirley's AI Writing Coach — iPad Hard Fix Script (vFix7)
-   Drop-in replacement for your current <script>.
-   Fixes:
-   - Image viewer shows only half on iPad (true full-fit contain)
-   - Flip viewer crops / only half (remove height:100%; use maxHeight calc)
-   - Close X not working (force z-index + JS click binding)
-   ========================================================= */
-
-const DBG = (...a)=>console.log('[CoachFix7]', ...a);
-
 /* ========= Navigation core ========= */
 let currentLevel = 'home';
 function enterLevel(level){
@@ -746,6 +735,7 @@ function enterLevel(level){
 }
 function goHome(){ enterLevel('home'); }
 
+/* JS-only binding for sandbox safety */
 function bindNavigationButtons(){
   document.querySelectorAll('.js-enter').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -771,13 +761,17 @@ let topicRealDraftCount = 0;
 let promptImageBase64 = '';
 let topicImageBase64 = '';
 
+// Image viewer vars
 let currentGallery = '';
 let currentImageIndex = 1;
 let totalImages = 0;
 
+// Flip viewer vars (FIXED)
 let currentFlipGallery = '';
 let totalFlipImages = 0;
 let currentFlipIndex = 1;
+let flipStatus = [];              // 'pending' | 'loaded' | 'error'
+let flipSwipeBound = false;
 
 const topicCategories = {
   'Descriptive Writing': [
@@ -835,12 +829,9 @@ Vocabulary (5): Range + precision, avoid repetition.
 `;
   rubricItems = rubricText.split('\n').filter(Boolean);
   const el = document.getElementById('rubric-reminder');
-  if(el){
-    el.innerHTML = `
-      <h3 class="card-title">Rubric Reminder</h3>
-      <ul>${rubricItems.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul>
-    `;
-  }
+  if(el) el.innerHTML = `
+    <h3 class="card-title">Rubric Reminder</h3>
+    <ul>${rubricItems.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul>`;
   return rubricText;
 }
 function toggleRubric(){
@@ -871,6 +862,7 @@ async function checkWithLanguageTool(text){
   return await res.json();
 }
 
+/* Basic capitalization detection */
 function findCapitalizationMatches(text){
   const matches = [];
   const sentences = text.split(/([.!?]\s+)/);
@@ -946,6 +938,7 @@ function translateChinesePrompt(chinesePrompt){
   return englishPrompt;
 }
 
+/* ========= Improved prompt coverage ========= */
 async function computePromptCoverage(text, promptOrTopic){
   if(!promptOrTopic){
     return { coverage:1, matchedKeywords:[], totalKeywords:0 };
@@ -992,6 +985,7 @@ async function calculateScores(text, matches, options={}){
 
   const grammarMatches=matches.filter(m=>m.rule && m.rule.issueType==='grammar');
   const spellingMatches=matches.filter(m=>m.rule && m.rule.issueType==='misspelling');
+  const styleMatches=matches.filter(m=>m.rule && m.rule.issueType==='style');
 
   const connectors=[
     'however','therefore','moreover','in addition','besides','on the other hand',
@@ -1019,13 +1013,17 @@ async function calculateScores(text, matches, options={}){
   const total=structureScore+coherenceScore+grammarScore+vocabScore;
 
   return {
-    structure:{label:'Structure & Development',score:structureScore,max:5},
-    coherence:{label:'Coherence & Flow',score:coherenceScore,max:5},
-    grammar:{label:'Grammar & Mechanics',score:grammarScore,max:5},
-    vocabulary:{label:'Vocabulary Range & Precision',score:vocabScore,max:5},
+    structure:{label:'Structure & Development',score:structureScore,max:5,reason:`${paragraphs} paragraphs; word count ${wordCount}.`},
+    coherence:{label:'Coherence & Flow',score:coherenceScore,max:5,reason:`${connectorCount} connectors detected.`},
+    grammar:{label:'Grammar & Mechanics',score:grammarScore,max:5,reason:`${grammarMatches.length+spellingMatches.length} grammar/spelling issues.`},
+    vocabulary:{label:'Vocabulary Range & Precision',score:vocabScore,max:5,reason:`Type-token ratio ${(ttr*100).toFixed(1)}%.`},
     total:{label:'Total',score:total,max:20},
     meta:{
-      wordCount, sentences, paragraphs, connectorCount,
+      wordCount, sentences, paragraphs,
+      grammarMatchesCount:grammarMatches.length,
+      spellingMatchesCount:spellingMatches.length,
+      styleMatchesCount:styleMatches.length,
+      connectorCount,
       onTopicCoverage:cov,
       onTopicMatchedKeywords:coverageInfo.matchedKeywords,
       onTopicTotalKeywords:coverageInfo.totalKeywords,
@@ -1065,33 +1063,67 @@ async function buildFeedback(text, matches, options={}, scores){
 
   if(scores){
     msg += '=== Rubric Scores (out of 5) ===\n';
-    msg += `- ${scores.structure.label}: ${scores.structure.score}/${scores.structure.max}\n`;
-    msg += `- ${scores.coherence.label}: ${scores.coherence.score}/${scores.coherence.max}\n`;
-    msg += `- ${scores.grammar.label}: ${scores.grammar.score}/${scores.grammar.max}\n`;
-    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score}/${scores.vocabulary.max}\n\n`;
+    msg += `- ${scores.structure.label}: ${scores.structure.score}/${scores.structure.max}\n  Reason: ${scores.structure.reason}\n`;
+    msg += `- ${scores.coherence.label}: ${scores.coherence.score}/${scores.coherence.max}\n  Reason: ${scores.coherence.reason}\n`;
+    msg += `- ${scores.grammar.label}: ${scores.grammar.score}/${scores.grammar.max}\n  Reason: ${scores.grammar.reason}\n`;
+    msg += `- ${scores.vocabulary.label}: ${scores.vocabulary.score}/${scores.vocabulary.max}\n  Reason: ${scores.vocabulary.reason}\n\n`;
     msg += `>>> TOTAL SCORE: ${scores.total.score} / ${scores.total.max} <<<\n\n`;
   }
 
   msg += 'GSAT Writing Snapshot:\n';
-  msg += `- Paragraphs: ${paragraphs}\n`;
+  msg += `- Paragraphs: ${paragraphs} (GSAT expects 2 developed paragraphs)\n`;
   msg += `- Words: ${wordCount}\n`;
   msg += `- Sentences: ${sentences}\n`;
-  msg += `- Avg words/sentence: ${avgLen}\n\n`;
+  msg += `- Avg words/sentence: ${avgLen}\n`;
+  msg += `- Logical connectors: ${meta?.connectorCount||0}\n\n`;
 
   msg += 'Issues detected:\n';
   msg += `- Grammar: ${grammarCount}\n- Spelling: ${spellingCount}\n- Style/phrasing: ${styleCount}\n\n`;
 
+  if(meta && meta.onTopicTotalKeywords>0){
+    const covPercent=(meta.onTopicCoverage*100).toFixed(0);
+    msg += 'Relevance to prompt/topic:\n';
+    msg += `- About ${covPercent}% key words/ideas from the prompt appear in your essay.\n`;
+    if(meta.onTopicCoverage<0.3){
+      msg += '- Your essay seems partly off-topic. Address the main question more directly.\n';
+    }else if(meta.onTopicCoverage<0.6){
+      msg += '- You are on track, but strengthen the link to the prompt.\n';
+    }else{
+      msg += '- Good focus. The essay stays on topic.\n';
+    }
+    msg += '\n';
+  }
+
+  const exampleLines=[];
+  matches.slice(0,5).forEach(m=>{
+    const snippet=text.slice(m.offset,m.offset+m.length);
+    const repl=(m.replacements&&m.replacements[0])? m.replacements[0].value:null;
+    const rule=m.rule&&(m.rule.description||m.rule.issueType||'');
+    if(repl) exampleLines.push(`- "${snippet}" → "${repl}" (${rule})`);
+  });
+  if(exampleLines.length){
+    msg += 'Examples to fix:\n' + exampleLines.join('\n') + '\n\n';
+  }
+
+  msg += 'Teacher-style next steps:\n';
+  msg += '- Add a clear Topic Sentence at the start of each paragraph.\n';
+  msg += '- Provide at least one concrete example or mini-scenario.\n';
+  msg += '- End with a short conclusion that echoes your main point.\n\n';
+
   if(mode==='revision' && prevScores){
     msg += `Compared with ${previousVersionLabel||'previous version'}:\n`;
-    ['structure','coherence','grammar','vocabulary'].forEach(k=>{
+    const fields=['structure','coherence','grammar','vocabulary'];
+    fields.forEach(k=>{
       const d = (scores[k].score - prevScores[k].score);
-      if(d!==0) msg += `- ${scores[k].label}: ${d>0?'+':''}${d}\n`;
+      if(d>0) msg += `- ${scores[k].label}: +${d}\n`;
+      if(d<0) msg += `- ${scores[k].label}: ${d}\n`;
     });
   }
+
   return msg.trim();
 }
 
-/* ========= Version UI (same as your original) ========= */
+/* ========= Version UI ========= */
 function buildVersionChip(label){
   let cls='version-chip';
   const match=label.match(/Version\s+(\d+)/i);
@@ -1107,6 +1139,9 @@ function buildVersionChip(label){
 
 function renderVersionBlock({index,label,original,corrected,highlighted,feedback,scores,isReference}){
   const chipHtml=buildVersionChip(label);
+  const versionHint = isReference
+    ? '（老師示範用，不可照抄）'
+    : `（你的第 ${label.match(/\d+/)?.[0]||''} 次修訂紀錄）`;
 
   const checkboxHtml = isReference ? '' :
     `<label class="no-print" style="font-size:0.9em;color:var(--text-muted);">
@@ -1128,7 +1163,7 @@ function renderVersionBlock({index,label,original,corrected,highlighted,feedback
 
   return `
     <div class="version-header-inline">
-      <span>${chipHtml}</span>
+      <span>${chipHtml} <span style="font-size:12px;color:var(--text-muted);">${versionHint}</span></span>
       ${checkboxHtml}
     </div>
 
@@ -1167,7 +1202,6 @@ function renderVersionBlock({index,label,original,corrected,highlighted,feedback
 
 function renderTopicVersionBlock({index,label,topic,original,corrected,highlighted,feedback,scores}){
   const chipHtml=buildVersionChip(label);
-
   const checkboxHtml =
     `<label class="no-print" style="font-size:0.9em;color:var(--text-muted);">
       <input type="checkbox" class="print-topic-select" data-index="${index}">
@@ -1188,7 +1222,7 @@ function renderTopicVersionBlock({index,label,topic,original,corrected,highlight
 
   return `
     <div class="version-header-inline">
-      <span>${chipHtml}</span>
+      <span>${chipHtml} <span style="font-size:12px;color:var(--text-muted);">（練習版本）</span></span>
       ${checkboxHtml}
     </div>
 
@@ -1232,6 +1266,7 @@ function getLastRealDraft(){
   }
   return null;
 }
+
 function useVersionAsCurrent(index){
   const d=drafts[index];
   if(!d) return;
@@ -1244,6 +1279,7 @@ function useTopicVersionAsCurrent(index){
   document.getElementById('topic-text').value=d.corrected||d.original||'';
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function updateReferenceButtonVisibility(){
   const btn=document.getElementById('ref-btn');
   if(!btn) return;
@@ -1309,7 +1345,7 @@ async function analyzeWriting(){
     updateReferenceButtonVisibility();
   }catch(err){
     console.error(err);
-    tempDiv.innerHTML='<p style="color:#ff9fb3;">Error while calling grammar checker.</p>';
+    tempDiv.innerHTML='<p style="color:#ff9fb3;">Error while calling grammar checker. Please try again later.</p>';
   }
 }
 
@@ -1332,11 +1368,12 @@ async function generateReferenceEssay(){
   const index=drafts.length;
   const label="Reference Essay";
   const highlighted=escapeHtml(ref);
-  const feedback="This is a teacher-style model outline. Do NOT copy.";
+  const scores=null;
+  const feedback="This is a teacher-style model outline. Do NOT copy; use it to learn structure.";
 
   drafts.push({
     original:ref, corrected:ref, highlighted,
-    feedback, scores:null, meta:null, label, isReference:true
+    feedback, scores, meta:null, label, isReference:true
   });
 
   const wrap=document.getElementById('history-wrap');
@@ -1344,7 +1381,7 @@ async function generateReferenceEssay(){
   block.className='analysis-run';
   block.innerHTML=renderVersionBlock({
     index,label,original:ref,corrected:ref,highlighted,
-    feedback,scores:null,isReference:true
+    feedback,scores,isReference:true
   });
   wrap.prepend(block);
   alert('Teacher model generated. Please DO NOT copy it.');
@@ -1361,27 +1398,32 @@ function printDrafts(){
   }
   const selected=selectedIndexes.map(i=>drafts[i]).filter(Boolean);
 
-  const printable=document.getElementById('printable-drafts');
-  printable.innerHTML=`
+  const headerHtml=`
     <div class="printable">
       <h1>Shirley's AI Writing Coach</h1>
-      <p>Selected Drafts</p><hr/>
-    </div>
-    ${selected.map(d=>`
-      <div class="printable">
-        <h2>${escapeHtml(d.label||'')}</h2>
-        <h3>Original with highlighted issues:</h3>
-        <p>${d.highlighted.replace(/\n/g,'<br>')}</p>
-        <h3>Feedback:</h3>
-        <pre style="white-space:pre-wrap;">${escapeHtml(d.feedback)}</pre>
-      </div>`).join('')}
-  `;
+      <p>Selected Drafts</p>
+      <hr/>
+    </div>`;
+
+  const bodyHtml=selected.map(d=>`
+    <div class="printable">
+      <h2>${escapeHtml(d.label||'')}</h2>
+      <h3>Original with highlighted issues:</h3>
+      <p>${d.highlighted.replace(/\n/g,'<br>')}</p>
+      <h3>Feedback:</h3>
+      <pre style="white-space:pre-wrap;">${escapeHtml(d.feedback)}</pre>
+    </div>`).join('');
+
+  const printable=document.getElementById('printable-drafts');
+  printable.innerHTML=headerHtml+bodyHtml;
 
   const bodyChildren=Array.from(document.body.children);
   const toHide=bodyChildren.filter(el=>el!==printable);
   toHide.forEach(el=>el.classList.add('no-print-temp'));
   printable.style.display='block';
+
   window.print();
+
   printable.style.display='none';
   toHide.forEach(el=>el.classList.remove('no-print-temp'));
 }
@@ -1396,28 +1438,33 @@ function printTopicDrafts(){
   }
   const selected=selectedIndexes.map(i=>topicDrafts[i]).filter(Boolean);
 
-  const printable=document.getElementById('printable-drafts');
-  printable.innerHTML=`
+  const headerHtml=`
     <div class="printable">
       <h1>Shirley's AI Writing Coach</h1>
-      <p>Selected Topic Drafts</p><hr/>
-    </div>
-    ${selected.map(d=>`
-      <div class="printable">
-        <h2>${escapeHtml(d.label||'')}</h2>
-        <p><strong>Topic:</strong> ${escapeHtml(d.topic||'')}</p>
-        <h3>Original with highlighted issues:</h3>
-        <p>${d.highlighted.replace(/\n/g,'<br>')}</p>
-        <h3>Feedback:</h3>
-        <pre style="white-space:pre-wrap;">${escapeHtml(d.feedback)}</pre>
-      </div>`).join('')}
-  `;
+      <p>Selected Topic Drafts</p>
+      <hr/>
+    </div>`;
+
+  const bodyHtml=selected.map(d=>`
+    <div class="printable">
+      <h2>${escapeHtml(d.label||'')}</h2>
+      <p><strong>Topic:</strong> ${escapeHtml(d.topic||'')}</p>
+      <h3>Original with highlighted issues:</h3>
+      <p>${d.highlighted.replace(/\n/g,'<br>')}</p>
+      <h3>Feedback:</h3>
+      <pre style="white-space:pre-wrap;">${escapeHtml(d.feedback)}</pre>
+    </div>`).join('');
+
+  const printable=document.getElementById('printable-drafts');
+  printable.innerHTML=headerHtml+bodyHtml;
 
   const bodyChildren=Array.from(document.body.children);
   const toHide=bodyChildren.filter(el=>el!==printable);
   toHide.forEach(el=>el.classList.add('no-print-temp'));
   printable.style.display='block';
+
   window.print();
+
   printable.style.display='none';
   toHide.forEach(el=>el.classList.remove('no-print-temp'));
 }
@@ -1479,7 +1526,7 @@ async function analyzeTopic(){
 
   }catch(err){
     console.error(err);
-    tempDiv.innerHTML='<p style="color:#ff9fb3;">Error while calling grammar checker.</p>';
+    tempDiv.innerHTML='<p style="color:#ff9fb3;">Error while calling grammar checker. Please try again later.</p>';
   }
 }
 
@@ -1586,13 +1633,7 @@ function bindUploadInputs(){
   });
 }
 
-/* ========= Path helper (NO double encode) ========= */
-function safePath(p){
-  if(String(p).includes('%')) return p;                 // already encoded
-  return String(p).split('/').map(encodeURIComponent).join('/');
-}
-
-/* ========= Image Viewer (true full-fit) ========= */
+/* ========= Image Viewer ========= */
 function openImageGallery(galleryName, imageCount){
   currentGallery=galleryName;
   totalImages=imageCount;
@@ -1600,34 +1641,12 @@ function openImageGallery(galleryName, imageCount){
 
   const viewer = document.getElementById('image-viewer');
   const imgEl = document.getElementById('viewer-image');
-  const container = viewer?.querySelector('.image-container');
-  const closeBtn = viewer?.querySelector('.close-viewer');
-
-  if(viewer){
-    viewer.style.touchAction='auto';
-    viewer.style.zIndex='999999';
-    viewer.style.pointerEvents='auto';
-  }
-  if(container){
-    container.style.height='calc(100vh - 80px)';
-    container.style.maxHeight='calc(100vh - 80px)';
-    container.style.overflow='hidden';
-    container.style.display='flex';
-    container.style.alignItems='center';
-    container.style.justifyContent='center';
-    container.style.background='#000';
-  }
   if(imgEl){
-    imgEl.style.maxHeight='100%';
-    imgEl.style.maxWidth='100%';
-    imgEl.style.width='100%';
-    imgEl.style.height='auto';
-    imgEl.style.objectFit='contain';
-    imgEl.style.display='block';
-  }
-  if(closeBtn){
-    closeBtn.style.zIndex='2000001';
-    closeBtn.style.pointerEvents='auto';
+    imgEl.style.maxHeight = '90vh';
+    imgEl.style.width = 'auto';
+    imgEl.style.objectFit = 'contain';
+    imgEl.style.display = 'block';
+    imgEl.style.margin = '0 auto';
   }
 
   updateImageViewer();
@@ -1635,7 +1654,7 @@ function openImageGallery(galleryName, imageCount){
 }
 
 function updateImageViewer(){
-  const imageUrl=`https://ducj-creator.github.io/Shirley-AI-Writing/${safePath(currentGallery)}/${currentImageIndex}.png`;
+  const imageUrl=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentGallery}/${currentImageIndex}.png`;
   const viewerImage=document.getElementById('viewer-image');
   const counter=document.getElementById('image-counter');
   if(!viewerImage || !counter) return;
@@ -1650,9 +1669,10 @@ function updateImageViewer(){
     counter.textContent=`${currentImageIndex} / ${totalImages}`;
   };
   img.onerror=()=>{
+    viewerImage.src='';
     viewerImage.alt='Failed to load image.';
     viewerImage.style.opacity='1';
-    counter.textContent=`${currentImageIndex}/${totalImages} - failed`;
+    counter.textContent=`${currentImageIndex}/${totalImages} - missing`;
   };
   img.src=imageUrl;
 }
@@ -1673,85 +1693,127 @@ function closeImageViewer(){
 }
 
 /* ========= Genre modal ========= */
-function openGenreSelection(){ document.getElementById('genre-modal').style.display='flex'; }
-function closeGenreModal(){ document.getElementById('genre-modal').style.display='none'; }
+function openGenreSelection(){
+  const modal=document.getElementById('genre-modal');
+  if(modal) modal.style.display='flex';
+}
+function closeGenreModal(){
+  const modal=document.getElementById('genre-modal');
+  if(modal) modal.style.display='none';
+}
+
+/* Writing Genres use Flip Viewer */
 function openGenreGallery(genre){
   closeGenreModal();
   openFlipViewer(`writing genres/${genre}`, 10);
 }
 
-/* ========= Flip viewer (no crop, X clickable) ========= */
+/* ========= Flip viewer (FIXED NO BLACK PAGES) ========= */
 function openFlipViewer(galleryName, imageCount){
   currentFlipGallery=galleryName;
   totalFlipImages=imageCount;
   currentFlipIndex=1;
+  flipStatus = new Array(totalFlipImages+1).fill('pending');
   renderFlipImages();
   updateFlipViewer();
-
-  const v=document.getElementById('flip-viewer');
-  const closeBtn=v?.querySelector('.close-flip');
-  const container=document.getElementById('flip-container');
-
-  if(v){
-    v.style.zIndex='999999';
-    v.style.pointerEvents='auto';
-    v.style.touchAction='pan-y';
-  }
-  if(container){
-    container.style.pointerEvents='none'; // don't block top-right X
-  }
-  if(closeBtn){
-    closeBtn.style.zIndex='2000001';
-    closeBtn.style.pointerEvents='auto';
-  }
-
-  v?.classList.add('active');
+  document.getElementById('flip-viewer')?.classList.add('active');
 }
 
 function renderFlipImages(){
   const container=document.getElementById('flip-container');
   if(!container) return;
   container.innerHTML='';
+
   for(let i=1;i<=totalFlipImages;i++){
     const img=document.createElement('img');
     img.className='flip-image';
-    img.src=`https://ducj-creator.github.io/Shirley-AI-Writing/${safePath(currentFlipGallery)}/${i}.png`;
-    img.alt=`Page ${i}`;
-    img.loading='lazy';
+    img.dataset.index=String(i);
 
-    // ✅ iPad safe-fit: avoid height:100% cropping
-    img.style.height='auto';
-    img.style.maxHeight='calc(100vh - 140px)';
-    img.style.maxWidth='94vw';
-    img.style.width='auto';
+    // IMPORTANT: prevent 0-height black screens
+    img.style.position='absolute';
+    img.style.inset='0';
+    img.style.width='100%';
+    img.style.height='100%';
     img.style.objectFit='contain';
-    img.style.pointerEvents='none';
+    img.style.background='#111';
 
-    img.onerror=function(){ this.style.display='none'; };
+    const url=`https://ducj-creator.github.io/Shirley-AI-Writing/${currentFlipGallery}/${i}.png`;
+
+    img.onload=()=>{
+      flipStatus[i]='loaded';
+      if(i===currentFlipIndex) updateFlipViewer();
+    };
+    img.onerror=()=>{
+      flipStatus[i]='error';
+      // fallback placeholder (still visible, not black)
+      img.src='data:image/svg+xml;utf8,'+encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+          <rect width="100%" height="100%" fill="#111"/>
+          <text x="50%" y="50%" fill="#bbb" font-size="24" font-family="Arial" text-anchor="middle" dy=".35em">
+            Page ${i} not found
+          </text>
+        </svg>`
+      );
+      if(i===currentFlipIndex){
+        // auto-skip to nearest available
+        const nextOk = findNextAvailable(i, +1) || findNextAvailable(i, -1);
+        if(nextOk) currentFlipIndex = nextOk;
+        updateFlipViewer();
+      }
+    };
+
+    img.src=url;
+    img.loading='eager';
+    img.decoding='async';
     container.appendChild(img);
   }
+
   enableFlipSwipe();
+}
+
+function findNextAvailable(start, dir){
+  if(totalFlipImages<=0) return null;
+  let steps=0;
+  let idx=start;
+
+  while(steps<totalFlipImages){
+    idx += dir;
+    if(idx>totalFlipImages) idx=1;
+    if(idx<1) idx=totalFlipImages;
+
+    if(flipStatus[idx] !== 'error') return idx;
+    steps++;
+  }
+  return null; // all error
 }
 
 function updateFlipViewer(){
   const images=document.querySelectorAll('.flip-image');
-  images.forEach((img, idx)=>{
-    img.classList.toggle('active', idx+1===currentFlipIndex);
+  images.forEach(img=>{
+    const idx=parseInt(img.dataset.index,10);
+    img.classList.toggle('active', idx===currentFlipIndex);
   });
+
   const counter = document.getElementById('flip-counter');
   if(counter){
-    counter.textContent = `${currentFlipIndex} / ${totalFlipImages}`;
+    const st = flipStatus[currentFlipIndex];
+    counter.textContent = st==='error'
+      ? `${currentFlipIndex} / ${totalFlipImages} (missing)`
+      : `${currentFlipIndex} / ${totalFlipImages}`;
   }
 }
 
 function changeFlipPage(direction){
-  const newIndex=currentFlipIndex+direction;
-  if(newIndex>=1 && newIndex<=totalFlipImages){
-    currentFlipIndex=newIndex;
-  }else if(newIndex<1){
-    currentFlipIndex=totalFlipImages;
+  let target=currentFlipIndex+direction;
+  if(target>totalFlipImages) target=1;
+  if(target<1) target=totalFlipImages;
+
+  // skip missing pages
+  if(flipStatus[target]==='error'){
+    const nextOk=findNextAvailable(target, direction) || currentFlipIndex;
+    currentFlipIndex=nextOk;
   }else{
-    currentFlipIndex=1;
+    currentFlipIndex=target;
   }
   updateFlipViewer();
 }
@@ -1761,16 +1823,20 @@ function closeFlipViewer(){
 }
 
 function enableFlipSwipe(){
+  if(flipSwipeBound) return;
+  flipSwipeBound = true;
+
   const viewer=document.getElementById('flip-viewer');
   if(!viewer) return;
   let startX=0, startY=0, isMoving=false;
 
-  viewer.ontouchstart=e=>{
+  viewer.addEventListener('touchstart', e=>{
     if(!viewer.classList.contains('active')) return;
     const t=e.touches[0];
     startX=t.clientX; startY=t.clientY; isMoving=true;
-  };
-  viewer.ontouchmove=e=>{
+  }, {passive:true});
+
+  viewer.addEventListener('touchmove', e=>{
     if(!isMoving) return;
     const t=e.touches[0];
     const dx=t.clientX-startX;
@@ -1779,11 +1845,12 @@ function enableFlipSwipe(){
       isMoving=false;
       changeFlipPage(dx<0?1:-1);
     }
-  };
-  viewer.ontouchend=()=>{ isMoving=false; };
+  }, {passive:true});
+
+  viewer.addEventListener('touchend', ()=>{ isMoving=false; });
 }
 
-/* ========= Delegate actions ========= */
+/* ========= Bind delegated actions ========= */
 function bindDelegatedActions(){
   document.body.addEventListener('click', (e)=>{
     const btn = e.target.closest('.js-action');
@@ -1793,15 +1860,6 @@ function bindDelegatedActions(){
     if(action === 'use-version') useVersionAsCurrent(index);
     if(action === 'use-topic-version') useTopicVersionAsCurrent(index);
   });
-}
-
-/* ========= Close buttons hard bind ========= */
-function bindViewerCloseButtons(){
-  const imgClose=document.querySelector('#image-viewer .close-viewer');
-  const flipClose=document.querySelector('#flip-viewer .close-flip');
-
-  imgClose?.addEventListener('click', (e)=>{ e.stopPropagation(); closeImageViewer(); });
-  flipClose?.addEventListener('click', (e)=>{ e.stopPropagation(); closeFlipViewer(); });
 }
 
 /* Keyboard nav */
@@ -1825,37 +1883,38 @@ function bindKeyboardNav(){
 
 /* ========= Init ========= */
 document.addEventListener('DOMContentLoaded', () => {
-  try{
-    DBG('loaded vFix7');
-    bindNavigationButtons();
-    bindUploadInputs();
-    bindKeyboardNav();
-    bindDelegatedActions();
-    bindViewerCloseButtons();
+  bindNavigationButtons();
+  bindUploadInputs();
+  bindKeyboardNav();
+  bindDelegatedActions();
 
-    loadRubric();
-    initTopicCategories();
-    updateReferenceButtonVisibility();
+  loadRubric();
+  initTopicCategories();
+  updateReferenceButtonVisibility();
 
-    const stamp=document.createElement('div');
-    stamp.textContent='vFix7 loaded';
-    stamp.style.position='fixed';
-    stamp.style.bottom='8px';
-    stamp.style.right='8px';
-    stamp.style.fontSize='11px';
-    stamp.style.padding='4px 8px';
-    stamp.style.borderRadius='999px';
-    stamp.style.background='rgba(0,0,0,0.6)';
-    stamp.style.color='white';
-    stamp.style.zIndex='2000000';
-    stamp.style.pointerEvents='none';
-    document.body.appendChild(stamp);
-  }catch(e){
-    console.error('Init failed but globals exposed', e);
-  }
+  // Modal close by clicking backdrop
+  const modal=document.getElementById('genre-modal');
+  modal?.addEventListener('click', (e)=>{
+    if(e.target===modal) closeGenreModal();
+  });
+
+  // Viewer close buttons JS bind (don’t trust inline)
+  document.querySelector('#image-viewer .close-viewer')
+    ?.addEventListener('click', closeImageViewer);
+  document.querySelector('#image-viewer .image-nav.prev')
+    ?.addEventListener('click', ()=>changeImage(-1));
+  document.querySelector('#image-viewer .image-nav.next')
+    ?.addEventListener('click', ()=>changeImage(1));
+
+  document.querySelector('#flip-viewer .close-flip')
+    ?.addEventListener('click', closeFlipViewer);
+  document.querySelector('#flip-viewer .flip-nav.prev')
+    ?.addEventListener('click', ()=>changeFlipPage(-1));
+  document.querySelector('#flip-viewer .flip-nav.next')
+    ?.addEventListener('click', ()=>changeFlipPage(1));
 });
 
-/* ========= Expose to window ========= */
+/* ========= Expose for backward-compat ========= */
 window.enterLevel=enterLevel;
 window.goHome=goHome;
 
