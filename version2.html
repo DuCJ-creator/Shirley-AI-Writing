@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Shirley's Writing Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+<style>
+/* ── Reset ─────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Tokens ─────────────────────────────────── */
+:root {
+  --cream:      #f8f4ee;
+  --cream-2:    #f2ece1;
+  --cream-3:    #e8dfd0;
+  --ink:        #1a1410;
+  --ink-2:      #3d3530;
+  --ink-3:      #6b6158;
+  --ink-4:      #9e9088;
+  --gold:       #a07840;
+  --gold-light: #c9a06a;
+  --gold-pale:  #f0e4cf;
+  --rust:       #8b3a2a;
+  --sage:       #4a6651;
+  --rule:       rgba(160,120,64,.22);
+
+  --serif-display: 'Cormorant Garamond', Georgia, serif;
+  --serif-body:    'Libre Baskerville', Georgia, serif;
+  --sans:          'DM Sans', system-ui, sans-serif;
+
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  20px;
+  --shadow-card: 0 2px 12px rgba(26,20,16,.07), 0 1px 3px rgba(26,20,16,.05);
+  --shadow-lift: 0 8px 32px rgba(26,20,16,.12), 0 2px 8px rgba(26,20,16,.07);
+
+  --transition: .22s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Base ─────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Background texture ─────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80vw 60vh at 10% -10%, rgba(160,120,64,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 70vw 50vh at 90% 110%, rgba(74,102,81,.06) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Layout ─────────────────────────────────── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 clamp(18px, 4vw, 48px) 80px;
+}
+
+/* ── Header ─────────────────────────────────── */
+.site-header {
+  text-align: center;
+  padding: clamp(48px, 8vw, 88px) 0 clamp(32px, 5vw, 56px);
+  animation: fadeUp .7s both;
+}
+
+.header-rule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.header-rule::before,
+.header-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--rule), transparent);
+}
+.header-ornament {
+  color: var(--gold);
+  font-size: 18px;
+  letter-spacing: 6px;
+}
+
+h1.site-title {
+  font-family: var(--serif-display);
+  font-size: clamp(38px, 7vw, 68px);
+  font-weight: 300;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+h1.site-title em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.site-byline {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-top: 12px;
+}
+
+/* ── Section headers ─────────────────────────── */
+.section {
+  margin-bottom: 48px;
+  animation: fadeUp .6s both;
+}
+.section:nth-child(2) { animation-delay: .08s; }
+.section:nth-child(3) { animation-delay: .16s; }
+.section:nth-child(4) { animation-delay: .24s; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.section-num {
+  font-family: var(--serif-display);
+  font-size: 40px;
+  font-weight: 300;
+  color: var(--gold-light);
+  line-height: 1;
+  min-width: 32px;
+}
+.section-label {
+  flex: 1;
+}
+.section-label h2 {
+  font-family: var(--serif-display);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: .01em;
+}
+.section-label p {
+  font-size: 12px;
+  color: var(--ink-4);
+  margin-top: 1px;
+  letter-spacing: .03em;
+}
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* ── Grid ─────────────────────────────────── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.cards.wide {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* ── Card ─────────────────────────────────── */
+.card {
+  position: relative;
+  background: #fff;
+  border: 1px solid rgba(160,120,64,.14);
+  border-radius: var(--radius-lg);
+  padding: 22px 22px 20px;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  user-select: none;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+  border-color: rgba(160,120,64,.32);
+}
+.card:hover::after { transform: scaleX(1); }
+.card:active { transform: translateY(-1px) scale(.99); }
+
+.card-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid var(--gold-pale);
+  background: var(--gold-pale);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--cream-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  font-size: 20px;
+  color: var(--gold);
+  border: 1px solid var(--cream-3);
+}
+
+.card h3 {
+  font-family: var(--serif-display);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.card p {
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.card-arrow {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  color: var(--ink-4);
+  font-size: 18px;
+  transition: transform var(--transition), color var(--transition);
+}
+.card:hover .card-arrow {
+  transform: translate(3px, -3px);
+  color: var(--gold);
+}
+
+/* Featured card style (past papers) */
+.card.featured {
+  background: linear-gradient(135deg, #fff 60%, var(--cream-2));
+  border-color: rgba(160,120,64,.28);
+}
+.card.featured .card-icon {
+  background: var(--gold-pale);
+  border-color: rgba(160,120,64,.2);
+}
+
+/* External link card */
+.card.external .card-icon {
+  background: #f0f4f0;
+  border-color: rgba(74,102,81,.18);
+  color: var(--sage);
+}
+.card.external .card-tag { color: var(--sage); background: #edf2ed; border-color: #dce8dc; }
+.card.external .card-arrow { font-size: 14px; }
+
+/* ── Genre sub-grid ─────────────────────────── */
+.genre-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.genre-card {
+  background: var(--cream-2);
+  border: 1px solid var(--cream-3);
+  border-radius: var(--radius-md);
+  padding: 16px 16px 14px;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition), box-shadow var(--transition);
+  text-align: center;
+}
+.genre-card:hover {
+  transform: translateY(-2px);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  border-color: rgba(160,120,64,.25);
+}
+.genre-card:active { transform: scale(.98); }
+.genre-card .g-icon { font-size: 24px; margin-bottom: 8px; }
+.genre-card h4 {
+  font-family: var(--serif-display);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.genre-card p { font-size: 11px; color: var(--ink-4); }
+
+/* ── Viewer overlay ─────────────────────────── */
+#viewer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(18,12,8,.93);
+}
+#viewer.open { display: flex; flex-direction: column; }
+
+.viewer-header {
+  flex-shrink: 0;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: rgba(0,0,0,.4);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(8px);
+}
+.viewer-title-block { display: flex; align-items: baseline; gap: 10px; }
+.viewer-title {
+  font-family: var(--serif-display);
+  font-size: 18px;
+  font-weight: 300;
+  color: rgba(255,255,255,.92);
+  letter-spacing: .02em;
+}
+.viewer-counter {
+  font-size: 12px;
+  color: rgba(255,255,255,.4);
+  letter-spacing: .06em;
+}
+.viewer-close {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.18);
+  color: rgba(255,255,255,.85);
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition);
+}
+.viewer-close:hover { background: rgba(255,255,255,.22); }
+
+.viewer-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 20px 70px;
+}
+
+.viewer-img-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewer-img-wrap img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  display: block;
+  transition: opacity .3s;
+}
+
+.viewer-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(255,255,255,.4);
+  font-size: 13px;
+  font-family: var(--sans);
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid rgba(255,255,255,.12);
+  border-top-color: var(--gold-light);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.viewer-nav {
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.16);
+  color: rgba(255,255,255,.8);
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), transform var(--transition);
+  z-index: 2;
+}
+.viewer-nav:hover { background: rgba(255,255,255,.2); }
+.viewer-nav.prev { left: 12px; }
+.viewer-nav.next { right: 12px; }
+.viewer-nav:active { transform: translateY(-50%) scale(.93); }
+
+.viewer-footer {
+  flex-shrink: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0,0,0,.4);
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.25);
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+.dot.active { background: var(--gold-light); transform: scale(1.35); }
+.dot:hover:not(.active) { background: rgba(255,255,255,.5); }
+
+/* ── Footer ─────────────────────────────────── */
+.site-footer {
+  text-align: center;
+  padding: 24px 0 32px;
+  border-top: 1px solid var(--rule);
+  margin-top: 32px;
+}
+.site-footer p {
+  font-size: 11px;
+  color: var(--ink-4);
+  letter-spacing: .06em;
+}
+
+/* ── Animations ─────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 600px) {
+  .cards { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .genre-cards { grid-template-columns: 1fr 1fr; }
+  .card { padding: 16px 16px 14px; }
+  .card h3 { font-size: 16px; }
+  .viewer-nav { width: 38px; height: 38px; font-size: 20px; }
+  .viewer-stage { padding: 12px 50px; }
+}
+@media (max-width: 380px) {
+  .cards { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <!-- ── Header ── -->
+  <header class="site-header">
+    <div class="header-rule">
+      <div class="header-ornament">✦ ✦ ✦</div>
+    </div>
+    <h1 class="site-title">Shirley's<br><em>Writing Coach</em></h1>
+    <p class="site-byline">Writing Materials &nbsp;·&nbsp; Structures &nbsp;·&nbsp; Model Essays</p>
+  </header>
+
+  <!-- ── Section 1: Writing Tips ── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <div class="section-label">
+        <h2>Writing Tips &amp; Guidelines</h2>
+        <p>Core techniques and illustrated guides</p>
+      </div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="cards wide" style="margin-bottom: 20px;">
+      <div class="card featured" onclick="openViewer('writing%20gists', 9, 'Shirley\'s Writing Gists')">
+        <div class="card-tag">9 Pages</div>
+        <div class="card-icon">📝</div>
+        <h3>Shirley's Writing Gists</h3>
+        <p>Essential tips, techniques, and strategies in nine illustrated guides</p>
+        <span class="card-arrow">→</span>
+      </div>
+    </div>
+
+    <p style="font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-bottom:14px;">Writing Genres</p>
+    <div class="genre-cards">
+      <div class="genre-card" onclick="openViewer('writing genres/descriptive', 10, 'Descriptive Writing')">
+        <div class="g-icon">🎨</div>
+        <h4>Descriptive</h4>
+        <p>Vivid, sensory detail</p>
+      </div>
+      <div class="genre-card" onclick="openViewer('writing genres/narrative', 10, 'Narrative Writing')">
+        <div class="g-icon">📖</div>
+        <h4>Narrative</h4>
+        <p>Story &amp; voice</p>
+      </div>
+      <div class="genre-card" onclick="openViewer('writing genres/argumentative', 10, 'Argumentative Writing')">
+        <div class="g-icon">⚖️</div>
+        <h4>Argumentative</h4>
+        <p>Persuasive reasoning</p>
+      </div>
+      <div class="genre-card" onclick="openViewer('writing genres/expository', 10, 'Expository Writing')">
+        <div class="g-icon">📋</div>
+        <h4>Expository</h4>
+        <p>Clear explanation</p>
+      </div>
+      <div class="genre-card" onclick="openViewer('writing genres/compare-contrast', 10, 'Compare & Contrast')">
+        <div class="g-icon">🔀</div>
+        <h4>Compare &amp; Contrast</h4>
+        <p>Similarities &amp; differences</p>
+      </div>
+      <div class="genre-card" onclick="openViewer('writing genres/problem-solution', 10, 'Problem & Solution')">
+        <div class="g-icon">💡</div>
+        <h4>Problem &amp; Solution</h4>
+        <p>Issue + resolution</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Section 2: Model Essays ── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <div class="section-label">
+        <h2>Model Essays &amp; Past Papers</h2>
+        <p>Official GSAT examination materials</p>
+      </div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="cards">
+      <div class="card featured" onclick="openViewer('GSAT%20past%20papers', 15, 'GSAT Past Papers')">
+        <div class="card-tag">15 Pages</div>
+        <div class="card-icon">🎯</div>
+        <h3>GSAT Past Papers</h3>
+        <p>Flip through official past exam writing prompts and model answers</p>
+        <span class="card-arrow">→</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Section 3: Idea Bank ── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <div class="section-label">
+        <h2>Idea Bank</h2>
+        <p>Topic collections for independent practice</p>
+      </div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="cards">
+      <div class="card external" onclick="window.open('https://ducj-creator.github.io/Shirley-AI-Writing/idea%20bank/index.html','_blank')">
+        <div class="card-tag">External Site</div>
+        <div class="card-icon">💬</div>
+        <h3>GSAT Writing Topics</h3>
+        <p>A curated collection of prompts and topic ideas to spark your writing practice</p>
+        <span class="card-arrow" style="font-size:13px;">↗</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="site-footer">
+    <p>For learning &amp; practice only &nbsp;·&nbsp; 學習與練習用途</p>
+  </footer>
+
+</div><!-- /page -->
+
+
+<!-- ── Viewer ─────────────────────────────── -->
+<div id="viewer" role="dialog" aria-modal="true" aria-label="Image viewer">
+
+  <div class="viewer-header">
+    <div class="viewer-title-block">
+      <span class="viewer-title" id="viewer-title"></span>
+      <span class="viewer-counter" id="viewer-counter"></span>
+    </div>
+    <button class="viewer-close" onclick="closeViewer()" aria-label="Close viewer">×</button>
+  </div>
+
+  <div class="viewer-stage">
+    <div class="viewer-loading" id="viewer-loading">
+      <div class="spinner"></div>
+      <span>Loading…</span>
+    </div>
+    <div class="viewer-img-wrap" id="viewer-img-wrap">
+      <img id="viewer-img" src="" alt="" style="opacity:0;"/>
+    </div>
+    <button class="viewer-nav prev" onclick="nav(-1)" aria-label="Previous page">‹</button>
+    <button class="viewer-nav next" onclick="nav(1)" aria-label="Next page">›</button>
+  </div>
+
+  <div class="viewer-footer" id="viewer-dots"></div>
+
+</div>
+
+
+<script>
+/* ── Config ── */
+const BASE = 'https://ducj-creator.github.io/Shirley-AI-Writing/';
+
+/* ── State ── */
+let gal = '', total = 0, idx = 1, probeCap = 0;
+
+/* ── Open viewer ── */
+function openViewer(name, count, title) {
+  gal = name;
+  total = count;
+  probeCap = count;
+  idx = 1;
+
+  document.getElementById('viewer-title').textContent = title;
+  document.getElementById('viewer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  buildDots();
+  showImage(1, true);
+}
+
+function closeViewer() {
+  document.getElementById('viewer').classList.remove('open');
+  document.body.style.overflow = '';
+  const img = document.getElementById('viewer-img');
+  img.src = '';
+  img.style.opacity = '0';
+}
+
+/* ── Navigation ── */
+function nav(dir) {
+  let n = idx + dir;
+  if (n < 1) n = total;
+  if (n > total) n = 1;
+  showImage(n, false);
+}
+
+function goTo(n) { showImage(n, false); }
+
+/* ── Load image ── */
+function showImage(n, probe) {
+  idx = n;
+  const imgEl  = document.getElementById('viewer-img');
+  const loading = document.getElementById('viewer-loading');
+  const counter = document.getElementById('viewer-counter');
+
+  imgEl.style.opacity = '0';
+  loading.style.display = 'flex';
+  counter.textContent  = n + ' / ' + total;
+  updateDots();
+
+  const url = BASE + gal + '/' + n + '.png';
+  const tmp = new Image();
+
+  tmp.onload = () => {
+    imgEl.src = url;
+    imgEl.style.opacity = '1';
+    loading.style.display = 'none';
+    counter.textContent = n + ' / ' + total;
+
+    if (probe) probeAll(n + 1);
+  };
+
+  tmp.onerror = () => {
+    if (probe && n > 1) {
+      /* real page count discovered */
+      total = n - 1;
+      buildDots();
+      if (idx > total) { idx = total; showImage(idx, false); }
+      return;
+    }
+    loading.innerHTML = '<span style="color:rgba(255,255,255,.4);font-size:13px;">Page not available</span>';
+  };
+
+  tmp.src = url;
+}
+
+/* ── Probe remaining pages eagerly ── */
+function probeAll(from) {
+  if (from > probeCap) return;
+  const url = BASE + gal + '/' + from + '.png';
+  const tmp = new Image();
+  tmp.onload  = () => { total = Math.max(total, from); buildDots(); probeAll(from + 1); };
+  tmp.onerror = () => { total = from - 1; buildDots(); };
+  tmp.src = url;
+}
+
+/* ── Dots ── */
+function buildDots() {
+  const wrap = document.getElementById('viewer-dots');
+  wrap.innerHTML = '';
+  const max = Math.min(total, 30); /* cap dots at 30 */
+  for (let i = 1; i <= max; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === idx ? ' active' : '');
+    d.title = 'Page ' + i;
+    (function(n){ d.addEventListener('click', () => goTo(n)); })(i);
+    wrap.appendChild(d);
+  }
+}
+function updateDots() {
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.className = 'dot' + (i + 1 === idx ? ' active' : '');
+  });
+}
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('viewer').classList.contains('open')) return;
+  if (e.key === 'ArrowRight') nav(1);
+  if (e.key === 'ArrowLeft')  nav(-1);
+  if (e.key === 'Escape')     closeViewer();
+});
+
+/* ── Click backdrop ── */
+document.getElementById('viewer').addEventListener('click', e => {
+  if (e.target === document.getElementById('viewer')) closeViewer();
+});
+
+/* ── Touch swipe ── */
+let _sx = 0;
+document.getElementById('viewer').addEventListener('touchstart', e => {
+  _sx = e.touches[0].clientX;
+}, { passive: true });
+document.getElementById('viewer').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - _sx;
+  if (Math.abs(dx) > 40) nav(dx < 0 ? 1 : -1);
+}, { passive: true });
+</script>
+</body>
+</html>
