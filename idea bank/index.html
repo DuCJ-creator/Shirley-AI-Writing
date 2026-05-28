@@ -25,7 +25,7 @@
             font-family: 'Microsoft JhengHei', 'Arial', sans-serif;
             color: white;
             overflow-x: hidden;
-            padding: 20px 0;
+            padding: 10px 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -71,11 +71,11 @@
         
         .star {
             position: fixed;
-            top: 80px;
+            top: 50px;
             left: 50%;
             transform: translateX(-50%);
-            width: min(80px, 12vw);
-            height: min(80px, 12vw);
+            width: min(50px, 8vw);
+            height: min(50px, 8vw);
             background: radial-gradient(circle, #ffdd00, #ffaa00);
             clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
             box-shadow: 0 0 40px #ffd700;
@@ -95,28 +95,28 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: min(100px, 15vh);
+            padding-top: min(60px, 10vh);
             z-index: 2;
         }
         
         .center {
             position: sticky;
             top: 20px;
-            width: min(260px, 50vw);
-            height: min(260px, 50vw);
+            width: min(160px, 35vw);
+            height: min(160px, 35vw);
             background: radial-gradient(circle, #ffd700, #ff8c00);
             border-radius: 50%;
-            box-shadow: 0 0 80px #ffd700, inset 0 0 40px rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 60px #ffd700, inset 0 0 30px rgba(255, 255, 255, 0.6);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: clamp(24px, 5vw, 34px);
+            font-size: clamp(13px, 3vw, 18px);
             font-weight: bold;
-            text-shadow: 0 0 20px #000;
+            text-shadow: 0 0 10px #000;
             z-index: 20;
             flex-shrink: 0;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s;
         }
@@ -127,21 +127,20 @@
         }
         
         .center span {
-            font-size: clamp(18px, 4vw, 26px);
-            margin-top: 10px;
+            font-size: clamp(10px, 2.5vw, 14px);
+            margin-top: 5px;
         }
         
         .topics-wrapper {
             position: relative;
-            width: min(900px, 90vw);
-            height: min(900px, 90vw);
-            margin: 50px auto;
+            width: min(600px, 90vw);
+            height: min(600px, 90vw);
+            margin: 20px auto;
+            overflow: visible;
         }
         
         .topic {
             position: absolute;
-            width: min(170px, 20vw);
-            height: min(170px, 20vw);
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -149,10 +148,10 @@
             justify-content: center;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4), 0 0 40px rgba(255, 215, 0, 0.7);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 215, 0, 0.7);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             animation: float 7s ease-in-out infinite, shine 5s infinite;
-            padding: 10px;
+            padding: 4px;
             box-sizing: border-box;
             z-index: 8;
             text-align: center;
@@ -163,18 +162,19 @@
         .topic:hover {
             transform: scale(1.25) !important;
             z-index: 30;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(255, 215, 0, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.6), 0 0 45px rgba(255, 215, 0, 1);
         }
         
         .topic .zh {
-            font-size: clamp(14px, 2vw, 19px);
-            line-height: 1.3;
-            margin-bottom: 5px;
+            font-size: clamp(8px, 1.2vw, 11px);
+            line-height: 1.2;
+            margin-bottom: 1px;
         }
         
         .topic .en {
-            font-size: clamp(10px, 1.5vw, 14px);
+            font-size: clamp(6px, 0.9vw, 9px);
             opacity: 0.95;
+            line-height: 1.1;
         }
         
         /* 顏色類別 */
@@ -203,8 +203,8 @@
         }
         
         @keyframes shine {
-            0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4), 0 0 40px rgba(255, 215, 0, 0.7); }
-            50% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.6), 0 0 60px rgba(255, 215, 0, 1); }
+            0%, 100% { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 215, 0, 0.7); }
+            50% { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 215, 0, 1); }
         }
         
         .line {
@@ -362,54 +362,32 @@
         /* 響應式設計 */
         @media (max-width: 1000px) {
             .topics-wrapper {
-                width: min(700px, 85vw);
-                height: min(700px, 85vw);
+                width: min(500px, 85vw);
+                height: min(500px, 85vw);
             }
         }
         
         @media (max-width: 768px) {
-            .topics-wrapper {
-                width: min(500px, 90vw);
-                height: min(900px, 160vw);
-            }
-            
             .center {
-                width: min(220px, 60vw);
-                height: min(220px, 60vw);
+                width: min(120px, 40vw);
+                height: min(120px, 40vw);
             }
-            
-            .topic {
-                width: min(140px, 25vw);
-                height: min(140px, 25vw);
-            }
-            
             .instructions {
                 width: 90%;
-                font-size: 12px;
+                font-size: 11px;
             }
         }
         
         @media (max-width: 480px) {
-            .topics-wrapper {
-                width: min(400px, 95vw);
-                height: min(1200px, 280vw);
-            }
-            
-            .topic {
-                width: min(120px, 28vw);
-                height: min(120px, 28vw);
-            }
-            
             .sentence {
-                padding: 15px;
-                margin: 15px 0;
+                padding: 12px;
+                margin: 10px 0;
             }
-            
             .lights-toggle {
                 top: 10px;
                 right: 10px;
-                padding: 8px 12px;
-                font-size: 14px;
+                padding: 6px 10px;
+                font-size: 12px;
             }
         }
     </style>
@@ -525,21 +503,45 @@
             }
         });
 
-        // 備用資料
+        // 備用資料 (完整18個主題)
         function useFallbackData() {
             const fallbackData = [
-                {
-                    category: "教育平等 Education Equality",
-                    "model sentence": "Education equality ensures that every student has access to quality learning opportunities regardless of their background."
-                },
-                {
-                    category: "環境保護 Environmental Protection", 
-                    "model sentence": "Environmental protection requires collective efforts to preserve natural resources for future generations."
-                },
-                {
-                    category: "科技發展 Technology Development",
-                    "model sentence": "Technology development has revolutionized the way we communicate and access information in modern society."
-                }
+                { category: "教育平等 Education Equality", "model sentence": "Education equality ensures that every student has access to quality learning opportunities regardless of their background." },
+                { category: "教育平等 Education Equality", "model sentence": "Inclusive education systems empower underrepresented groups to achieve academic parity with their peers." },
+                { category: "環境保護 Environmental Protection", "model sentence": "Environmental protection requires collective efforts to preserve natural resources for future generations." },
+                { category: "環境保護 Environmental Protection", "model sentence": "Sustainable practices such as recycling and renewable energy use are essential to mitigate ecosystem degradation." },
+                { category: "科技發展 Technology Development", "model sentence": "Technology development has revolutionized the way we communicate and access information in modern society." },
+                { category: "科技發展 Technology Development", "model sentence": "Proactive investment in digital literacy empowers citizens to navigate the challenges of rapid technological change." },
+                { category: "性別平等 Gender Equality", "model sentence": "Gender equality is a fundamental right, yet discriminatory barriers remain pervasive in many workplaces worldwide." },
+                { category: "性別平等 Gender Equality", "model sentence": "Advocating for equal pay and leadership opportunities allows women to make significant inroads in every sector." },
+                { category: "文化多樣性 Cultural Diversity", "model sentence": "Cultural diversity enriches society by fostering intercultural understanding, tolerance, and solidarity among communities." },
+                { category: "文化多樣性 Cultural Diversity", "model sentence": "Preserving indigenous heritage and languages is an inherent responsibility of any inclusive and equitable governance system." },
+                { category: "心理健康 Mental Health", "model sentence": "Mental health literacy and compassionate support systems are imperative for building a resilient society." },
+                { category: "心理健康 Mental Health", "model sentence": "Holistic approaches to wellbeing empower individuals to navigate adversity with greater empathy and resilience." },
+                { category: "全球化 Globalization", "model sentence": "Globalization transcends borders, creating interconnectedness that demands both equitable governance and shared accountability." },
+                { category: "全球化 Globalization", "model sentence": "The cohesion of global citizenship depends on impartial institutions that uphold transparency and legitimacy." },
+                { category: "氣候變遷 Climate Change", "model sentence": "Climate change poses catastrophic risks to vulnerable populations, making mitigation and preparedness strategies urgent imperatives." },
+                { category: "氣候變遷 Climate Change", "model sentence": "Collective stewardship of the environment requires profound vigilance and a commitment to sustainable ecosystems." },
+                { category: "社會正義 Social Justice", "model sentence": "Social justice advocates for equitable treatment and dignity for all, challenging arbitrary systems of discrimination." },
+                { category: "社會正義 Social Justice", "model sentence": "Empowerment through inclusive policies facilitates reconciliation and strengthens the resilience of marginalized communities." },
+                { category: "媒體識讀 Media Literacy", "model sentence": "Media literacy enables citizens to critically assess information sources, combating the prevalent spread of misinformation." },
+                { category: "媒體識讀 Media Literacy", "model sentence": "An informed and vigilant public is essential to maintaining the integrity and accountability of democratic institutions." },
+                { category: "志工服務 Volunteer Service", "model sentence": "Volunteer service cultivates altruism and empathy, nurturing a lifelong commitment to community stewardship." },
+                { category: "志工服務 Volunteer Service", "model sentence": "Through mentorship and proactive engagement, volunteers facilitate the inclusivity and cohesion of diverse communities." },
+                { category: "飲食文化 Food Culture", "model sentence": "Food culture is a profound expression of heritage and identity, transmitting values across generations." },
+                { category: "飲食文化 Food Culture", "model sentence": "Sustainable food systems that prioritize biodiversity and conservation are fundamental to human and ecological resilience." },
+                { category: "運動精神 Sportsmanship", "model sentence": "Sportsmanship embodies integrity, compassion, and solidarity, transcending competition to unite people across cultures." },
+                { category: "運動精神 Sportsmanship", "model sentence": "Athletes who model equitable and inclusive conduct empower the next generation with enduring values of dignity." },
+                { category: "人工智慧 Artificial Intelligence", "model sentence": "Artificial intelligence development demands ethical governance frameworks to ensure accountability and transparency in its applications." },
+                { category: "人工智慧 Artificial Intelligence", "model sentence": "Immersive AI tools facilitate personalized learning trajectories, empowering students with curiosity-driven, lifelong education." },
+                { category: "閱讀素養 Reading Literacy", "model sentence": "Reading literacy is the foundation of lifelong learning, nurturing curiosity and the capacity to assess complex ideas." },
+                { category: "閱讀素養 Reading Literacy", "model sentence": "Inclusive access to diverse texts empowers underrepresented voices and strengthens intercultural solidarity in education." },
+                { category: "都市發展 Urban Development", "model sentence": "Sustainable urban development requires holistic planning that balances resilience, inclusivity, and environmental conservation." },
+                { category: "都市發展 Urban Development", "model sentence": "Equitable urban governance ensures that all citizens, regardless of background, have access to essential resources and dignity." },
+                { category: "原住民文化 Indigenous Culture", "model sentence": "Preserving indigenous culture and heritage is a fundamental act of reconciliation and respect for human diversity." },
+                { category: "原住民文化 Indigenous Culture", "model sentence": "Indigenous stewardship of land and ecosystems embodies a profound, holistic understanding of sustainable conservation." },
+                { category: "道德教育 Moral Education", "model sentence": "Moral education nurtures integrity, compassion, and altruism, empowering students to navigate ethical dilemmas with resilience." },
+                { category: "道德教育 Moral Education", "model sentence": "Cultivating ethical citizenship through education facilitates a more equitable and cohesive society for future generations." }
             ];
             
             data = fallbackData;
@@ -550,20 +552,36 @@
         // 渲染主題圓圈
         function renderTopics(topics) {
             const wrapper = document.getElementById('topicsWrapper');
-            const centerX = wrapper.offsetWidth / 2;
-            const centerY = wrapper.offsetHeight / 2;
-            const baseRadius = Math.min(wrapper.offsetWidth, wrapper.offsetHeight) * 0.35;
+
+            // Use viewport-relative sizing so all bulbs always fit
+            const vw = Math.min(window.innerWidth, 700);
+            const bulbR = Math.min(36, vw * 0.052);   // half of bulb width (~72px max diameter)
+            const innerRadius = Math.min(130, vw * 0.19);
+            const outerRadius = Math.min(215, vw * 0.30);
+
+            // Split topics into two rings
+            const innerCount = Math.min(9, Math.ceil(topics.length / 2));
+            const outerCount = topics.length - innerCount;
+
+            // Size wrapper to fit outerRadius + bulb + padding
+            const needed = (outerRadius + bulbR + 20) * 2;
+            wrapper.style.width = needed + 'px';
+            wrapper.style.height = needed + 'px';
+            wrapper.style.maxWidth = '90vw';
 
             topics.forEach((n, i) => {
-                const angle = (i / topics.length) * 2 * Math.PI - Math.PI / 2;
-                const radius = i < 9 ? baseRadius * 0.75 : baseRadius * 1.1;
-                const x = centerX + radius * Math.cos(angle);
-                const y = centerY + radius * Math.sin(angle);
+                const isInner = i < innerCount;
+                const ringTotal = isInner ? innerCount : outerCount;
+                const ringIndex = isInner ? i : i - innerCount;
+                const radius = isInner ? innerRadius : outerRadius;
+                const angle = (ringIndex / ringTotal) * 2 * Math.PI - Math.PI / 2;
 
                 const div = document.createElement('div');
-                div.className = `topic ${colors[i]}`;
-                div.style.left = `calc(50% + ${radius * Math.cos(angle)}px - 85px)`;
-                div.style.top = `calc(50% + ${radius * Math.sin(angle)}px - 85px)`;
+                div.className = `topic ${colors[i % colors.length]}`;
+                div.style.left = `calc(50% + ${radius * Math.cos(angle)}px - ${bulbR}px)`;
+                div.style.top = `calc(50% + ${radius * Math.sin(angle)}px - ${bulbR}px)`;
+                div.style.width = (bulbR * 2) + 'px';
+                div.style.height = (bulbR * 2) + 'px';
                 div.style.animationDelay = i * 0.2 + 's';
                 const zh = n.split(' ')[0];
                 const en = n.split(' ').slice(1).join(' ');
@@ -741,6 +759,18 @@
         // 確保頁面居中
         window.addEventListener('load', () => {
             document.body.style.justifyContent = 'flex-start';
+        });
+
+        // 視窗縮放時重新渲染
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const wrapper = document.getElementById('topicsWrapper');
+                wrapper.innerHTML = '';
+                const topics = [...new Set(data.map(x => x.category.trim()))];
+                if (topics.length) renderTopics(topics);
+            }, 200);
         });
     </script>
 </body>
