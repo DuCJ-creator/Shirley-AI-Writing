@@ -430,18 +430,18 @@
 
   /* ---------- Annotate feature ---------- */
   #annotateCanvas {
-    position: absolute; top: 0; left: 0;
-    width: 100%;
+    position: fixed; top: 0; left: 0;
     z-index: 2147483640;
     pointer-events: none;
   }
   #annotateCanvas.drawing { pointer-events: auto; touch-action: auto; cursor: crosshair; }
 
   #annotateFab {
-    position: absolute !important;
-    right: 20px;
-    top: 150px;
+    position: fixed !important;
+    right: 16px;
+    top: 50%;
     bottom: auto;
+    transform: translateY(-50%);
     z-index: 2147483647;
     display: flex;
     align-items: center;
@@ -459,9 +459,11 @@
   }
 
   #annotateToolbar {
-    position: absolute !important;
-    right: 20px;
-    top: 212px;
+    position: fixed !important;
+    right: 82px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
     z-index: 2147483647;
     width: 216px;
     background: var(--card);
@@ -1139,6 +1141,8 @@
   let currentTool = null; // {type:'pen'|'highlighter'|'eraser', color, width, alpha, composite}
   const undoStack = [];
   let strokeSnapshot = null;
+  let drawing = false;
+  let activeStroke = null;
   const allToolButtons = [];
 
   penColors.forEach((p, i)=>{
@@ -1195,7 +1199,7 @@
   function clearAnnotationMarks(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     undoStack.length = 0;
-    strokeSnapshot = null;
+    activeStroke = null;
     drawing = false;
     refreshUndoButton();
   }
@@ -1230,58 +1234,75 @@
   });
 
   function sizeCanvas(){
-    const oldCanvas = document.createElement('canvas');
-    oldCanvas.width = canvas.width;
-    oldCanvas.height = canvas.height;
-    if (canvas.width && canvas.height) oldCanvas.getContext('2d').drawImage(canvas, 0, 0);
-    canvas.width = Math.max(document.documentElement.scrollWidth, window.innerWidth);
-    canvas.height = Math.max(document.documentElement.scrollHeight, window.innerHeight);
-    if (oldCanvas.width && oldCanvas.height) ctx.drawImage(oldCanvas, 0, 0);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    redrawStrokes();
   }
   sizeCanvas();
   window.addEventListener('resize', sizeCanvas);
   window.addEventListener('load', sizeCanvas);
-  if (window.ResizeObserver) new ResizeObserver(sizeCanvas).observe(document.body);
+  window.addEventListener('scroll', redrawStrokes, {passive:true});
 
   function refreshUndoButton(){
     undoBtn.disabled = undoStack.length === 0;
   }
   refreshUndoButton();
 
-  let drawing = false;
   function getPos(e){
     return { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY };
   }
-  canvas.addEventListener('pointerdown', (e)=>{
-    if (!currentTool) return;
-    strokeSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    drawing = true;
-    const {x,y} = getPos(e);
+  function drawStroke(stroke){
+    if (!stroke || !stroke.points.length) return;
     ctx.beginPath();
-    ctx.moveTo(x,y);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = currentTool.color;
-    ctx.lineWidth = currentTool.width;
-    ctx.globalAlpha = currentTool.alpha;
-    ctx.globalCompositeOperation = currentTool.composite;
+    ctx.strokeStyle = stroke.color;
+    ctx.lineWidth = stroke.width;
+    ctx.globalAlpha = stroke.alpha;
+    ctx.globalCompositeOperation = stroke.composite;
+    const first = stroke.points[0];
+    ctx.moveTo(first.x - window.scrollX, first.y - window.scrollY);
+    for (let i=1; i<stroke.points.length; i++) {
+      const point = stroke.points[i];
+      ctx.lineTo(point.x - window.scrollX, point.y - window.scrollY);
+    }
+    if (stroke.points.length === 1) {
+      ctx.lineTo(first.x - window.scrollX + 0.01, first.y - window.scrollY + 0.01);
+    }
+    ctx.stroke();
+  }
+  function redrawStrokes(){
+    if (!canvas.width || !canvas.height) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    undoStack.forEach(drawStroke);
+    drawStroke(activeStroke);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  canvas.addEventListener('pointerdown', (e)=>{
+    if (!currentTool) return;
+    drawing = true;
+    const point = getPos(e);
+    activeStroke = {...currentTool, points:[point]};
+    canvas.setPointerCapture?.(e.pointerId);
+    redrawStrokes();
   });
   canvas.addEventListener('pointermove', (e)=>{
     if (!drawing || !currentTool) return;
-    const {x,y} = getPos(e);
-    ctx.lineTo(x,y);
-    ctx.stroke();
+    activeStroke.points.push(getPos(e));
+    redrawStrokes();
   });
   function stopDraw(){
-    if (drawing && strokeSnapshot) {
-      undoStack.push(strokeSnapshot);
+    if (drawing && activeStroke) {
+      undoStack.push(activeStroke);
       if (undoStack.length > 30) undoStack.shift();
       refreshUndoButton();
     }
-    strokeSnapshot = null;
+    activeStroke = null;
     drawing = false;
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
+    redrawStrokes();
   }
   canvas.addEventListener('pointerup', stopDraw);
   canvas.addEventListener('pointerleave', stopDraw);
@@ -1293,7 +1314,8 @@
 
   undoBtn.addEventListener('click', ()=>{
     if (!undoStack.length) return;
-    ctx.putImageData(undoStack.pop(), 0, 0);
+    undoStack.pop();
+    redrawStrokes();
     refreshUndoButton();
   });
 
