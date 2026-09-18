@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>備戰英文滿級・翻譯寫作練習本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F3EFE3;
+    --paper-line: #E6DFC8;
+    --card: #FCFAF3;
+    --card-line: #DFD5B8;
+    --ink: #262A3B;
+    --ink-soft: #5B5F73;
+    --ink-faint: #98957F;
+    --red: #6E2A34;
+    --red-deep: #591F27;
+    --red-soft: #F1E1DF;
+    --blue: #2B3E63;
+    --blue-soft: #E4E9F1;
+    --green: #3F6B4E;
+    --green-soft: #E3EFE7;
+    --amber: #A9822C;
+    --amber-soft: #F1E6C8;
+    --focus: #2B3E63;
+    --shadow: rgba(38,42,59,0.10);
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --paper: #14161D;
+      --paper-line: #1E212B;
+      --card: #1C1F29;
+      --card-line: #2E3244;
+      --ink: #ECE9DE;
+      --ink-soft: #ACA99C;
+      --ink-faint: #85816D;
+      --red: #D98F79;
+      --red-deep: #E7AC96;
+      --red-soft: #34211D;
+      --blue: #9AB3DD;
+      --blue-soft: #202A3C;
+      --green: #8FC7A3;
+      --green-soft: #1C2B22;
+      --amber: #D9BB6E;
+      --amber-soft: #362C17;
+      --focus: #9AB3DD;
+      --shadow: rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14161D;
+    --paper-line: #1E212B;
+    --card: #1C1F29;
+    --card-line: #2E3244;
+    --ink: #ECE9DE;
+    --ink-soft: #ACA99C;
+    --ink-faint: #85816D;
+    --red: #D98F79;
+    --red-deep: #E7AC96;
+    --red-soft: #34211D;
+    --blue: #9AB3DD;
+    --blue-soft: #202A3C;
+    --green: #8FC7A3;
+    --green-soft: #1C2B22;
+    --amber: #D9BB6E;
+    --amber-soft: #362C17;
+    --focus: #9AB3DD;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 37px,
+        var(--paper-line) 37px, var(--paper-line) 38px
+      ),
+      var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  h1, h2, h3, .serif { font-family: 'Noto Serif TC', serif; }
+  a { color: var(--blue); }
+
+  .bi-en {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8em;
+    font-style: italic;
+    color: var(--ink-faint);
+    margin-top: 3px;
+  }
+
+  /* ---------- Header ---------- */
+  header.top {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--paper);
+    border-bottom: 1px solid var(--card-line);
+    backdrop-filter: blur(6px);
+  }
+  .top-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 18px 20px 14px;
+  }
+  .top-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .brand-block { position: relative; padding-bottom: 8px; }
+  .brand-block::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 42px; height: 2px;
+    background: var(--amber);
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .brand .mark {
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    font-size: 1.5rem;
+    color: var(--red);
+    letter-spacing: 0.02em;
+  }
+  .brand-sub { font-size: 0.82rem; color: var(--ink-soft); margin-top: 2px; }
+  .brand-sub .bi-en { margin-top: 1px; }
+
+  .reset-btn {
+    border: 1px solid var(--card-line);
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 0.76rem;
+    padding: 6px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .reset-btn .bi-en { font-size: 0.85em; margin-top: 0; }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .progress-wrap { margin-top: 14px; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  .progress-label .bi-en { display: inline; margin: 0 0 0 5px; }
+  .progress-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--card-line);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), var(--red));
+    width: 0%;
+    transition: width 0.4s ease;
+    border-radius: 3px;
+  }
+
+  nav.tabs {
+    display: flex;
+    gap: 4px;
+    max-width: 800px;
+    margin: 12px auto 0;
+    padding: 0 20px;
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--ink-faint);
+    padding: 9px 4px 10px;
+    margin-right: 24px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-align: left;
+  }
+  nav.tabs button .en {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.66rem;
+    font-style: italic;
+    color: var(--ink-faint);
+    margin-top: 1px;
+  }
+  nav.tabs button.active { color: var(--ink); border-bottom-color: var(--amber); }
+  nav.tabs button.active .en { color: var(--amber); }
+
+  /* ---------- Main ---------- */
+  main { max-width: 800px; margin: 0 auto; padding: 28px 20px 90px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .intro { font-size: 0.92rem; color: var(--ink-soft); margin: 0 0 4px; max-width: 62ch; }
+  .intro-en { font-size: 0.8rem; color: var(--ink-faint); font-style: italic; margin: 0 0 22px; max-width: 62ch; }
+
+  .stage-title, .section-title {
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--ink);
+    margin: 30px 0 3px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    position: relative;
+    padding-bottom: 8px;
+  }
+  .stage-title::after, .section-title::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 30px; height: 2px;
+    background: var(--amber);
+  }
+  .stage-title .en, .section-title .en {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.72rem;
+    font-style: italic;
+    color: var(--ink-faint);
+  }
+  .stage-desc { font-size: 0.83rem; color: var(--ink-soft); margin: 12px 0 2px; }
+  .stage-desc-en { font-size: 0.78rem; color: var(--ink-faint); font-style: italic; margin: 0 0 14px; }
+
+  /* sentence card */
+  .sentence-card {
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 10px;
+    padding: 14px 16px 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 2px var(--shadow);
+    transition: border-color 0.25s ease;
+  }
+  .sentence-card.done { border-color: var(--green); }
+  .sentence-zh { display: flex; gap: 8px; font-size: 0.98rem; color: var(--ink); margin-bottom: 9px; }
+  .sentence-zh .num {
+    flex: none;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    color: var(--red);
+    min-width: 1.4em;
+  }
+  textarea.answer {
+    width: 100%;
+    resize: vertical;
+    min-height: 46px;
+    border: 1px solid var(--card-line);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    padding: 8px 10px;
+    line-height: 1.5;
+  }
+  textarea.answer:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .item-foot { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 5px; font-size: 0.72rem; color: var(--ink-faint); }
+  .item-foot .check { color: var(--green); font-weight: 600; display: none; }
+  .sentence-card.done .item-foot .check { display: inline; }
+
+  /* topic accordion */
+  .topic { border: 1px solid var(--card-line); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: var(--card); }
+  .topic-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: space-between;
+    background: transparent;
+    border: none;
+    padding: 13px 16px;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: var(--ink);
+    transition: background 0.2s ease;
+  }
+  .topic-head:hover { background: var(--amber-soft); }
+  .topic-head .ttl { display: flex; align-items: baseline; gap: 9px; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 1rem; }
+  .topic-head .ttl .no { color: var(--red); font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.85rem; }
+  .topic-head .ttl .en { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.72rem; color: var(--ink-faint); }
+  .topic-head .meta { flex: none; display: flex; align-items: center; gap: 10px; font-size: 0.74rem; color: var(--ink-faint); }
+  .topic-head .chevron { transition: transform 0.25s ease; color: var(--ink-faint); }
+  .topic.open .topic-head .chevron { transform: rotate(90deg); color: var(--amber); }
+  .topic-body { display: none; padding: 2px 16px 16px; border-top: 1px solid var(--card-line); }
+  .topic.open .topic-body { display: block; }
+
+  .subsection { margin-top: 16px; }
+  .subsection:first-child { margin-top: 14px; }
+  .subsection-name { font-size: 0.85rem; font-weight: 600; color: var(--blue); margin-bottom: 8px; }
+  .group-name { font-size: 0.72rem; color: var(--ink-faint); margin: 10px 0 6px; letter-spacing: 0.02em; }
+  .group-name .en { font-style: italic; margin-left: 4px; }
+
+  /* writing tab */
+  .exam-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 6px; }
+  .exam-table th, .exam-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--card-line); vertical-align: top; }
+  .exam-table th { color: var(--ink-faint); font-weight: 600; font-size: 0.72rem; }
+  .exam-table th .en { display: block; font-style: italic; font-weight: 400; }
+  .exam-table td.yr { color: var(--red); font-weight: 700; white-space: nowrap; }
+
+  .theme-card { background: var(--card); border: 1px solid var(--card-line); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+  .theme-card .yrs { font-size: 0.72rem; color: var(--red); font-weight: 700; margin-bottom: 4px; }
+  .theme-card .name { font-weight: 700; margin-bottom: 6px; font-family: 'Noto Serif TC', serif; }
+  .theme-card p { margin: 3px 0; font-size: 0.85rem; color: var(--ink-soft); }
+  .theme-card p.en { font-style: italic; color: var(--ink-faint); font-size: 0.8rem; }
+  .theme-card .tag { display: block; font-size: 0.76rem; color: var(--blue); background: var(--blue-soft); padding: 5px 9px; border-radius: 5px; margin-top: 8px; }
+  .theme-card .tag .en { display: block; font-style: italic; font-size: 0.85em; color: var(--ink-faint); margin-top: 1px; }
+
+  .structure-flow { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+  .structure-flow .step { flex: 1 1 220px; background: var(--card); border: 1px solid var(--card-line); border-top: 2px solid var(--amber); border-radius: 10px; padding: 12px 14px; }
+  .structure-flow .step .tag { font-size: 0.72rem; color: var(--red); font-weight: 700; margin-bottom: 4px; }
+  .structure-flow .step p { margin: 3px 0; font-size: 0.85rem; color: var(--ink-soft); }
+  .structure-flow .step p.en { font-style: italic; color: var(--ink-faint); font-size: 0.8rem; }
+
+  .vocab-chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+  .vocab-chip { background: var(--amber-soft); color: var(--amber); border-radius: 7px; padding: 6px 10px; font-size: 0.82rem; }
+
+  .pattern-card { background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--blue); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 0.85rem; }
+  .pattern-card .lbl { color: var(--blue); font-weight: 600; font-size: 0.74rem; margin-bottom: 3px; }
+  .pattern-card .en { color: var(--ink); }
+  .pattern-card .zh { color: var(--ink-soft); margin-top: 2px; }
+
+  .prompt-card { background: var(--card); border: 1px solid var(--card-line); border-top: 3px solid var(--red); border-radius: 12px; padding: 18px 18px 16px; margin-bottom: 20px; }
+  .prompt-card .ptitle { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 1.02rem; margin: 0 0 10px; }
+  .para-block { margin-top: 14px; }
+  .para-block .plabel { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.82rem; margin-bottom: 5px; flex-wrap: wrap; }
+  .para-block .plabel .name { font-weight: 600; color: var(--ink); }
+  .para-block .plabel .task { display: block; font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; font-weight: 400; }
+  .para-block .plabel .task .en { display: block; font-style: italic; color: var(--ink-faint); margin-top: 1px; }
+  .para-block textarea.essay {
+    width: 100%; min-height: 100px; resize: vertical;
+    border: 1px solid var(--card-line); border-radius: 8px;
+    background: transparent; color: var(--ink);
+    font-family: 'Inter', sans-serif; font-size: 0.92rem;
+    padding: 10px 12px; line-height: 1.6;
+  }
+  .para-block textarea.essay:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .wc-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; font-size: 0.74rem; }
+  .wc-badge { padding: 2px 9px; border-radius: 5px; background: var(--card-line); color: var(--ink-faint); }
+  .wc-badge.ok { background: var(--green-soft); color: var(--green); }
+  .wc-badge.low, .wc-badge.high { background: var(--red-soft); color: var(--red); }
+
+  footer.note { max-width: 800px; margin: 30px auto 0; padding: 0 20px; font-size: 0.76rem; color: var(--ink-faint); }
+  footer.note .en { display: block; font-style: italic; margin-top: 4px; }
+
+  /* ---------- Annotate feature ---------- */
+  #annotateCanvas {
+    position: fixed; top: 0; left: 0;
+    z-index: 900;
+    pointer-events: none;
+  }
+  #annotateCanvas.drawing { pointer-events: auto; touch-action: none; cursor: crosshair; }
+
+  #annotateFab {
+    position: fixed;
+    right: 18px; bottom: 18px;
+    z-index: 950;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(145deg, var(--amber), var(--red));
+    color: #fff;
+    font-size: 1.3rem;
+    box-shadow: 0 3px 10px var(--shadow);
+    cursor: pointer;
+  }
+
+  #annotateToolbar {
+    position: fixed;
+    right: 18px; bottom: 80px;
+    z-index: 950;
+    width: 216px;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-top: 3px solid var(--amber);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 6px 20px var(--shadow);
+    display: none;
+  }
+  #annotateToolbar.open { display: block; }
+  #annotateToolbar .at-title { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 0.92rem; margin-bottom: 2px; }
+  #annotateToolbar .at-title .en { display: block; font-family: 'Inter', sans-serif; font-style: italic; font-weight: 400; font-size: 0.7rem; color: var(--ink-faint); margin-bottom: 10px; }
+  .at-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .at-swatch {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--card-line);
+    cursor: pointer; padding: 0;
+  }
+  .at-swatch.active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--amber); }
+  .at-tool {
+    flex: 1 1 auto;
+    border: 1px solid var(--card-line);
+    background: transparent;
+    border-radius: 7px;
+    padding: 6px 8px;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.3;
+  }
+  .at-tool.active { background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
+  .at-tool .en { display: block; font-style: italic; font-size: 0.85em; }
+  .at-actions { display: flex; gap: 8px; }
+  .at-actions button {
+    flex: 1 1 auto;
+    border: 1px solid var(--card-line);
+    background: transparent;
+    border-radius: 7px;
+    padding: 7px 6px;
+    font-size: 0.74rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .at-actions .en { display: block; font-style: italic; font-size: 0.82em; }
+  .at-actions .save-btn { background: var(--red); color: #fff; border-color: var(--red); }
+  .at-actions .save-btn .en { color: #fff; opacity: 0.85; }
+  .at-actions button:disabled { opacity: 0.55; cursor: default; }
+
+  @media (max-width: 520px) {
+    .brand .mark { font-size: 1.25rem; }
+    .structure-flow { flex-direction: column; }
+    #annotateToolbar { width: calc(100vw - 36px); right: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="top-row">
+      <div class="brand-block">
+        <div class="brand"><span class="mark">備戰英文滿級</span></div>
+        <div class="brand-sub">
+          翻譯・寫作練習本
+          <div class="bi-en">Translation &amp; Writing Practice Book</div>
+        </div>
+      </div>
+      <button class="reset-btn" id="resetBtn" type="button">清除全部作答紀錄<div class="bi-en">Clear All Answers</div></button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>翻譯練習進度<span class="bi-en">Translation Progress</span></span>
+        <span id="progressText">0 / 0</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="active" data-panel="panel-foundation">翻譯基礎<span class="en">Foundation</span></button>
+    <button data-panel="panel-structure">句型主題練習<span class="en">Grammar Topics</span></button>
+    <button data-panel="panel-writing">寫作篇<span class="en">Writing</span></button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===================== PANEL 1 ===================== -->
+  <section class="panel active" id="panel-foundation">
+    <p class="intro">翻譯基礎：找主幹。每個句子先找出中文的主詞、動詞與受詞，再動手翻成英文。作答會自動儲存在這個瀏覽器裡，離開頁面也不會消失。</p>
+    <p class="intro-en">Translation Basics: Find the Backbone. For each sentence, first identify the subject, verb, and object in Chinese, then translate it into English. Your answers are saved automatically in this browser.</p>
+    <div id="foundationRoot"></div>
+  </section>
+
+  <!-- ===================== PANEL 2 ===================== -->
+  <section class="panel" id="panel-structure">
+    <p class="intro">共 14 個文法主題，每個主題底下有兩組（題組一 / 題組二）中文句子，練習把兩句話用對應的句構寫成通順的英文。點選主題展開練習。</p>
+    <p class="intro-en">There are 14 grammar topics, each with two sentence sets (Set 1 / Set 2). Combine the two Chinese sentences into fluent English using the target structure. Tap a topic to expand it.</p>
+    <div id="structureRoot"></div>
+  </section>
+
+  <!-- ===================== PANEL 3 ===================== -->
+  <section class="panel" id="panel-writing">
+    <p class="intro">會考英文寫作採兩段式作文（120–150 字），第一段描述情景，第二段分析成因並反思。以下先複習歷屆考題與得分重點，再進行兩篇模擬練習。</p>
+    <p class="intro-en">GSAT English writing uses a two-paragraph format (120–150 words): paragraph one describes the scenario, paragraph two analyzes its causes and reflects on it. Review past topics and key points below, then try two practice prompts.</p>
+
+    <h2 class="section-title">歷屆作文題目總覽 <span class="en">Past Exam Topics (108–115)</span></h2>
+    <table class="exam-table" id="examTable"></table>
+
+    <h2 class="section-title">寫作主題與 108 課綱關聯 <span class="en">Themes &amp; Curriculum Connections</span></h2>
+    <div id="themeRoot"></div>
+
+    <h2 class="section-title">兩段式寫作結構 <span class="en">Two-Paragraph Structure, 120–150 words</span></h2>
+    <div class="structure-flow">
+      <div class="step">
+        <div class="tag">第一段・約 60–70 字</div>
+        <p><strong>現象或情景描述</strong></p>
+        <p>描述題目給定的圖片、選擇或現象。</p>
+        <p class="en">Describe the provided images, choices, or general trend.</p>
+      </div>
+      <div class="step">
+        <div class="tag">第二段・約 70–80 字</div>
+        <p><strong>成因分析與個人反思</strong></p>
+        <p>分析現象背後的原因，結合個人經驗並提出解決方案或體悟。</p>
+        <p class="en">Analyze the underlying causes, share personal experience, and offer a solution or insight.</p>
+      </div>
+    </div>
+
+    <h2 class="section-title">高分重點詞彙 <span class="en">Key Vocabulary</span></h2>
+    <div class="vocab-chip-wrap" id="vocabRoot"></div>
+
+    <h2 class="section-title">實用起承轉合句型 <span class="en">Useful Transitional Patterns</span></h2>
+    <div id="patternRoot"></div>
+
+    <h2 class="section-title">模擬寫作練習 <span class="en">Practice Writing Prompts</span></h2>
+    <div id="promptRoot"></div>
+  </section>
+
+</main>
+
+<footer class="note">
+  內容整理自 Shirley Du 老師講義《備戰英文滿級／翻譯／寫作講義》。所有作答僅儲存在你目前使用的瀏覽器中，供自主練習使用，並非正式評分工具。
+  <span class="en">Compiled from Teacher Shirley Du's handout, "Crack GSAT Translation/Writing." All answers are saved only in your current browser for self-practice and are not an official scoring tool.</span>
+</footer>
+
+<canvas id="annotateCanvas"></canvas>
+<button id="annotateFab" type="button" title="標註工具 Annotate Tools">✎</button>
+<div id="annotateToolbar">
+  <div class="at-title">標註工具<span class="en">Annotate Tools</span></div>
+  <div class="at-row" id="penRow"></div>
+  <div class="at-row">
+    <button class="at-tool" id="toolHighlight" type="button">螢光筆<span class="en">Highlighter</span></button>
+    <button class="at-tool" id="toolEraser" type="button">橡皮擦<span class="en">Eraser</span></button>
+  </div>
+  <div class="at-row">
+    <button class="at-tool active" id="toolBrowse" type="button">瀏覽模式<span class="en">Browse Mode</span></button>
+  </div>
+  <div class="at-actions">
+    <button id="btnClearMarks" type="button">清除標註<span class="en">Clear</span></button>
+    <button class="save-btn" id="btnSaveShot" type="button">儲存截圖<span class="en">Save Image</span></button>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ---------------- storage helpers ---------------- */
+  const STORE_PREFIX = "gsat-practice:";
+  function saveVal(id, val){ try { localStorage.setItem(STORE_PREFIX+id, val); } catch(e){} }
+  function loadVal(id){ try { return localStorage.getItem(STORE_PREFIX+id) || ""; } catch(e){ return ""; } }
+  function clearAll(){
+    try {
+      const keys = [];
+      for (let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if (k && k.indexOf(STORE_PREFIX)===0) keys.push(k);
+      }
+      keys.forEach(k=>localStorage.removeItem(k));
+    } catch(e){}
+  }
+
+  /* ---------------- tabs ---------------- */
+  const tabButtons = document.querySelectorAll('nav.tabs button');
+  tabButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById(btn.dataset.panel).classList.add('active');
+      window.scrollTo({top:0, behavior:'instant'});
+    });
+  });
+
+  /* ---------------- progress tracking ---------------- */
+  let totalItems = 0;
+  const doneSet = new Set();
+  function updateProgress(){
+    document.getElementById('progressText').textContent = doneSet.size + ' / ' + totalItems;
+    const pct = totalItems ? Math.round((doneSet.size/totalItems)*100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+  }
+
+  function makeSentenceCard(id, num, zh){
+    totalItems++;
+    const card = document.createElement('div');
+    card.className = 'sentence-card';
+    const zhRow = document.createElement('div');
+    zhRow.className = 'sentence-zh';
+    zhRow.innerHTML = '<span class="num">'+num+'.</span><span>'+zh+'</span>';
+    const ta = document.createElement('textarea');
+    ta.className = 'answer';
+    ta.placeholder = '請輸入英文翻譯... / Type your English translation...';
+    ta.value = loadVal(id);
+    if (ta.value.trim()){ card.classList.add('done'); doneSet.add(id); }
+    ta.addEventListener('input', ()=>{
+      saveVal(id, ta.value);
+      if (ta.value.trim()){ card.classList.add('done'); doneSet.add(id); }
+      else { card.classList.remove('done'); doneSet.delete(id); }
+      updateProgress();
+    });
+    const foot = document.createElement('div');
+    foot.className = 'item-foot';
+    foot.innerHTML = '<span class="check">已作答 Done ✓</span>';
+    card.appendChild(zhRow);
+    card.appendChild(ta);
+    card.appendChild(foot);
+    return card;
+  }
+
+  /* ===================== FOUNDATION DATA ===================== */
+  const foundation = [
+    {stage:'第一階段', en:'Stage 1', desc:'簡單句：單一主幹，先找出主詞與動詞。', descEn:'Simple Sentences: a single core clause — first identify the subject and verb.', items:[
+      '鳥兒在空中快樂地飛翔。','那個小女孩笑得很開心。','我的哥哥每天早上都會喝一杯熱咖啡。',
+      '那個穿紅衣服的男人是一位經驗豐富的醫生。','我們昨天在圖書館裡遇到了一位老朋友。',
+      '善良的老師給了哭泣的孩子一顆糖果。','這項意外的消息讓全班同學感到非常驚訝。',
+      '父母選了他作為這次家庭旅行的負責人。'
+    ]},
+    {stage:'第二階段', en:'Stage 2', desc:'複合句：兩個獨立子句以連接詞連接。', descEn:'Compound Sentences: two independent clauses joined by a conjunction.', items:[
+      '太陽升起了，而且鳥兒開始在樹上唱歌。','他雖然讀了很多書，但依然無法回答這個簡單的問題。',
+      '你可以現在完成這份報告，或者明天早上再交給我。','天氣非常寒冷，因此我們決定留在室內看電影。'
+    ]},
+    {stage:'第三階段', en:'Stage 3', desc:'複雜句：含有子句（名詞／形容詞／副詞子句）。', descEn:'Complex Sentences: containing a noun, adjective, or adverb clause.', items:[
+      '當警車到達現場時，那個偷竊的賊已經逃跑了。','我不相信那個總是說謊的男孩所說的話。',
+      '如果你今晚有空的話，我們可以在那家新開的餐廳一起吃晚餐。','那位剛才在台上發表演講的教授是我的叔叔。',
+      '大家都知道地球繞著太陽公轉這個事實。','儘管外面下著豪雨，孩子們依然在公園裡快樂地踢足球。',
+      '那個被大家誤會的年輕人最後證明了自己的清白。','為了能夠順利通過這場高難度的入學考試，他每天晚上都複習功課到深夜。'
+    ]}
+  ];
+
+  const foundationRoot = document.getElementById('foundationRoot');
+  let fCounter = 0;
+  foundation.forEach(stage=>{
+    const h = document.createElement('div');
+    h.className = 'stage-title';
+    h.innerHTML = stage.stage + ' <span class="en">'+stage.en+'</span>';
+    const d = document.createElement('p');
+    d.className = 'stage-desc';
+    d.textContent = stage.desc;
+    const de = document.createElement('p');
+    de.className = 'stage-desc-en';
+    de.textContent = stage.descEn;
+    foundationRoot.appendChild(h);
+    foundationRoot.appendChild(d);
+    foundationRoot.appendChild(de);
+    stage.items.forEach(zh=>{
+      fCounter++;
+      const id = 'f-'+fCounter;
+      foundationRoot.appendChild(makeSentenceCard(id, fCounter, zh));
+    });
+  });
+
+  /* ===================== STRUCTURE TOPICS DATA ===================== */
+  const topics = [
+    {no:1, title:'句子結構', en:'Sentence Structures', subs:[
+      {name:'Simple Sentences 簡單句 (S+Vi)', groups:[
+        ['突然間，一陣強風吹過。','樹上的葉子紛紛落了下來。'],
+        ['太陽緩緩升起。','整個村莊在晨光中醒來。']
+      ]},
+      {name:'Simple Sentences 簡單句 (S+Vl+C)', groups:[
+        ['這座老舊的木橋看起來不再安全。','村民們紛紛要求政府儘快維修。'],
+        ['經過多年的努力，他終於成為了一名醫生。','他的父母為他的成就感到非常驕傲。']
+      ]},
+      {name:'Simple Sentences 簡單句 (S+Vt+O)', groups:[
+        ['政府正在實施一項新政策。','該政策旨在減少塑膠垃圾的產生。'],
+        ['許多現代人面臨著巨大的工作壓力。','他們需要尋找健康的管道來宣洩情緒。']
+      ]},
+      {name:'Simple Sentences 簡單句 (S+Vt+iO+dO)', groups:[
+        ['這項新政策將會帶給年輕世代更多就業機會。','專家預期經濟在未來幾年內會復甦。'],
+        ['這位慈善家捐給了孤兒院一大筆錢。','他的善舉激勵了社會上的許多人。']
+      ]},
+      {name:'Simple Sentences 簡單句 (S+Vt+O+OC)', groups:[
+        ['持續的努力使他夢想成真。','他向大眾證明了凡事皆有可能。'],
+        ['同學都認為他是大家學習的榜樣。','他總是熱心地幫助班上課業落後的同學。']
+      ]},
+      {name:'Compound Sentences 複合句', groups:[
+        ['許多學生渴望出國留學，但他們往往缺乏足夠的資金。','因此，申請政府獎學金變得至關重要。'],
+        ['我們必須立即採取行動保護環境，否則地球將面臨嚴重的危機。','每一個人都不能在這場全球災難中置身事外。']
+      ]},
+      {name:'Complex Sentences 複雜句：名詞子句', groups:[
+        ['許多人不相信人工智慧會取代大多數的人類工作。','然而，科技發展的速度已經超乎了我們的想像。'],
+        ['政府如何應對這場經濟危機仍然是個未知數。','大眾都在密切關注未來幾週內宣布的政策。']
+      ]},
+      {name:'Complex Sentences 複雜句：形容詞子句', groups:[
+        ['那些不能適應快速生活節奏的人往往承受著巨大的壓力。','他們應該學會適時地放慢腳步來放鬆身心。'],
+        ['這是一部探討社群媒體負面影響的電影，其情節引人深思。','許多青少年看完後都開始反思自己的網路習慣。']
+      ]},
+      {name:'Complex Sentences 複雜句：副詞子句', groups:[
+        ['雖然科技帶來了便利，它同時也引發了嚴重的隱私問題。','當我們享受便利時，不應忽略潛在的風險。'],
+        ['只要我們堅持不懈，就沒有克服不了的障礙。','我們應該保持樂觀，勇敢地面對未來的挑戰。']
+      ]}
+    ]},
+    {no:2, title:'名詞', en:'Nouns', subs:[
+      {groups:[
+        ['缺乏經驗是這個團隊目前面臨的最大障礙。','他們需要專家的指導來克服這些困難。'],
+        ['網路上充斥著各種資訊，但並非所有資訊都是可靠的。','培養批判性思考的能力能幫助我們辨別真偽。']
+      ]}
+    ]},
+    {no:3, title:'代名詞', en:'Pronouns', subs:[
+      {groups:[
+        ['那些熱心參與志工服務的人往往能獲得極大的成就感。','這種珍貴的經驗對他們未來的發展非常有益。'],
+        ['這兩家新創公司在市場上激烈競爭。','然而，兩者都沒有在短期內放棄的打算。']
+      ]}
+    ]},
+    {no:4, title:'形容詞', en:'Adjectives', subs:[
+      {groups:[
+        ['面對日益嚴重的氣候變遷，全球合作是不可或缺的。','我們必須尋求更環保的替代能源。'],
+        ['培養良好的閱讀習慣對大腦發育有顯著的影響。','這讓學生在邏輯思考上比同儕更具優勢。']
+      ]}
+    ]},
+    {no:5, title:'副詞', en:'Adverbs', subs:[
+      {groups:[
+        ['人工智慧近年來發展得極為迅速。','它已經深刻地改變了我們的日常生活與工作模式。'],
+        ['幸運地，所有乘客都在這場嚴重的火災中安全逃生。','救援人員迅速地控制了現場火勢。']
+      ]}
+    ]},
+    {no:6, title:'動詞時式', en:'Verb Tenses', subs:[
+      {groups:[
+        ['自從政府去年調高基本工資以來，物價便持續上漲。','許多勞工抱怨他們的薪水根本不夠用。'],
+        ['當科學家抵達偏遠山區時，該罕見物種已經絕種了。','這項發現讓整個研究團隊感到非常遺憾。']
+      ]}
+    ]},
+    {no:7, title:'動名詞', en:'Gerund', subs:[
+      {groups:[
+        ['每天規律運動不僅能強健身體，還能減輕心理壓力。','保持這個習慣是維持健康生活形態的最佳方法。'],
+        ['他承認在期末考中作弊，這讓他的父母感到非常失望。','他現在正考慮向老師誠實道歉。']
+      ]}
+    ]},
+    {no:8, title:'不定詞', en:'Infinitive', subs:[
+      {groups:[
+        ['為了提升英語能力，她決定每天背誦二十個單字。','這個好習慣幫助她成功通過了英文檢定。'],
+        ['跨國企業往往傾向於雇用具有國際視野的人才。','對年輕人來說，學習獨立思考是很重要的。']
+      ]}
+    ]},
+    {no:9, title:'現在分詞', en:'Present Participle', subs:[
+      {groups:[
+        ['看到警察走過來，那名可疑的男子立刻轉身逃跑。','目擊者隨後向警方提供了詳細的嫌犯描述。'],
+        ['那位站在講台上的教授正在發表一場引人入勝的演講。','台下的聽眾都聽得津津有味。']
+      ]}
+    ]},
+    {no:10, title:'過去分詞', en:'Past Participle', subs:[
+      {groups:[
+        ['被這突如其來的壞消息嚇壞了，她一字也說不出來。','她的朋友連忙走過去安慰她。'],
+        ['這本由知名作家撰寫的小說在出版後幾天內就售罄了。','許多讀者正熱切期待著續集的出版。']
+      ]}
+    ]},
+    {no:11, title:'名詞子句', en:'Nominal / Noun Clauses', subs:[
+      {groups:[
+        ['誠實是最佳策略這件事是不可否認的真理。','我們在做任何決定時都應該堅守這個原則。'],
+        ['我們無法得知這項新發明何時會商品化。','然而，投資大眾已經對它展現了高度的興趣。']
+      ]}
+    ]},
+    {no:12, title:'形容詞子句', en:'Adjective Clauses', subs:[
+      {groups:[
+        ['這座我們去年夏天造訪的歷史小鎮現在成了熱門景點。','當地政府正努力保留其傳統文化。'],
+        ['這位最近獲得國際大獎的青年導演在台灣出生。','他的成功極大地鼓勵了本地的電影工作者。']
+      ]}
+    ]},
+    {no:13, title:'副詞子句', en:'Adverbial Clauses', subs:[
+      {groups:[
+        ['科技進步得如此神速，以至於我們必須不斷學習新技能。','否則，我們很快就會被這個競爭激烈的社會淘汰。'],
+        ['為了準時抵達會場，他一大早就出門了。','幸好他這麼做了，因為一路上交通非常擁擠。']
+      ]}
+    ]},
+    {no:14, title:'特殊結構', en:'Special Structures', subs:[
+      {name:'虛擬語氣 (Subjunctive Mood)', groups:[
+        ['如果當初政府及時採取防疫措施，這場疫情就不會蔓延得這麼快。','遺憾的是，歷史無法重來。'],
+        ['許多專家強烈建議每個人都應該定期接受健康檢查。','預防往往勝於治療。']
+      ]},
+      {name:'感嘆句 (Exclamatory Sentences)', groups:[
+        ['這位年輕音樂家的鋼琴演奏是多麼地美妙啊！','全場觀眾都被他精湛的技巧深深打動。'],
+        ['這真是一個多麼令人振奮的消息啊！','整個研究團隊聽到後都不禁歡呼起來。']
+      ]},
+      {name:'倒裝句 (Inversion)', groups:[
+        ['我們絕不能忽視心理健康對青少年發展的重要性。','只有透過家庭與學校的合作，問題才能得到解決。'],
+        ['他直到失去了健康，才意識到均衡飲食的重要。','現在，他開始每天親自下廚準備營養的餐點。']
+      ]}
+    ]}
+  ];
+
+  const structureRoot = document.getElementById('structureRoot');
+  topics.forEach(topic=>{
+    const topicEl = document.createElement('div');
+    topicEl.className = 'topic';
+
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'topic-head';
+    head.innerHTML =
+      '<span class="ttl"><span class="no">Topic '+topic.no+'</span>'+topic.title+' <span class="en">'+topic.en+'</span></span>'+
+      '<span class="meta"><span class="cnt"></span><span class="chevron">›</span></span>';
+
+    const body = document.createElement('div');
+    body.className = 'topic-body';
+
+    topic.subs.forEach((sub, subIdx)=>{
+      if (sub.name){
+        const wrap = document.createElement('div');
+        wrap.className = 'subsection';
+        const subTitle = document.createElement('div');
+        subTitle.className = 'subsection-name';
+        subTitle.textContent = sub.name;
+        wrap.appendChild(subTitle);
+        appendGroups(wrap, sub.groups, topic.no, subIdx);
+        body.appendChild(wrap);
+      } else {
+        appendGroups(body, sub.groups, topic.no, subIdx);
+      }
+    });
+
+    function appendGroups(container, groups, topicNo, subIdx){
+      groups.forEach((pair, gIdx)=>{
+        const gName = document.createElement('div');
+        gName.className = 'group-name';
+        gName.innerHTML = (gIdx===0 ? '題組一' : '題組二') + '<span class="en">'+(gIdx===0 ? 'Set 1' : 'Set 2')+'</span>';
+        container.appendChild(gName);
+        pair.forEach((zh, sIdx)=>{
+          const id = 't'+topicNo+'-'+subIdx+'-'+gIdx+'-'+sIdx;
+          container.appendChild(makeSentenceCard(id, '句'+(sIdx+1), zh));
+        });
+      });
+    }
+
+    topicEl.appendChild(head);
+    topicEl.appendChild(body);
+    structureRoot.appendChild(topicEl);
+
+    const cntSpan = head.querySelector('.cnt');
+    function refreshCnt(){
+      const ids = [];
+      topic.subs.forEach((sub, subIdx)=>{
+        sub.groups.forEach((pair, gIdx)=>{
+          pair.forEach((_, sIdx)=> ids.push('t'+topic.no+'-'+subIdx+'-'+gIdx+'-'+sIdx));
+        });
+      });
+      const done = ids.filter(id=>doneSet.has(id)).length;
+      cntSpan.textContent = done+'/'+ids.length;
+    }
+    refreshCnt();
+    body.addEventListener('input', refreshCnt);
+
+    head.addEventListener('click', ()=>{ topicEl.classList.toggle('open'); });
+  });
+
+  updateProgress();
+
+  /* ===================== WRITING TAB DATA ===================== */
+  const examTopics = [
+    ['108 / 2019', '臺灣最讓人引以為榮的事物', 'Pride of Taiwan (Culture, People, or Hospitality)'],
+    ['109 / 2020', '新商場開幕人潮湧入造成交通大塞車', 'New Shopping Mall Grand Opening Causing Traffic Congestion'],
+    ['110 / 2021', '網美與熱門景點擠爆與垃圾亂象', 'Tourist Crowds and Littering at Scenic Spots'],
+    ['111 / 2022', '理想的公園設施規劃', 'Designing Ideal Public Park Facilities'],
+    ['112 / 2023', '表情符號（Emoji）在日常溝通中的使用', 'The Use of Emojis in Daily Communication'],
+    ['113 / 2024', '如果你有一隻機器人，你希望它幫你做什麼？', 'What Would You Want Your Personal Robot to Do?'],
+    ['114 / 2025', '颱風假的不同情景對比', 'Contrast of Different Scenarios on Typhoon Days'],
+    ['115 / 2026', '毛小孩與毛家長（養寵物取代養小孩的現象與衝擊）', 'Pet Ownership vs. Childrearing: Trends and Impacts']
+  ];
+  const examTable = document.getElementById('examTable');
+  examTable.innerHTML =
+    '<tr><th>年度<span class="en">Year</span></th><th>中文題目<span class="en">Chinese Topic</span></th><th>英文題目<span class="en">English Topic</span></th></tr>' +
+    examTopics.map(r=>'<tr><td class="yr">'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>').join('');
+
+  const themes = [
+    {yrs:'108–109', name:'在地認同與公民意識 · Local Identity & Civic Awareness',
+     theme:'引導學生從生活經驗出發，觀察周遭交通與社會現象。',
+     themeEn:'Guides students to reflect on everyday experiences and observe local culture and traffic issues.',
+     core:'社會參與、系統思考與問題解決', coreEn:'Social Participation, Systemic Thinking, and Problem Solving'},
+    {yrs:'110–111', name:'觀光衝擊與公共規劃 · Overtourism & Public Planning',
+     theme:'探討觀光亂象與公共設施的需求。',
+     themeEn:'Examines overtourism, environmental damage, and public facility design.',
+     core:'環境永續與設計思維', coreEn:'Environmental Sustainability and Design Thinking'},
+    {yrs:'112–113', name:'科技資訊與現代溝通 · Technology & Modern Communication',
+     theme:'分析 Emoji 溝通利弊與 AI／機器人科技的實用性。',
+     themeEn:'Evaluates the pros/cons of digital symbols and practical AI/robotic applications.',
+     core:'科技資訊與媒體素養', coreEn:'Information Technology and Media Literacy'},
+    {yrs:'114–115', name:'同理心與社會結構審視 · Empathy & Social Structure Reflection',
+     theme:'對比颱風假中的不同崗位，以及少子化下的養寵物趨勢。',
+     themeEn:'Compares different social roles during extreme weather and analyzes pet trends amid falling birthrates.',
+     core:'多元文化、同理心與社會觀察', coreEn:'Multicultural Understanding, Empathy, and Social Observation'}
+  ];
+  const themeRoot = document.getElementById('themeRoot');
+  themes.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = 'theme-card';
+    el.innerHTML =
+      '<div class="yrs">'+t.yrs+'</div><div class="name">'+t.name+'</div>'+
+      '<p>'+t.theme+'</p><p class="en">'+t.themeEn+'</p>'+
+      '<span class="tag">課綱核心素養：'+t.core+'<span class="en">Core Competency: '+t.coreEn+'</span></span>';
+    themeRoot.appendChild(el);
+  });
+
+  const vocab = ['A sharp contrast（鮮明對比）','Traffic congestion（交通壅塞）','Overtourism（過度旅遊）',
+    'Emotional support（情緒陪伴）','Declining birthrate（少子化趨勢）','Bridge the communication gap（消除溝通隔閡）',
+    'Unsung heroes（默默奉獻的無名英雄）'];
+  const vocabRoot = document.getElementById('vocabRoot');
+  vocab.forEach(v=>{
+    const chip = document.createElement('span');
+    chip.className = 'vocab-chip';
+    chip.textContent = v;
+    vocabRoot.appendChild(chip);
+  });
+
+  const patterns = [
+    {lbl:'引出圖表或現象 · Introducing Trends or Pictures',
+     en:'As shown in the pictures, a striking contrast can be observed between... and...',
+     zh:'如圖所示，在……與……之間可以觀察到鮮明的對比。'},
+    {lbl:'分析現象成因 · Analyzing Causes',
+     en:'Behind this prevailing trend lie several profound economic and psychological factors.',
+     zh:'在這盛行趨勢的背後，隱藏著幾項深層的經濟與心理因素。'},
+    {lbl:'總結與個人體悟 · Summarizing & Personal Insights',
+     en:'Ultimately, finding a balance between... and... is essential for a harmonious society.',
+     zh:'最終，在……與……之間取得平衡，對於和諧社會至關重要。'}
+  ];
+  const patternRoot = document.getElementById('patternRoot');
+  patterns.forEach(p=>{
+    const el = document.createElement('div');
+    el.className = 'pattern-card';
+    el.innerHTML = '<div class="lbl">'+p.lbl+'</div><div class="en">'+p.en+'</div><div class="zh">'+p.zh+'</div>';
+    patternRoot.appendChild(el);
+  });
+
+  const prompts = [
+    {title:'Prompt 1：數位孤獨與社群連結 Digital Isolation vs. Social Connection',
+     p1:'描述現代年輕人過度依賴手機導致餐桌上無交流的現象，並對比親友實體互動的熱絡情景。',
+     p1en:'Describe how young people\u2019s smartphone reliance leads to silent meals, and contrast it with warm, face-to-face interactions.',
+     p2:'分析這種「數位孤獨」發生的原因，並分享你如何在日常生活中建立具體的人際連結。',
+     p2en:'Analyze the causes of "digital isolation" and share how you cultivate meaningful real-life connections.'},
+    {title:'Prompt 2：外送文化與交通公共秩序 Delivery Apps & Public Traffic Order',
+     p1:'說明外送平台帶來的極大便利，以及外送員違規搶快對道路安全造成的衝擊。',
+     p1en:'Describe the high convenience of food delivery apps alongside the road hazards caused by rushed delivery drivers.',
+     p2:'說明你對這個現象的看法，並提出消費者、業者或政府可採取的改善措施。',
+     p2en:'State your view on this trend and propose realistic measures for consumers, platforms, or the government to improve public safety.'}
+  ];
+
+  function countWords(str){
+    const trimmed = str.trim();
+    if (!trimmed) return 0;
+    return trimmed.split(/\s+/).length;
+  }
+
+  const promptRoot = document.getElementById('promptRoot');
+  prompts.forEach((pr, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'prompt-card';
+    const title = document.createElement('div');
+    title.className = 'ptitle';
+    title.textContent = pr.title;
+    card.appendChild(title);
+
+    [['第一段', pr.p1, pr.p1en, 60, 70, idx, 1], ['第二段', pr.p2, pr.p2en, 70, 80, idx, 2]].forEach(cfg=>{
+      const [name, taskZh, taskEn, lo, hi, pIdx, paraNo] = cfg;
+      const block = document.createElement('div');
+      block.className = 'para-block';
+      const label = document.createElement('div');
+      label.className = 'plabel';
+      label.innerHTML = '<span class="name">'+name+'（約 '+lo+'–'+hi+' 字）</span>';
+      const taskLine = document.createElement('span');
+      taskLine.className = 'task';
+      taskLine.innerHTML = taskZh + '<span class="en">'+taskEn+'</span>';
+      label.appendChild(taskLine);
+      const ta = document.createElement('textarea');
+      ta.className = 'essay';
+      ta.placeholder = '開始寫這一段的英文內容... / Start writing this paragraph in English...';
+      const id = 'w'+pIdx+'-p'+paraNo;
+      ta.value = loadVal(id);
+      const wcRow = document.createElement('div');
+      wcRow.className = 'wc-row';
+      const badge = document.createElement('span');
+      badge.className = 'wc-badge';
+      wcRow.appendChild(badge);
+
+      function refresh(){
+        const n = countWords(ta.value);
+        badge.textContent = '字數/Words '+n+'（目標/Target '+lo+'–'+hi+'）';
+        badge.className = 'wc-badge' + (n===0 ? '' : (n<lo ? ' low' : (n>hi ? ' high' : ' ok')));
+      }
+      ta.addEventListener('input', ()=>{ saveVal(id, ta.value); refresh(); });
+      refresh();
+
+      block.appendChild(label);
+      block.appendChild(ta);
+      block.appendChild(wcRow);
+      card.appendChild(block);
+    });
+
+    promptRoot.appendChild(card);
+  });
+
+  /* ---------------- reset answers ---------------- */
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if (confirm('確定要清除所有已儲存的作答紀錄嗎？此動作無法復原。\nClear all saved answers? This cannot be undone.')){
+      clearAll();
+      location.reload();
+    }
+  });
+
+  /* ===================== ANNOTATE FEATURE ===================== */
+  const canvas = document.getElementById('annotateCanvas');
+  const ctx = canvas.getContext('2d');
+  const fab = document.getElementById('annotateFab');
+  const toolbar = document.getElementById('annotateToolbar');
+  const penRow = document.getElementById('penRow');
+  const toolBrowseBtn = document.getElementById('toolBrowse');
+  const toolHighlightBtn = document.getElementById('toolHighlight');
+  const toolEraserBtn = document.getElementById('toolEraser');
+
+  const penColors = [
+    {name:'酒紅筆 Wine Pen', color:'#8C2F1D'},
+    {name:'墨藍筆 Navy Pen', color:'#2B3E63'},
+    {name:'墨黑筆 Ink Pen', color:'#20222B'},
+    {name:'松綠筆 Pine Pen', color:'#2F5C3E'}
+  ];
+  let currentTool = null; // {type:'pen'|'highlighter'|'eraser', color, width, alpha, composite}
+  const allToolButtons = [];
+
+  penColors.forEach((p, i)=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'at-swatch';
+    b.style.background = p.color;
+    b.title = p.name;
+    b.addEventListener('click', ()=>{
+      currentTool = {type:'pen', color:p.color, width:3, alpha:1, composite:'source-over'};
+      setActive(b);
+      enableDrawing(true);
+    });
+    penRow.appendChild(b);
+    allToolButtons.push(b);
+  });
+
+  function setActive(btn){
+    allToolButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  allToolButtons.push(toolHighlightBtn, toolEraserBtn, toolBrowseBtn);
+
+  toolHighlightBtn.addEventListener('click', ()=>{
+    currentTool = {type:'highlighter', color:'#D9B23C', width:16, alpha:0.35, composite:'multiply'};
+    setActive(toolHighlightBtn);
+    enableDrawing(true);
+  });
+  toolEraserBtn.addEventListener('click', ()=>{
+    currentTool = {type:'eraser', color:'#000', width:26, alpha:1, composite:'destination-out'};
+    setActive(toolEraserBtn);
+    enableDrawing(true);
+  });
+  toolBrowseBtn.addEventListener('click', ()=>{
+    currentTool = null;
+    setActive(toolBrowseBtn);
+    enableDrawing(false);
+  });
+
+  function enableDrawing(on){
+    canvas.classList.toggle('drawing', on);
+  }
+
+  fab.addEventListener('click', ()=>{ toolbar.classList.toggle('open'); });
+
+  function sizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  sizeCanvas();
+  window.addEventListener('resize', sizeCanvas);
+
+  let drawing = false;
+  function getPos(e){
+    return { x: e.clientX, y: e.clientY };
+  }
+  canvas.addEventListener('pointerdown', (e)=>{
+    if (!currentTool) return;
+    drawing = true;
+    const {x,y} = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = currentTool.color;
+    ctx.lineWidth = currentTool.width;
+    ctx.globalAlpha = currentTool.alpha;
+    ctx.globalCompositeOperation = currentTool.composite;
+  });
+  canvas.addEventListener('pointermove', (e)=>{
+    if (!drawing || !currentTool) return;
+    const {x,y} = getPos(e);
+    ctx.lineTo(x,y);
+    ctx.stroke();
+  });
+  function stopDraw(){ drawing = false; ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  canvas.addEventListener('pointerup', stopDraw);
+  canvas.addEventListener('pointerleave', stopDraw);
+  canvas.addEventListener('pointercancel', stopDraw);
+
+  document.getElementById('btnClearMarks').addEventListener('click', ()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  });
+
+  function loadHtml2Canvas(){
+    return new Promise((resolve,reject)=>{
+      if (window.html2canvas) return resolve();
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = ()=>resolve();
+      s.onerror = ()=>reject(new Error('load failed'));
+      document.head.appendChild(s);
+    });
+  }
+
+  const saveBtn = document.getElementById('btnSaveShot');
+  saveBtn.addEventListener('click', async ()=>{
+    saveBtn.disabled = true;
+    const originalHTML = saveBtn.innerHTML;
+    saveBtn.innerHTML = '儲存中... <span class="en">Saving...</span>';
+    try {
+      await loadHtml2Canvas();
+      fab.style.visibility = 'hidden';
+      toolbar.style.visibility = 'hidden';
+      const shot = await window.html2canvas(document.documentElement, {
+        x: window.scrollX,
+        y: window.scrollY,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+        scale: 1,
+        backgroundColor: getComputedStyle(document.body).backgroundColor || '#ffffff'
+      });
+      fab.style.visibility = '';
+      toolbar.style.visibility = '';
+
+      const out = document.createElement('canvas');
+      out.width = shot.width;
+      out.height = shot.height;
+      const octx = out.getContext('2d');
+      octx.drawImage(shot, 0, 0);
+      octx.drawImage(canvas, 0, 0, out.width, out.height);
+
+      const a = document.createElement('a');
+      a.href = out.toDataURL('image/png');
+      a.download = 'gsat-practice-' + Date.now() + '.png';
+      a.click();
+    } catch (err){
+      alert('截圖失敗，請確認網路連線後再試一次。\nCould not save the image — please check your connection and try again.');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalHTML;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
