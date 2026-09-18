@@ -1156,7 +1156,8 @@
   });
 
   toolHighlightBtn.addEventListener('click', ()=>{
-    currentTool = {type:'highlighter', color:'#F6D979', width:18, alpha:0.28, composite:'source-over'};
+    // Use a very light stroke so repeated pointer segments never hide the text.
+    currentTool = {type:'highlighter', color:'#FFE9A6', width:12, alpha:0.14, composite:'source-over'};
     setActive(toolHighlightBtn);
     enableDrawing(true);
   });
