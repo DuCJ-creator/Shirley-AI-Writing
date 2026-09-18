@@ -3,30 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>備戰英文滿級・翻譯寫作練習本</title>
+<title>跟Shirley 杜老師一起備戰英文滿級：Crack GSAT with Tr. Shirley Du</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper: #F3EFE3;
-    --paper-line: #E6DFC8;
-    --card: #FCFAF3;
-    --card-line: #DFD5B8;
-    --ink: #262A3B;
-    --ink-soft: #5B5F73;
-    --ink-faint: #98957F;
-    --red: #6E2A34;
-    --red-deep: #591F27;
-    --red-soft: #F1E1DF;
-    --blue: #2B3E63;
-    --blue-soft: #E4E9F1;
-    --green: #3F6B4E;
-    --green-soft: #E3EFE7;
-    --amber: #A9822C;
-    --amber-soft: #F1E6C8;
-    --focus: #2B3E63;
-    --shadow: rgba(38,42,59,0.10);
+    --paper: #F5F7FA;
+    --paper-line: #E5EAF1;
+    --card: #FFFFFF;
+    --card-line: #CBD5E1;
+    --ink: #1D2635;
+    --ink-soft: #536174;
+    --ink-faint: #7C899A;
+    --red: #8B1E2D;
+    --red-deep: #681522;
+    --red-soft: #F6E8EB;
+    --blue: #123B63;
+    --blue-soft: #EAF1F8;
+    --green: #2F674D;
+    --green-soft: #E8F3ED;
+    --amber: #B18124;
+    --amber-soft: #FBF3DD;
+    --focus: #1E5688;
+    --shadow: rgba(18,59,99,0.11);
   }
   :root:not([data-theme="light"]) {
     @media (prefers-color-scheme: dark) {
@@ -87,6 +87,8 @@
     line-height: 1.6;
     min-height: 100vh;
   }
+  body.annotation-lock { overscroll-behavior: none; }
+  body.annotation-lock #annotateCanvas { touch-action: none; }
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
@@ -378,6 +380,54 @@
   footer.note { max-width: 800px; margin: 30px auto 0; padding: 0 20px; font-size: 0.76rem; color: var(--ink-faint); }
   footer.note .en { display: block; font-style: italic; margin-top: 4px; }
 
+  /* ---------- Shirley's learning hub ---------- */
+  .resource-hub {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px 36px;
+  }
+  .resource-intro { margin: 0 0 14px; color: var(--ink-soft); font-size: 0.84rem; }
+  .resource-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .resource-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 142px;
+    padding: 16px 17px 15px;
+    color: var(--ink);
+    text-decoration: none;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-top: 4px solid var(--blue);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px var(--shadow);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .resource-card:nth-child(2) { border-top-color: var(--red); }
+  .resource-card:nth-child(3) { border-top-color: var(--amber); }
+  .resource-card:nth-child(4) { border-top-color: var(--green); }
+  .resource-card:hover, .resource-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: var(--blue);
+    box-shadow: 0 5px 14px var(--shadow);
+    outline: none;
+  }
+  .resource-card .resource-kicker { color: var(--ink-faint); font: 600 .68rem/1.2 Inter, sans-serif; letter-spacing: .09em; text-transform: uppercase; }
+  .resource-card h3 { margin: 7px 0 5px; color: var(--blue); font-size: 1rem; line-height: 1.35; }
+  .resource-card p { margin: 0; color: var(--ink-soft); font-size: .78rem; line-height: 1.55; }
+  .resource-card .resource-arrow { margin-top: auto; padding-top: 12px; color: var(--red); font-size: .75rem; font-weight: 700; }
+  .resource-frame-wrap { margin-top: 18px; }
+  .resource-frame {
+    display: block;
+    width: 100%;
+    height: 620px;
+    border: 1px solid var(--card-line);
+    border-radius: 10px;
+    background: var(--card);
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+  .resource-frame.is-empty { display: none; }
+
   /* ---------- Annotate feature ---------- */
   #annotateCanvas {
     position: fixed; top: 0; left: 0;
@@ -458,6 +508,7 @@
     .brand .mark { font-size: 1.25rem; }
     .structure-flow { flex-direction: column; }
     #annotateToolbar { width: calc(100vw - 36px); right: 18px; }
+    .resource-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -467,9 +518,9 @@
   <div class="top-inner">
     <div class="top-row">
       <div class="brand-block">
-        <div class="brand"><span class="mark">備戰英文滿級</span></div>
+        <div class="brand"><span class="mark">跟Shirley 杜老師一起備戰英文滿級</span></div>
         <div class="brand-sub">
-          翻譯・寫作練習本
+          Crack GSAT with Tr. Shirley Du
           <div class="bi-en">Translation &amp; Writing Practice Book</div>
         </div>
       </div>
@@ -544,6 +595,40 @@
   </section>
 
 </main>
+
+<section class="resource-hub" aria-labelledby="resourceHubTitle">
+  <h2 class="section-title" id="resourceHubTitle">Shirley 的延伸學習資源 <span class="en">Further Learning</span></h2>
+  <p class="resource-intro">從文法、歌曲、字彙到寫作，繼續建立完整的英文能力。</p>
+  <div class="resource-grid">
+    <a class="resource-card" href="https://ducj-creator.github.io/Shirley-Grammar/" data-frame-url="https://ducj-creator.github.io/Shirley-Grammar/">
+      <span class="resource-kicker">Grammar</span>
+      <h3>Shirley's Grammar Lemon Tree</h3>
+      <p>用清楚的架構整理文法觀念，讓複雜規則變得好理解。</p>
+      <span class="resource-arrow">Explore grammar ↗</span>
+    </a>
+    <a class="resource-card" href="https://ducj-creator.github.io/Shirley-AI-Music-Studio/learning/index.html" data-frame-url="https://ducj-creator.github.io/Shirley-AI-Music-Studio/learning/index.html">
+      <span class="resource-kicker">Listening &amp; Memory</span>
+      <h3>Grammar with Songs</h3>
+      <p>把句型與節奏結合，透過歌曲增加理解與記憶。</p>
+      <span class="resource-arrow">Learn with music ↗</span>
+    </a>
+    <a class="resource-card" href="https://ducj-creator.github.io/shirleyvocab.html#home" data-frame-url="https://ducj-creator.github.io/shirleyvocab.html#home">
+      <span class="resource-kicker">Vocabulary</span>
+      <h3>Vocab Foundation</h3>
+      <p>從核心字彙打底，逐步擴充閱讀與表達需要的詞庫。</p>
+      <span class="resource-arrow">Build your vocabulary ↗</span>
+    </a>
+    <a class="resource-card" href="https://ducj-creator.github.io/Shirley-AI-Writing/version2.html" data-frame-url="https://ducj-creator.github.io/Shirley-AI-Writing/version2.html">
+      <span class="resource-kicker">Writing</span>
+      <h3>Shirley's Writing Coach</h3>
+      <p>循序練習文章組織、句子表達與英文寫作思考。</p>
+      <span class="resource-arrow">Start writing ↗</span>
+    </a>
+  </div>
+  <div class="resource-frame-wrap">
+    <iframe class="resource-frame is-empty" id="resourceFrame" title="Shirley 延伸學習資源" loading="lazy" allow="fullscreen"></iframe>
+  </div>
+</section>
 
 <footer class="note">
   內容整理自 Shirley Du 老師講義《備戰英文滿級／翻譯／寫作講義》。所有作答僅儲存在你目前使用的瀏覽器中，供自主練習使用，並非正式評分工具。
@@ -1061,7 +1146,7 @@
   allToolButtons.push(toolHighlightBtn, toolEraserBtn, toolBrowseBtn);
 
   toolHighlightBtn.addEventListener('click', ()=>{
-    currentTool = {type:'highlighter', color:'#D9B23C', width:16, alpha:0.35, composite:'multiply'};
+    currentTool = {type:'highlighter', color:'#D8A72E', width:16, alpha:0.35, composite:'multiply'};
     setActive(toolHighlightBtn);
     enableDrawing(true);
   });
@@ -1078,9 +1163,43 @@
 
   function enableDrawing(on){
     canvas.classList.toggle('drawing', on);
+    document.body.classList.toggle('annotation-lock', on);
   }
 
-  fab.addEventListener('click', ()=>{ toolbar.classList.toggle('open'); });
+  fab.addEventListener('click', ()=>{
+    const willOpen = !toolbar.classList.contains('open');
+    toolbar.classList.toggle('open', willOpen);
+    if (!willOpen) {
+      // Closing the palette also exits drawing mode, so the page can scroll again.
+      currentTool = null;
+      setActive(toolBrowseBtn);
+      enableDrawing(false);
+    }
+  });
+
+  const resourceFrame = document.getElementById('resourceFrame');
+  document.querySelectorAll('.resource-card[data-frame-url]').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      e.preventDefault();
+      resourceFrame.src = card.dataset.frameUrl;
+      resourceFrame.classList.remove('is-empty');
+      document.querySelectorAll('.resource-card').forEach(item=>item.setAttribute('aria-current', 'false'));
+      card.setAttribute('aria-current', 'true');
+      resourceFrame.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  // Keep the annotation canvas and page content in the same viewport.
+  // Marks use fixed screen coordinates, so scrolling while drawing would misalign them.
+  function blockAnnotationScroll(e){
+    if (currentTool) e.preventDefault();
+  }
+  window.addEventListener('wheel', blockAnnotationScroll, {passive:false});
+  window.addEventListener('touchmove', blockAnnotationScroll, {passive:false});
+  window.addEventListener('keydown', (e)=>{
+    if (!currentTool) return;
+    if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(e.key)) e.preventDefault();
+  }, {passive:false});
 
   function sizeCanvas(){
     canvas.width = window.innerWidth;
