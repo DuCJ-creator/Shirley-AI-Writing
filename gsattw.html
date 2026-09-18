@@ -430,16 +430,18 @@
 
   /* ---------- Annotate feature ---------- */
   #annotateCanvas {
-    position: fixed; top: 0; left: 0;
+    position: absolute; top: 0; left: 0;
+    width: 100%;
     z-index: 2147483640;
     pointer-events: none;
   }
-  #annotateCanvas.drawing { pointer-events: auto; touch-action: none; cursor: crosshair; }
+  #annotateCanvas.drawing { pointer-events: auto; touch-action: auto; cursor: crosshair; }
 
   #annotateFab {
-    position: fixed !important;
+    position: absolute !important;
     right: 20px;
-    bottom: 20px;
+    top: 150px;
+    bottom: auto;
     z-index: 2147483647;
     display: flex;
     align-items: center;
@@ -457,9 +459,9 @@
   }
 
   #annotateToolbar {
-    position: fixed !important;
+    position: absolute !important;
     right: 20px;
-    bottom: 82px;
+    top: 212px;
     z-index: 2147483647;
     width: 216px;
     background: var(--card);
@@ -1181,13 +1183,21 @@
   });
   toolBrowseBtn.addEventListener('click', ()=>{
     currentTool = null;
+    clearAnnotationMarks();
     setActive(toolBrowseBtn);
     enableDrawing(false);
   });
 
   function enableDrawing(on){
     canvas.classList.toggle('drawing', on);
-    document.body.classList.toggle('annotation-lock', on);
+  }
+
+  function clearAnnotationMarks(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    undoStack.length = 0;
+    strokeSnapshot = null;
+    drawing = false;
+    refreshUndoButton();
   }
 
   fab.addEventListener('click', ()=>{
@@ -1201,6 +1211,7 @@
     if (!willOpen) {
       // Closing the palette also exits drawing mode, so the page can scroll again.
       currentTool = null;
+      clearAnnotationMarks();
       setActive(toolBrowseBtn);
       enableDrawing(false);
     }
@@ -1218,24 +1229,19 @@
     });
   });
 
-  // Keep the annotation canvas and page content in the same viewport.
-  // Marks use fixed screen coordinates, so scrolling while drawing would misalign them.
-  function blockAnnotationScroll(e){
-    if (currentTool) e.preventDefault();
-  }
-  window.addEventListener('wheel', blockAnnotationScroll, {passive:false});
-  window.addEventListener('touchmove', blockAnnotationScroll, {passive:false});
-  window.addEventListener('keydown', (e)=>{
-    if (!currentTool) return;
-    if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(e.key)) e.preventDefault();
-  }, {passive:false});
-
   function sizeCanvas(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const oldCanvas = document.createElement('canvas');
+    oldCanvas.width = canvas.width;
+    oldCanvas.height = canvas.height;
+    if (canvas.width && canvas.height) oldCanvas.getContext('2d').drawImage(canvas, 0, 0);
+    canvas.width = Math.max(document.documentElement.scrollWidth, window.innerWidth);
+    canvas.height = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+    if (oldCanvas.width && oldCanvas.height) ctx.drawImage(oldCanvas, 0, 0);
   }
   sizeCanvas();
   window.addEventListener('resize', sizeCanvas);
+  window.addEventListener('load', sizeCanvas);
+  if (window.ResizeObserver) new ResizeObserver(sizeCanvas).observe(document.body);
 
   function refreshUndoButton(){
     undoBtn.disabled = undoStack.length === 0;
@@ -1244,7 +1250,7 @@
 
   let drawing = false;
   function getPos(e){
-    return { x: e.clientX, y: e.clientY };
+    return { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY };
   }
   canvas.addEventListener('pointerdown', (e)=>{
     if (!currentTool) return;
@@ -1282,9 +1288,7 @@
   canvas.addEventListener('pointercancel', stopDraw);
 
   document.getElementById('btnClearMarks').addEventListener('click', ()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    undoStack.length = 0;
-    refreshUndoButton();
+    clearAnnotationMarks();
   });
 
   undoBtn.addEventListener('click', ()=>{
