@@ -641,6 +641,7 @@
   <div class="at-title">標註工具<span class="en">Annotate Tools</span></div>
   <div class="at-row" id="penRow"></div>
   <div class="at-row">
+    <button class="at-tool" id="toolPen" type="button">畫筆<span class="en">Draw</span></button>
     <button class="at-tool" id="toolHighlight" type="button">螢光筆<span class="en">Highlighter</span></button>
     <button class="at-tool" id="toolEraser" type="button">橡皮擦<span class="en">Eraser</span></button>
   </div>
@@ -1112,6 +1113,7 @@
   const toolbar = document.getElementById('annotateToolbar');
   const penRow = document.getElementById('penRow');
   const toolBrowseBtn = document.getElementById('toolBrowse');
+  const toolPenBtn = document.getElementById('toolPen');
   const toolHighlightBtn = document.getElementById('toolHighlight');
   const toolEraserBtn = document.getElementById('toolEraser');
 
@@ -1121,6 +1123,7 @@
     {name:'墨黑筆 Ink Pen', color:'#20222B'},
     {name:'松綠筆 Pine Pen', color:'#2F5C3E'}
   ];
+  let selectedPenColor = penColors[0].color;
   let currentTool = null; // {type:'pen'|'highlighter'|'eraser', color, width, alpha, composite}
   const allToolButtons = [];
 
@@ -1131,7 +1134,8 @@
     b.style.background = p.color;
     b.title = p.name;
     b.addEventListener('click', ()=>{
-      currentTool = {type:'pen', color:p.color, width:3, alpha:1, composite:'source-over'};
+      selectedPenColor = p.color;
+      currentTool = {type:'pen', color:selectedPenColor, width:4, alpha:1, composite:'source-over'};
       setActive(b);
       enableDrawing(true);
     });
@@ -1143,10 +1147,16 @@
     allToolButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
   }
-  allToolButtons.push(toolHighlightBtn, toolEraserBtn, toolBrowseBtn);
+  allToolButtons.push(toolPenBtn, toolHighlightBtn, toolEraserBtn, toolBrowseBtn);
+
+  toolPenBtn.addEventListener('click', ()=>{
+    currentTool = {type:'pen', color:selectedPenColor, width:4, alpha:1, composite:'source-over'};
+    setActive(toolPenBtn);
+    enableDrawing(true);
+  });
 
   toolHighlightBtn.addEventListener('click', ()=>{
-    currentTool = {type:'highlighter', color:'#D8A72E', width:16, alpha:0.35, composite:'multiply'};
+    currentTool = {type:'highlighter', color:'#F6D979', width:18, alpha:0.28, composite:'source-over'};
     setActive(toolHighlightBtn);
     enableDrawing(true);
   });
