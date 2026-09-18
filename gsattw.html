@@ -440,8 +440,8 @@
     position: fixed !important;
     left: var(--annotation-rail-left, auto);
     right: auto;
-    top: auto;
-    bottom: 24px;
+    top: calc(50% + 30px);
+    bottom: auto;
     transform: none;
     z-index: 2147483647;
     display: flex;
@@ -464,7 +464,7 @@
     left: var(--annotation-toolbar-left, auto);
     right: auto;
     top: auto;
-    bottom: 92px;
+    bottom: calc(50% + 30px);
     transform: none;
     z-index: 2147483647;
     width: 216px;
@@ -475,6 +475,8 @@
     padding: 14px;
     box-shadow: 0 6px 20px var(--shadow);
     display: none;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
   }
   #annotateToolbar.open { display: block; }
   #annotateToolbar .at-title { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 0.92rem; margin-bottom: 2px; }
