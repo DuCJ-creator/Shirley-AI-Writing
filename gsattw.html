@@ -503,6 +503,7 @@
   .at-actions .save-btn { background: var(--red); color: #fff; border-color: var(--red); }
   .at-actions .save-btn .en { color: #fff; opacity: 0.85; }
   .at-actions button:disabled { opacity: 0.55; cursor: default; }
+  .at-actions .undo-btn { font-size: 1rem; }
 
   @media (max-width: 520px) {
     .brand .mark { font-size: 1.25rem; }
@@ -649,6 +650,7 @@
     <button class="at-tool active" id="toolBrowse" type="button">瀏覽模式<span class="en">Browse Mode</span></button>
   </div>
   <div class="at-actions">
+    <button class="undo-btn" id="btnUndo" type="button" title="撤銷上一筆 Undo">↩️<span class="en">Undo</span></button>
     <button id="btnClearMarks" type="button">清除標註<span class="en">Clear</span></button>
     <button class="save-btn" id="btnSaveShot" type="button">儲存截圖<span class="en">Save Image</span></button>
   </div>
@@ -1116,6 +1118,7 @@
   const toolPenBtn = document.getElementById('toolPen');
   const toolHighlightBtn = document.getElementById('toolHighlight');
   const toolEraserBtn = document.getElementById('toolEraser');
+  const undoBtn = document.getElementById('btnUndo');
 
   const penColors = [
     {name:'酒紅筆 Wine Pen', color:'#8C2F1D'},
@@ -1125,6 +1128,8 @@
   ];
   let selectedPenColor = penColors[0].color;
   let currentTool = null; // {type:'pen'|'highlighter'|'eraser', color, width, alpha, composite}
+  const undoStack = [];
+  let strokeSnapshot = null;
   const allToolButtons = [];
 
   penColors.forEach((p, i)=>{
@@ -1157,7 +1162,7 @@
 
   toolHighlightBtn.addEventListener('click', ()=>{
     // Use a very light stroke so repeated pointer segments never hide the text.
-    currentTool = {type:'highlighter', color:'#FFF4C7', width:8, alpha:0.06, composite:'source-over'};
+    currentTool = {type:'highlighter', color:'#FFF8D8', width:7, alpha:0.035, composite:'source-over'};
     setActive(toolHighlightBtn);
     enableDrawing(true);
   });
@@ -1219,12 +1224,18 @@
   sizeCanvas();
   window.addEventListener('resize', sizeCanvas);
 
+  function refreshUndoButton(){
+    undoBtn.disabled = undoStack.length === 0;
+  }
+  refreshUndoButton();
+
   let drawing = false;
   function getPos(e){
     return { x: e.clientX, y: e.clientY };
   }
   canvas.addEventListener('pointerdown', (e)=>{
     if (!currentTool) return;
+    strokeSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     drawing = true;
     const {x,y} = getPos(e);
     ctx.beginPath();
@@ -1242,13 +1253,31 @@
     ctx.lineTo(x,y);
     ctx.stroke();
   });
-  function stopDraw(){ drawing = false; ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+  function stopDraw(){
+    if (drawing && strokeSnapshot) {
+      undoStack.push(strokeSnapshot);
+      if (undoStack.length > 30) undoStack.shift();
+      refreshUndoButton();
+    }
+    strokeSnapshot = null;
+    drawing = false;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
   canvas.addEventListener('pointerup', stopDraw);
   canvas.addEventListener('pointerleave', stopDraw);
   canvas.addEventListener('pointercancel', stopDraw);
 
   document.getElementById('btnClearMarks').addEventListener('click', ()=>{
     ctx.clearRect(0,0,canvas.width,canvas.height);
+    undoStack.length = 0;
+    refreshUndoButton();
+  });
+
+  undoBtn.addEventListener('click', ()=>{
+    if (!undoStack.length) return;
+    ctx.putImageData(undoStack.pop(), 0, 0);
+    refreshUndoButton();
   });
 
   function loadHtml2Canvas(){
