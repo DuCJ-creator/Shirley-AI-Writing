@@ -438,7 +438,8 @@
 
   #annotateFab {
     position: fixed !important;
-    right: 16px;
+    left: var(--annotation-rail-left, auto);
+    right: auto;
     top: 50%;
     bottom: auto;
     transform: translateY(-50%);
@@ -460,7 +461,8 @@
 
   #annotateToolbar {
     position: fixed !important;
-    right: 82px;
+    left: var(--annotation-toolbar-left, auto);
+    right: auto;
     top: 50%;
     bottom: auto;
     transform: translateY(-50%);
@@ -1130,6 +1132,21 @@
   const toolHighlightBtn = document.getElementById('toolHighlight');
   const toolEraserBtn = document.getElementById('toolEraser');
   const undoBtn = document.getElementById('btnUndo');
+
+  function positionAnnotationRail(){
+    const content = document.querySelector('main');
+    if (!content) return;
+    const rect = content.getBoundingClientRect();
+    const fabWidth = 52;
+    const toolbarWidth = Math.min(216, window.innerWidth - 36);
+    const gap = 18;
+    const fabLeft = Math.min(rect.right + gap, window.innerWidth - fabWidth - 12);
+    const toolbarLeft = Math.min(rect.right + gap, window.innerWidth - toolbarWidth - 12);
+    fab.style.setProperty('--annotation-rail-left', Math.max(12, fabLeft) + 'px');
+    toolbar.style.setProperty('--annotation-toolbar-left', Math.max(12, toolbarLeft) + 'px');
+  }
+  positionAnnotationRail();
+  window.addEventListener('resize', positionAnnotationRail);
 
   const penColors = [
     {name:'酒紅筆 Wine Pen', color:'#8C2F1D'},
