@@ -440,9 +440,9 @@
     position: fixed !important;
     left: var(--annotation-rail-left, auto);
     right: auto;
-    top: 50%;
-    bottom: auto;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: 24px;
+    transform: none;
     z-index: 2147483647;
     display: flex;
     align-items: center;
@@ -463,9 +463,9 @@
     position: fixed !important;
     left: var(--annotation-toolbar-left, auto);
     right: auto;
-    top: 50%;
-    bottom: auto;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: 92px;
+    transform: none;
     z-index: 2147483647;
     width: 216px;
     background: var(--card);
@@ -478,6 +478,9 @@
   }
   #annotateToolbar.open { display: block; }
   #annotateToolbar .at-title { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 0.92rem; margin-bottom: 2px; }
+  #annotateToolbar .at-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  #annotateToolbar .at-close { border: 0; background: transparent; color: var(--ink-faint); font-size: 1.35rem; line-height: 1; padding: 0 2px; cursor: pointer; }
+  #annotateToolbar .at-close:hover { color: var(--red); }
   #annotateToolbar .at-title .en { display: block; font-family: 'Inter', sans-serif; font-style: italic; font-weight: 400; font-size: 0.7rem; color: var(--ink-faint); margin-bottom: 10px; }
   .at-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .at-swatch {
@@ -521,7 +524,7 @@
   @media (max-width: 520px) {
     .brand .mark { font-size: 1.25rem; }
     .structure-flow { flex-direction: column; }
-    #annotateToolbar { width: calc(100vw - 36px); right: 18px; }
+    #annotateToolbar { width: calc(100vw - 36px); right: auto; }
     .resource-grid { grid-template-columns: 1fr; }
   }
 </style>
@@ -652,7 +655,10 @@
 <canvas id="annotateCanvas"></canvas>
 <button id="annotateFab" type="button" title="標註工具 Annotate Tools">✎</button>
 <div id="annotateToolbar">
-  <div class="at-title">標註工具<span class="en">Annotate Tools</span></div>
+  <div class="at-title-row">
+    <div class="at-title">標註工具<span class="en">Annotate Tools</span></div>
+    <button class="at-close" id="btnCloseAnnotate" type="button" title="關閉標註工具 Close">×</button>
+  </div>
   <div class="at-row" id="penRow"></div>
   <div class="at-row">
     <button class="at-tool" id="toolPen" type="button">畫筆<span class="en">Draw</span></button>
@@ -1132,6 +1138,7 @@
   const toolHighlightBtn = document.getElementById('toolHighlight');
   const toolEraserBtn = document.getElementById('toolEraser');
   const undoBtn = document.getElementById('btnUndo');
+  const closeAnnotateBtn = document.getElementById('btnCloseAnnotate');
 
   function positionAnnotationRail(){
     const content = document.querySelector('main');
@@ -1221,6 +1228,16 @@
     refreshUndoButton();
   }
 
+  function closeAnnotation(){
+    toolbar.classList.remove('open');
+    currentTool = null;
+    clearAnnotationMarks();
+    canvas.style.mixBlendMode = 'normal';
+    setActive(toolBrowseBtn);
+    enableDrawing(false);
+  }
+  closeAnnotateBtn.addEventListener('click', closeAnnotation);
+
   fab.addEventListener('click', ()=>{
     const willOpen = !toolbar.classList.contains('open');
     toolbar.classList.toggle('open', willOpen);
@@ -1230,11 +1247,7 @@
       enableDrawing(true);
     }
     if (!willOpen) {
-      // Closing the palette also exits drawing mode, so the page can scroll again.
-      currentTool = null;
-      clearAnnotationMarks();
-      setActive(toolBrowseBtn);
-      enableDrawing(false);
+      closeAnnotation();
     }
   });
 
