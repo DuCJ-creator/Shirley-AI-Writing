@@ -27,6 +27,8 @@
     --amber-soft: #FBF3DD;
     --focus: #1E5688;
     --shadow: rgba(18,59,99,0.11);
+    --mk-red: #D50000;
+    --mk-hl: rgba(255,82,82,0.38);
   }
   :root:not([data-theme="light"]) {
     @media (prefers-color-scheme: dark) {
@@ -48,6 +50,8 @@
       --amber-soft: #362C17;
       --focus: #9AB3DD;
       --shadow: rgba(0,0,0,0.4);
+    --mk-red: #FF6B6B;
+    --mk-hl: rgba(255,82,82,0.48);
     }
   }
   :root[data-theme="dark"] {
@@ -69,6 +73,8 @@
     --amber-soft: #362C17;
     --focus: #9AB3DD;
     --shadow: rgba(0,0,0,0.4);
+    --mk-red: #FF6B6B;
+    --mk-hl: rgba(255,82,82,0.48);
   }
 
   * { box-sizing: border-box; }
@@ -277,7 +283,7 @@
     color: var(--red);
     min-width: 1.4em;
   }
-  textarea.answer {
+  .answer {
     width: 100%;
     resize: vertical;
     min-height: 46px;
@@ -290,7 +296,7 @@
     padding: 8px 10px;
     line-height: 1.5;
   }
-  textarea.answer:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .answer:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
   .item-foot { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 5px; font-size: 0.72rem; color: var(--ink-faint); }
   .item-foot .check { color: var(--green); font-weight: 600; display: none; }
   .sentence-card.done .item-foot .check { display: inline; }
@@ -364,14 +370,14 @@
   .para-block .plabel .name { font-weight: 600; color: var(--ink); }
   .para-block .plabel .task { display: block; font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; font-weight: 400; }
   .para-block .plabel .task .en { display: block; font-style: italic; color: var(--ink-faint); margin-top: 1px; }
-  .para-block textarea.essay {
+  .para-block .essay {
     width: 100%; min-height: 100px; resize: vertical;
     border: 1px solid var(--card-line); border-radius: 8px;
     background: transparent; color: var(--ink);
     font-family: 'Inter', sans-serif; font-size: 0.92rem;
     padding: 10px 12px; line-height: 1.6;
   }
-  .para-block textarea.essay:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .para-block .essay:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
   .wc-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; font-size: 0.74rem; }
   .wc-badge { padding: 2px 9px; border-radius: 5px; background: var(--card-line); color: var(--ink-faint); }
   .wc-badge.ok { background: var(--green-soft); color: var(--green); }
@@ -529,6 +535,198 @@
     #annotateToolbar { width: calc(100vw - 36px); right: auto; }
     .resource-grid { grid-template-columns: 1fr; }
   }
+
+  /* ---------- Editable answer areas (support red pen / red highlight) ---------- */
+  .answer, .para-block .essay {
+    display: block;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    cursor: text;
+  }
+  .answer[contenteditable]:empty::before,
+  .essay[contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink-faint);
+    pointer-events: none;
+  }
+  .mk-red { color: var(--mk-red); }
+  .mk-hl  { background: var(--mk-hl); border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .mk-red, .mk-hl { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* ---------- Correction bar (red pen / red highlight) ---------- */
+  .top-actions { display: flex; gap: 8px; align-items: flex-start; }
+  .print-btn {
+    border: 1px solid var(--blue);
+    background: var(--blue);
+    color: #fff;
+    font-size: 0.76rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .print-btn .bi-en { color: #fff; opacity: .85; font-size: 0.85em; margin-top: 0; }
+  .print-btn:hover { background: var(--red); border-color: var(--red); }
+  .mark-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 0.74rem; }
+  .mb-label { color: var(--ink-soft); font-weight: 600; }
+  .mb-label .bi-en { display: inline; margin: 0 0 0 4px; }
+  .mb-btn {
+    border: 1px solid var(--card-line);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 4px 9px;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .mb-btn:hover { border-color: var(--mk-red); }
+  .mb-sw { display: inline-block; min-width: 1.4em; text-align: center; font-weight: 700; border-radius: 3px; padding: 0 2px; }
+  .mb-sw.t { color: var(--mk-red); }
+  .mb-sw.h { background: var(--mk-hl); }
+  .mb-hint { color: var(--ink-faint); font-size: 0.7rem; flex: 1 1 200px; }
+
+  /* ---------- Print selection checkboxes ---------- */
+  input.pick { width: 18px; height: 18px; flex: none; accent-color: var(--red); cursor: pointer; margin: 0; }
+  .sentence-zh .pick { margin-top: 4px; }
+  .stage-title .pick { align-self: center; }
+  .topic-headwrap { display: flex; align-items: center; }
+  .topic-headwrap > .pick { margin-left: 14px; }
+  .topic-headwrap .topic-head { flex: 1; padding-left: 12px; }
+  .ptitle { display: flex; align-items: flex-start; gap: 10px; }
+  .ptitle .pick { margin-top: 4px; }
+  .pick-bar {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: var(--blue-soft); border: 1px solid var(--card-line); border-radius: 8px;
+    padding: 8px 12px; margin: 6px 0 12px; font-size: 0.8rem; color: var(--ink-soft);
+  }
+  .pick-all { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--ink); font-weight: 600; }
+  .pick-all .bi-en { display: inline; margin: 0 0 0 6px; font-weight: 400; }
+  .pick-count { margin-left: auto; color: var(--blue); font-weight: 600; }
+
+  /* ---------- Print dialog ---------- */
+  dialog#printDlg {
+    border: 1px solid var(--card-line); border-top: 4px solid var(--amber); border-radius: 12px;
+    background: var(--card); color: var(--ink); padding: 0;
+    width: min(460px, calc(100vw - 32px)); box-shadow: 0 10px 30px var(--shadow);
+  }
+  dialog#printDlg::backdrop { background: rgba(20,22,29,.5); }
+  .pd-body { padding: 18px 20px 16px; }
+  .pd-title { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 1.1rem; }
+  .pd-title .bi-en { margin: 0 0 12px; }
+  .pd-grid { display: grid; grid-template-columns: 1.2fr .8fr 1.6fr; gap: 10px; margin: 8px 0 14px; }
+  .pd-grid label { font-size: .78rem; color: var(--ink-soft); display: flex; flex-direction: column; gap: 3px; }
+  .pd-grid label .en { font-style: italic; color: var(--ink-faint); font-size: .85em; margin-left: 4px; }
+  .pd-grid input {
+    border: 1px solid var(--card-line); border-radius: 6px; background: transparent; color: var(--ink);
+    padding: 7px 9px; font: inherit; font-size: .92rem; width: 100%;
+  }
+  .pd-grid input:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .pd-sec { font-size: .82rem; font-weight: 600; color: var(--blue); margin: 4px 0 6px; }
+  .pd-sec .en { font-weight: 400; font-style: italic; color: var(--ink-faint); margin-left: 6px; }
+  .pd-part { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--card-line); font-size: .88rem; flex-wrap: wrap; }
+  .pd-part label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .pd-part .pick-count { font-size: .78rem; }
+  .pd-part .sub { flex-basis: 100%; padding-left: 26px; font-size: .78rem; color: var(--ink-soft); }
+  .pd-part .sub label { gap: 6px; }
+  .pd-note { font-size: .76rem; color: var(--ink-soft); margin: 12px 0 4px; line-height: 1.6; }
+  .pd-err { color: var(--red); font-size: .8rem; min-height: 1.2em; margin: 4px 0; }
+  .pd-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .pd-actions button { border: 1px solid var(--card-line); background: transparent; color: var(--ink-soft); border-radius: 7px; padding: 8px 16px; font: inherit; font-size: .86rem; cursor: pointer; }
+  .pd-actions button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+
+  @media (max-width: 520px) {
+    .pd-grid { grid-template-columns: 1fr 1fr; }
+    .pd-grid label:last-child { grid-column: 1 / -1; }
+  }
+
+  /* ---------- Print output ---------- */
+  #printArea { display: none; }
+  @media print {
+    @page { size: A4; margin: 13mm 12mm; }
+    #annotateFab, #annotateToolbar, #annotateCanvas, .mark-bar, .resource-hub { display: none !important; }
+    body { background: #fff !important; }
+    body.use-print-area > *:not(#printArea) { display: none !important; }
+    body.use-print-area #printArea { display: block; }
+    #printArea, #printArea * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  #printArea {
+    --paper: #fff; --paper-line: #E5EAF1; --card: #fff; --card-line: #CBD5E1;
+    --ink: #111; --ink-soft: #333; --ink-faint: #666;
+    --red: #8B1E2D; --red-soft: #F6E8EB; --blue: #123B63; --blue-soft: #EAF1F8;
+    --green: #2F674D; --green-soft: #E8F3ED; --amber: #B18124; --amber-soft: #FBF3DD;
+    --shadow: transparent;
+    --mk-red: #D50000; --mk-hl: rgba(255,60,60,0.38);
+    background: #fff; color: #111;
+    font-family: 'Inter', -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 11pt; line-height: 1.5;
+  }
+  #printArea .pt { width: 100%; border-collapse: collapse; }
+  #printArea .pt thead { display: table-header-group; }
+  #printArea .pt td { padding: 0; vertical-align: top; }
+  #printArea .pi { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; border-bottom: 1.5px solid #111; padding: 0 0 5px; margin-bottom: 12px; font-size: 10.5pt; }
+  #printArea .pi .ttl { font-family: 'Noto Serif TC', serif; font-weight: 700; }
+  #printArea .pi .ttl small { font-family: 'Inter', sans-serif; font-weight: 400; color: #555; margin-left: 6px; font-size: 8.5pt; }
+  #printArea .pi .f { display: inline-block; min-width: 4.5em; border-bottom: 1px solid #111; padding: 0 6px; margin: 0 10px 0 3px; text-align: center; }
+  #printArea .pph { font-family: 'Noto Serif TC', serif; font-size: 14pt; border-left: 4px solid #8B1E2D; padding-left: 8px; margin: 16px 0 8px; break-after: avoid; }
+  #printArea .pph small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 9pt; color: #666; margin-left: 6px; }
+  #printArea .pg { font-family: 'Noto Serif TC', serif; font-size: 12pt; margin: 12px 0 4px; color: #123B63; break-after: avoid; }
+  #printArea .pg small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 8.5pt; color: #666; margin-left: 5px; }
+  #printArea .ps { font-size: 10pt; font-weight: 600; color: #123B63; margin: 8px 0 3px; break-after: avoid; }
+  #printArea .pset { font-size: 9pt; color: #666; margin: 6px 0 3px; break-after: avoid; }
+  #printArea .pq { break-inside: avoid; margin: 0 0 9px; }
+  #printArea .pz { display: flex; gap: 6px; margin-bottom: 2px; }
+  #printArea .pn { font-weight: 700; color: #8B1E2D; min-width: 1.9em; flex: none; }
+  #printArea .pa, #printArea .pe {
+    min-height: 84px; line-height: 28px; padding: 0 4px; white-space: pre-wrap; overflow-wrap: anywhere;
+    background: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #9AA5B4 27px, #9AA5B4 28px);
+  }
+  #printArea .pe { min-height: 224px; }
+  #printArea .pw { break-inside: avoid; margin: 0 0 16px; border-top: 3px solid #8B1E2D; padding-top: 6px; }
+  #printArea .pwt { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 12pt; margin-bottom: 6px; }
+  #printArea .pwl { font-size: 10pt; margin: 8px 0 3px; }
+  #printArea .pwl b { font-weight: 700; }
+  #printArea .pwl .en { display: block; font-style: italic; color: #666; font-size: 9pt; }
+  #printArea .pwc { text-align: right; font-size: 9pt; color: #555; margin-top: 2px; }
+  #printArea .pref { break-before: auto; margin-bottom: 14px; }
+  #printArea .pref .section-title { margin-top: 16px; break-after: avoid; }
+  #printArea .pref .theme-card, #printArea .pref .pattern-card, #printArea .pref .step { break-inside: avoid; box-shadow: none; }
+
+  /* ---------- highlighter mode + preview ---------- */
+  .mb-btn.active { background: var(--mk-hl); border-color: var(--mk-red); font-weight: 700; }
+  body.hl-armed .answer, body.hl-armed .essay { cursor: crosshair; }
+  body.hl-armed .answer ::selection, body.hl-armed .essay ::selection,
+  body.hl-armed .answer::selection, body.hl-armed .essay::selection { background: rgba(255,82,82,.45); }
+  body.previewing { overflow: hidden; }
+  body.previewing #annotateFab, body.previewing #annotateToolbar, body.previewing #annotateCanvas { display: none !important; }
+  body.previewing #printArea {
+    display: block; position: fixed; inset: 0; z-index: 2147483647;
+    overflow: auto; background: #5B6472;
+  }
+  #printArea .pv-bar {
+    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap; background: #1D2635; color: #fff; padding: 10px 16px; font-size: 14px;
+  }
+  #printArea .pv-bar small { opacity: .7; margin-left: 8px; }
+  #printArea .pv-bar button {
+    border: 1px solid #8A97AB; background: transparent; color: #fff; border-radius: 7px;
+    padding: 7px 14px; font: inherit; cursor: pointer;
+  }
+  #printArea .pv-bar button.primary { background: #8B1E2D; border-color: #8B1E2D; font-weight: 600; }
+  #printArea .pv-sheet {
+    background: #fff; width: 210mm; max-width: calc(100% - 16px); margin: 16px auto 40px;
+    padding: 13mm 12mm; box-shadow: 0 4px 18px rgba(0,0,0,.35); min-height: 297mm; box-sizing: border-box;
+  }
+  @media print {
+    #printArea .pv-bar { display: none !important; }
+    body.previewing #printArea, body.use-print-area #printArea { position: static !important; overflow: visible !important; background: #fff !important; }
+    body.previewing { overflow: visible !important; }
+    #printArea .pv-sheet { width: auto; max-width: none; margin: 0; padding: 0; box-shadow: none; min-height: 0; }
+  }
 </style>
 </head>
 <body>
@@ -543,7 +741,10 @@
           <div class="bi-en">Translation &amp; Writing Practice Book</div>
         </div>
       </div>
-      <button class="reset-btn" id="resetBtn" type="button">清除全部作答紀錄<div class="bi-en">Clear All Answers</div></button>
+      <div class="top-actions">
+        <button class="print-btn" id="openPrintBtn" type="button">🖨 列印 <span id="printCount">(0)</span><div class="bi-en">Print</div></button>
+        <button class="reset-btn" id="resetBtn" type="button">清除全部作答紀錄<div class="bi-en">Clear All Answers</div></button>
+      </div>
     </div>
     <div class="progress-wrap">
       <div class="progress-label">
@@ -551,6 +752,13 @@
         <span id="progressText">0 / 0</span>
       </div>
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="mark-bar" id="markBar" role="toolbar" aria-label="批改工具 Correction tools">
+      <span class="mb-label">批改<span class="bi-en">Correct</span></span>
+      <button type="button" class="mb-btn" id="mbRed" title="紅筆：選取文字後改成紅字；游標在空白處則開始用紅字輸入 / Red pen"><span class="mb-sw t">A</span>紅筆</button>
+      <button type="button" class="mb-btn" id="mbHl" title="紅色螢光筆模式：按下後，拖曳選取的文字會被標成紅色螢光；再按一次關閉 / Red highlighter mode" aria-pressed="false"><span class="mb-sw h">A</span>紅色螢光</button>
+      <button type="button" class="mb-btn" id="mbClear" title="清除選取文字上的紅色標記 / Remove marks">清除標記</button>
+      <span class="mb-hint" id="mbHint">紅筆：選取文字改紅字，或游標處直接用紅字輸入。紅色螢光：按下後拖曳選取要標示的文字。列印時會一併印出。</span>
     </div>
   </div>
   <nav class="tabs" id="tabs">
@@ -581,6 +789,7 @@
     <p class="intro">會考英文寫作採兩段式作文（120–150 字），第一段描述情景，第二段分析成因並反思。以下先複習歷屆考題與得分重點，再進行兩篇模擬練習。</p>
     <p class="intro-en">GSAT English writing uses a two-paragraph format (120–150 words): paragraph one describes the scenario, paragraph two analyzes its causes and reflects on it. Review past topics and key points below, then try two practice prompts.</p>
 
+    <div id="writingRef">
     <h2 class="section-title">歷屆作文題目總覽 <span class="en">Past Exam Topics (108–115)</span></h2>
     <table class="exam-table" id="examTable"></table>
 
@@ -608,6 +817,8 @@
 
     <h2 class="section-title">實用起承轉合句型 <span class="en">Useful Transitional Patterns</span></h2>
     <div id="patternRoot"></div>
+
+    </div>
 
     <h2 class="section-title">模擬寫作練習 <span class="en">Practice Writing Prompts</span></h2>
     <div id="promptRoot"></div>
@@ -654,6 +865,38 @@
   <span class="en">Compiled from Teacher Shirley Du's handout, "Crack GSAT Translation/Writing." All answers are saved only in your current browser for self-practice and are not an official scoring tool.</span>
 </footer>
 
+<div id="printArea">
+  <div class="pv-bar">
+    <button type="button" id="pvBack">← 返回修改 Back</button>
+    <span>列印預覽 Print Preview<small>實際分頁以列印結果為準</small></span>
+    <button type="button" class="primary" id="pvPrint">🖨 列印 Print</button>
+  </div>
+  <div class="pv-sheet" id="pvSheet"></div>
+</div>
+
+<dialog id="printDlg" aria-labelledby="printDlgTitle">
+  <div class="pd-body">
+    <div class="pd-title" id="printDlgTitle">列印設定<div class="bi-en">Print Settings</div></div>
+    <div class="pd-grid">
+      <label>班級<input id="piClass" maxlength="12" autocomplete="off" placeholder="例：301"></label>
+      <label>座號<input id="piSeat" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="例：15"></label>
+      <label>姓名<input id="piName" maxlength="20" autocomplete="off"></label>
+    </div>
+    <div class="pd-sec">選擇列印的部分<span class="en">Parts to print</span></div>
+    <div class="pd-part"><label><input type="checkbox" class="pick" data-partall="f"> 翻譯基礎 Foundation</label><span class="pick-count" data-partcount="f"></span></div>
+    <div class="pd-part"><label><input type="checkbox" class="pick" data-partall="s"> 句型主題練習 Grammar Topics</label><span class="pick-count" data-partcount="s"></span></div>
+    <div class="pd-part"><label><input type="checkbox" class="pick" data-partall="w"> 寫作篇 Writing</label><span class="pick-count" data-partcount="w"></span>
+      <div class="sub"><label><input type="checkbox" class="pick" data-ref> 同時列印寫作參考資料（歷屆題目、結構、詞彙、句型）</label></div>
+    </div>
+    <p class="pd-note">要列印哪些題目，請回到頁面，在每一題前方的方框打勾；此處的勾選可一次選取／取消整個部分。未作答的題目會留下書寫線供手寫，紅筆與紅色螢光標記會一併印出。</p>
+    <div class="pd-err" id="pdErr" role="alert"></div>
+    <div class="pd-actions">
+      <button type="button" id="pdCancel">取消 Cancel</button>
+      <button type="button" class="primary" id="pdPrint">預覽列印 Preview</button>
+    </div>
+  </div>
+</dialog>
+
 <canvas id="annotateCanvas"></canvas>
 <button id="annotateFab" type="button" title="標註工具 Annotate Tools">✎</button>
 <div id="annotateToolbar">
@@ -665,6 +908,7 @@
   <div class="at-row">
     <button class="at-tool" id="toolPen" type="button">畫筆<span class="en">Draw</span></button>
     <button class="at-tool" id="toolHighlight" type="button">螢光筆<span class="en">Highlighter</span></button>
+    <button class="at-tool" id="toolHighlightRed" type="button">紅螢光<span class="en">Red Marker</span></button>
     <button class="at-tool" id="toolEraser" type="button">橡皮擦<span class="en">Eraser</span></button>
   </div>
   <div class="at-row">
@@ -716,30 +960,240 @@
     document.getElementById('progressFill').style.width = pct + '%';
   }
 
-  function makeSentenceCard(id, num, zh){
+  /* ---------------- rich answer editor (red pen / red highlight) ---------------- */
+  function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function delVal(id){ try { localStorage.removeItem(STORE_PREFIX+id); } catch(e){} }
+
+  // Parse an editor (or fragment) into a per-character model {c, r: red text, h: red highlight}.
+  // Optional targets [{node, offset}] receive their model index in .pos
+  function parseEditor(root, targets){
+    const model = [];
+    const ts = targets || [];
+    function hit(node, off){ for (const t of ts){ if (t.node===node && t.offset===off) t.pos = model.length; } }
+    function walk(el, r, h){
+      const kids = el.childNodes;
+      for (let i=0; i<=kids.length; i++){
+        hit(el, i);
+        if (i===kids.length) break;
+        const n = kids[i];
+        if (n.nodeType===3){
+          const v = n.nodeValue;
+          for (let k=0; k<=v.length; k++){
+            hit(n, k);
+            if (k===v.length) break;
+            const c = v[k];
+            if (c==='\u200b') continue;
+            model.push({c:c, r:r, h:h});
+          }
+        } else if (n.nodeType===1){
+          const tg = n.tagName;
+          if (tg==='BR'){ model.push({c:'\n', r:r, h:h}); }
+          else {
+            let nr = r, nh = h;
+            if (tg==='SPAN'){
+              if (n.classList.contains('mk-red')) nr = true;
+              if (n.classList.contains('mk-hl')) nh = true;
+            }
+            if ((tg==='DIV'||tg==='P') && model.length && model[model.length-1].c!=='\n') model.push({c:'\n', r:r, h:h});
+            walk(n, nr, nh);
+          }
+        }
+      }
+    }
+    walk(root, false, false);
+    return model;
+  }
+  function modelToHtml(model){
+    let html = '', i = 0;
+    while (i < model.length){
+      const r = model[i].r, h = model[i].h;
+      let seg = '';
+      while (i < model.length && model[i].r===r && model[i].h===h){
+        seg += model[i].c==='\n' ? '<br>' : escHtml(model[i].c);
+        i++;
+      }
+      if (r || h) seg = '<span class="'+(r?'mk-red':'')+(r&&h?' ':'')+(h?'mk-hl':'')+'">'+seg+'</span>';
+      html += seg;
+    }
+    return html;
+  }
+  function renderModel(el, model){ el.innerHTML = modelToHtml(model); }
+  function editorHtml(el){ return modelToHtml(parseEditor(el)); }
+  function editorText(el){ return parseEditor(el).map(x=>x.c).join(''); }
+  function loadInto(el, html){
+    const t = document.createElement('template');
+    t.innerHTML = html;                       // inert; re-serialised through the model (only text / <br> / marks survive)
+    renderModel(el, parseEditor(t.content));
+  }
+  // model index -> DOM point (for restoring the selection after re-render)
+  function domPoint(root, pos){
+    let count = 0, res = null;
+    (function w(el){
+      const kids = Array.prototype.slice.call(el.childNodes);
+      for (let i=0; i<kids.length; i++){
+        if (res) return;
+        const n = kids[i];
+        if (n.nodeType===3){
+          const l = n.nodeValue.length;
+          if (pos <= count + l){ res = [n, pos - count]; return; }
+          count += l;
+        } else if (n.tagName==='BR'){
+          if (pos <= count){ res = [el, i]; return; }
+          count += 1;
+        } else { w(n); }
+      }
+    })(root);
+    return res || [root, root.childNodes.length];
+  }
+
+  function makeEditor(id, cls, placeholder, onChange){
+    const el = document.createElement('div');
+    el.className = cls;
+    el.setAttribute('contenteditable', 'true');
+    el.spellcheck = false;
+    el.dataset.placeholder = placeholder;
+    el.setAttribute('role', 'textbox');
+    el.setAttribute('aria-multiline', 'true');
+    el.setAttribute('aria-label', placeholder);
+    el.setAttribute('autocapitalize', 'off');
+    el.setAttribute('autocorrect', 'off');
+    const stored = loadVal('h:'+id);
+    if (stored) loadInto(el, stored);
+    else {
+      const legacy = loadVal(id);              // answers saved by the earlier textarea version
+      if (legacy) el.innerHTML = escHtml(legacy).replace(/\n/g, '<br>');
+    }
+    el.addEventListener('input', ()=>{
+      if (el.firstChild && editorText(el)==='' && !el.querySelector('span')) el.innerHTML = '';
+      saveVal('h:'+id, editorHtml(el));
+      delVal(id);
+      if (onChange) onChange(el);
+    });
+    el.addEventListener('keydown', (e)=>{
+      if (e.key==='Enter' && !e.isComposing){ e.preventDefault(); document.execCommand('insertLineBreak'); }
+    });
+    el.addEventListener('paste', (e)=>{
+      e.preventDefault();
+      const t = (e.clipboardData || window.clipboardData).getData('text/plain').replace(/\r/g,'');
+      t.split('\n').forEach((ln, i)=>{
+        if (i) document.execCommand('insertLineBreak');
+        if (ln) document.execCommand('insertText', false, ln);
+      });
+    });
+    return el;
+  }
+
+  /* ---------------- print selection state ---------------- */
+  const registry = [];          // every printable question / prompt
+  const selected = new Set();   // ids ticked for printing
+  const groups = [];            // group checkboxes (stage / topic)
+
+  function makePick(id, label){
+    const b = document.createElement('input');
+    b.type = 'checkbox';
+    b.className = 'pick';
+    b.title = '勾選後列印 Tick to print';
+    b.setAttribute('aria-label', label || '選取列印');
+    if (loadVal('sel:'+id)==='1'){ b.checked = true; selected.add(id); }
+    b.addEventListener('change', ()=>{
+      if (b.checked) selected.add(id); else selected.delete(id);
+      saveVal('sel:'+id, b.checked ? '1' : '');
+      refreshSel();
+    });
+    return b;
+  }
+  function setMany(ids, on){
+    ids.forEach(id=>{
+      if (on) selected.add(id); else selected.delete(id);
+      saveVal('sel:'+id, on ? '1' : '');
+    });
+    refreshSel();
+  }
+  function makeGroupBox(ids, label){
+    const b = document.createElement('input');
+    b.type = 'checkbox';
+    b.className = 'pick';
+    b.title = '整組全選／取消 Select whole group';
+    b.setAttribute('aria-label', label);
+    b.addEventListener('change', ()=> setMany(ids, b.checked));
+    groups.push({box:b, ids:ids});
+    return b;
+  }
+  function refreshSel(){
+    registry.forEach(r=>{ r.box.checked = selected.has(r.id); });
+    groups.forEach(g=>{
+      const n = g.ids.filter(id=>selected.has(id)).length;
+      g.box.checked = n>0 && n===g.ids.length;
+      g.box.indeterminate = n>0 && n<g.ids.length;
+    });
+    let total = 0;
+    ['f','s','w'].forEach(p=>{
+      const ids = registry.filter(r=>r.part===p).map(r=>r.id);
+      const n = ids.filter(id=>selected.has(id)).length;
+      total += n;
+      document.querySelectorAll('[data-partall="'+p+'"]').forEach(b=>{
+        b.checked = n>0 && n===ids.length;
+        b.indeterminate = n>0 && n<ids.length;
+      });
+      document.querySelectorAll('[data-partcount="'+p+'"]').forEach(s=>{
+        s.textContent = '已選 '+n+' / '+ids.length+(p==='w' ? ' 篇' : ' 題');
+      });
+    });
+    document.querySelectorAll('[data-ref]').forEach(b=>{ b.checked = selected.has('w-ref'); });
+    if (selected.has('w-ref')) total += 1;
+    const pc = document.getElementById('printCount');
+    if (pc) pc.textContent = '(' + total + ')';
+  }
+  function makePartBar(part, withRef){
+    const bar = document.createElement('div');
+    bar.className = 'pick-bar';
+    bar.innerHTML =
+      '<label class="pick-all"><input type="checkbox" class="pick" data-partall="'+part+'">本部分全選<span class="bi-en">Select all</span></label>' +
+      (withRef ? '<label class="pick-all"><input type="checkbox" class="pick" data-ref>含寫作參考資料<span class="bi-en">Include reference</span></label>' : '') +
+      '<span class="pick-count" data-partcount="'+part+'"></span>';
+    return bar;
+  }
+  document.addEventListener('change', (e)=>{
+    const t = e.target;
+    if (!t || !t.matches) return;
+    if (t.matches('[data-partall]')){
+      setMany(registry.filter(r=>r.part===t.dataset.partall).map(r=>r.id), t.checked);
+    } else if (t.matches('[data-ref]')){
+      setMany(['w-ref'], t.checked);
+    }
+  });
+
+  function makeSentenceCard(id, num, zh, meta){
     totalItems++;
     const card = document.createElement('div');
     card.className = 'sentence-card';
     const zhRow = document.createElement('div');
     zhRow.className = 'sentence-zh';
-    zhRow.innerHTML = '<span class="num">'+num+'.</span><span>'+zh+'</span>';
-    const ta = document.createElement('textarea');
-    ta.className = 'answer';
-    ta.placeholder = '請輸入英文翻譯... / Type your English translation...';
-    ta.value = loadVal(id);
-    if (ta.value.trim()){ card.classList.add('done'); doneSet.add(id); }
-    ta.addEventListener('input', ()=>{
-      saveVal(id, ta.value);
-      if (ta.value.trim()){ card.classList.add('done'); doneSet.add(id); }
+    const box = makePick(id, '選取第 '+num+' 題列印');
+    zhRow.appendChild(box);
+    const numEl = document.createElement('span');
+    numEl.className = 'num';
+    numEl.textContent = num + '.';
+    const zhEl = document.createElement('span');
+    zhEl.innerHTML = zh;
+    zhRow.appendChild(numEl);
+    zhRow.appendChild(zhEl);
+
+    function syncDone(ed){
+      if (editorText(ed).trim()){ card.classList.add('done'); doneSet.add(id); }
       else { card.classList.remove('done'); doneSet.delete(id); }
-      updateProgress();
-    });
+    }
+    const ta = makeEditor(id, 'answer', '請輸入英文翻譯... / Type your English translation...', (ed)=>{ syncDone(ed); updateProgress(); });
+    syncDone(ta);
+
     const foot = document.createElement('div');
     foot.className = 'item-foot';
     foot.innerHTML = '<span class="check">已作答 Done ✓</span>';
     card.appendChild(zhRow);
     card.appendChild(ta);
     card.appendChild(foot);
+
+    registry.push(Object.assign({id:id, kind:'q', num:num, zh:zh, ed:ta, box:box}, meta));
     return card;
   }
 
@@ -764,11 +1218,15 @@
   ];
 
   const foundationRoot = document.getElementById('foundationRoot');
+  foundationRoot.appendChild(makePartBar('f'));
   let fCounter = 0;
-  foundation.forEach(stage=>{
+  foundation.forEach((stage, si)=>{
+    const startN = fCounter;
+    const stageIds = stage.items.map((_, i)=> 'f-'+(startN+i+1));
     const h = document.createElement('div');
     h.className = 'stage-title';
     h.innerHTML = stage.stage + ' <span class="en">'+stage.en+'</span>';
+    h.insertBefore(makeGroupBox(stageIds, stage.stage+' 全選'), h.firstChild);
     const d = document.createElement('p');
     d.className = 'stage-desc';
     d.textContent = stage.desc;
@@ -781,7 +1239,9 @@
     stage.items.forEach(zh=>{
       fCounter++;
       const id = 'f-'+fCounter;
-      foundationRoot.appendChild(makeSentenceCard(id, fCounter, zh));
+      foundationRoot.appendChild(makeSentenceCard(id, fCounter, zh, {
+        part:'f', groupKey:'f'+si, groupTitle:stage.stage, groupEn:stage.en, sub:'', set:''
+      }));
     });
   });
 
@@ -914,9 +1374,17 @@
   ];
 
   const structureRoot = document.getElementById('structureRoot');
+  structureRoot.appendChild(makePartBar('s'));
   topics.forEach(topic=>{
     const topicEl = document.createElement('div');
     topicEl.className = 'topic';
+
+    const topicIds = [];
+    topic.subs.forEach((sub, subIdx)=>{
+      sub.groups.forEach((pair, gIdx)=>{
+        pair.forEach((_, sIdx)=> topicIds.push('t'+topic.no+'-'+subIdx+'-'+gIdx+'-'+sIdx));
+      });
+    });
 
     const head = document.createElement('button');
     head.type = 'button';
@@ -928,6 +1396,25 @@
     const body = document.createElement('div');
     body.className = 'topic-body';
 
+    function appendGroups(container, sub, subIdx){
+      sub.groups.forEach((pair, gIdx)=>{
+        const setZh = gIdx===0 ? '題組一' : '題組二';
+        const setEn = gIdx===0 ? 'Set 1' : 'Set 2';
+        const gName = document.createElement('div');
+        gName.className = 'group-name';
+        gName.innerHTML = setZh + '<span class="en">'+setEn+'</span>';
+        container.appendChild(gName);
+        pair.forEach((zh, sIdx)=>{
+          const id = 't'+topic.no+'-'+subIdx+'-'+gIdx+'-'+sIdx;
+          container.appendChild(makeSentenceCard(id, '句'+(sIdx+1), zh, {
+            part:'s', groupKey:'t'+topic.no,
+            groupTitle:'Topic '+topic.no+'　'+topic.title, groupEn:topic.en,
+            sub: sub.name || '', set: setZh+' '+setEn
+          }));
+        });
+      });
+    }
+
     topic.subs.forEach((sub, subIdx)=>{
       if (sub.name){
         const wrap = document.createElement('div');
@@ -936,40 +1423,25 @@
         subTitle.className = 'subsection-name';
         subTitle.textContent = sub.name;
         wrap.appendChild(subTitle);
-        appendGroups(wrap, sub.groups, topic.no, subIdx);
+        appendGroups(wrap, sub, subIdx);
         body.appendChild(wrap);
       } else {
-        appendGroups(body, sub.groups, topic.no, subIdx);
+        appendGroups(body, sub, subIdx);
       }
     });
 
-    function appendGroups(container, groups, topicNo, subIdx){
-      groups.forEach((pair, gIdx)=>{
-        const gName = document.createElement('div');
-        gName.className = 'group-name';
-        gName.innerHTML = (gIdx===0 ? '題組一' : '題組二') + '<span class="en">'+(gIdx===0 ? 'Set 1' : 'Set 2')+'</span>';
-        container.appendChild(gName);
-        pair.forEach((zh, sIdx)=>{
-          const id = 't'+topicNo+'-'+subIdx+'-'+gIdx+'-'+sIdx;
-          container.appendChild(makeSentenceCard(id, '句'+(sIdx+1), zh));
-        });
-      });
-    }
-
-    topicEl.appendChild(head);
+    const headWrap = document.createElement('div');
+    headWrap.className = 'topic-headwrap';
+    headWrap.appendChild(makeGroupBox(topicIds, 'Topic '+topic.no+' '+topic.title+' 全選'));
+    headWrap.appendChild(head);
+    topicEl.appendChild(headWrap);
     topicEl.appendChild(body);
     structureRoot.appendChild(topicEl);
 
     const cntSpan = head.querySelector('.cnt');
     function refreshCnt(){
-      const ids = [];
-      topic.subs.forEach((sub, subIdx)=>{
-        sub.groups.forEach((pair, gIdx)=>{
-          pair.forEach((_, sIdx)=> ids.push('t'+topic.no+'-'+subIdx+'-'+gIdx+'-'+sIdx));
-        });
-      });
-      const done = ids.filter(id=>doneSet.has(id)).length;
-      cntSpan.textContent = done+'/'+ids.length;
+      const done = topicIds.filter(id=>doneSet.has(id)).length;
+      cntSpan.textContent = done+'/'+topicIds.length;
     }
     refreshCnt();
     body.addEventListener('input', refreshCnt);
@@ -1074,14 +1546,21 @@
   }
 
   const promptRoot = document.getElementById('promptRoot');
+  promptRoot.appendChild(makePartBar('w', true));
   prompts.forEach((pr, idx)=>{
+    const pid = 'wp'+idx;
     const card = document.createElement('div');
     card.className = 'prompt-card';
     const title = document.createElement('div');
     title.className = 'ptitle';
-    title.textContent = pr.title;
+    const pbox = makePick(pid, '選取此寫作題列印');
+    const ttxt = document.createElement('span');
+    ttxt.textContent = pr.title;
+    title.appendChild(pbox);
+    title.appendChild(ttxt);
     card.appendChild(title);
 
+    const paras = [];
     [['第一段', pr.p1, pr.p1en, 60, 70, idx, 1], ['第二段', pr.p2, pr.p2en, 70, 80, idx, 2]].forEach(cfg=>{
       const [name, taskZh, taskEn, lo, hi, pIdx, paraNo] = cfg;
       const block = document.createElement('div');
@@ -1093,37 +1572,287 @@
       taskLine.className = 'task';
       taskLine.innerHTML = taskZh + '<span class="en">'+taskEn+'</span>';
       label.appendChild(taskLine);
-      const ta = document.createElement('textarea');
-      ta.className = 'essay';
-      ta.placeholder = '開始寫這一段的英文內容... / Start writing this paragraph in English...';
-      const id = 'w'+pIdx+'-p'+paraNo;
-      ta.value = loadVal(id);
+
       const wcRow = document.createElement('div');
       wcRow.className = 'wc-row';
       const badge = document.createElement('span');
       badge.className = 'wc-badge';
       wcRow.appendChild(badge);
 
+      const ta = makeEditor('w'+pIdx+'-p'+paraNo, 'essay', '開始寫這一段的英文內容... / Start writing this paragraph in English...', refresh);
       function refresh(){
-        const n = countWords(ta.value);
+        const n = countWords(editorText(ta));
         badge.textContent = '字數/Words '+n+'（目標/Target '+lo+'–'+hi+'）';
         badge.className = 'wc-badge' + (n===0 ? '' : (n<lo ? ' low' : (n>hi ? ' high' : ' ok')));
       }
-      ta.addEventListener('input', ()=>{ saveVal(id, ta.value); refresh(); });
       refresh();
 
       block.appendChild(label);
       block.appendChild(ta);
       block.appendChild(wcRow);
       card.appendChild(block);
+      paras.push({name:name, lo:lo, hi:hi, taskZh:taskZh, taskEn:taskEn, ed:ta});
     });
 
+    registry.push({id:pid, kind:'prompt', part:'w', title:pr.title, paras:paras, box:pbox});
     promptRoot.appendChild(card);
   });
 
+  /* ===================== CORRECTION TOOLS (red pen / red highlight) ===================== */
+  let lastRange = null, lastEditor = null;
+  function editorOf(node){
+    const el = node && (node.nodeType===1 ? node : node.parentElement);
+    return el && el.closest ? el.closest('.answer[contenteditable], .essay[contenteditable]') : null;
+  }
+  document.addEventListener('selectionchange', ()=>{
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    const ed = editorOf(r.commonAncestorContainer);
+    if (ed){ lastEditor = ed; lastRange = r.cloneRange(); }
+  });
+
+  const mbHint = document.getElementById('mbHint');
+  const HINT_DEFAULT = mbHint.textContent;
+  let hintTimer = null;
+  function flashHint(t){
+    mbHint.textContent = t;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(()=>{ mbHint.textContent = HINT_DEFAULT; }, 3200);
+  }
+
+  function caretPen(ed, rg, cls){
+    const sel = window.getSelection();
+    const node = rg.startContainer.nodeType===1 ? rg.startContainer : rg.startContainer.parentElement;
+    const inMark = node && node.closest ? node.closest('span.'+cls) : null;
+    if (inMark && ed.contains(inMark)){
+      const r = document.createRange();
+      r.setStartAfter(inMark); r.collapse(true);
+      ed.focus();
+      sel.removeAllRanges(); sel.addRange(r);
+      flashHint('已離開'+(cls==='mk-red' ? '紅筆' : '紅色螢光')+'，之後輸入的文字恢復一般顏色。');
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = cls;
+    span.textContent = '\u200b';
+    rg.insertNode(span);
+    const r = document.createRange();
+    r.setStart(span.firstChild, 1); r.collapse(true);
+    ed.focus();
+    sel.removeAllRanges(); sel.addRange(r);
+    flashHint((cls==='mk-red' ? '紅筆' : '紅色螢光')+'輸入中；再按一次同一顆按鈕可離開。');
+  }
+
+  function markOp(kind){
+    if (!lastEditor || !lastRange || !document.body.contains(lastEditor)){
+      flashHint('請先點一下作答區，或選取要批改的文字。');
+      return;
+    }
+    const ed = lastEditor, rg = lastRange;
+    if (rg.collapsed){
+      if (kind==='clear'){ flashHint('請先選取要清除標記的文字。'); return; }
+      if (kind==='r') caretPen(ed, rg, 'mk-red');
+      return;
+    }
+    const targets = [{node:rg.startContainer, offset:rg.startOffset}, {node:rg.endContainer, offset:rg.endOffset}];
+    const model = parseEditor(ed, targets);
+    let s = targets[0].pos, e = targets[1].pos;
+    if (s==null || e==null) return;
+    if (s > e){ const t = s; s = e; e = t; }
+    if (s === e) return;
+    const part = model.slice(s, e);
+    if (kind==='clear'){
+      part.forEach(x=>{ x.r = false; x.h = false; });
+    } else {
+      const key = kind==='r' ? 'r' : 'h';
+      const vis = part.filter(x=>x.c!=='\n');
+      const allOn = vis.length>0 && vis.every(x=>x[key]);   // toggle: press again to remove
+      part.forEach(x=>{ x[key] = !allOn; });
+    }
+    renderModel(ed, model);
+    const a = domPoint(ed, s), b = domPoint(ed, e);
+    const nr = document.createRange();
+    nr.setStart(a[0], a[1]); nr.setEnd(b[0], b[1]);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(nr);
+    lastRange = nr.cloneRange();
+    ed.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+  /* red highlighter mode: press once, then drag over text to highlight it */
+  let hlArmed = false, mouseDown = false, hlTimer = null;
+  const mbHlBtn = document.getElementById('mbHl');
+  function setHl(on){
+    hlArmed = on;
+    mbHlBtn.classList.toggle('active', on);
+    mbHlBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    document.body.classList.toggle('hl-armed', on);
+    flashHint(on ? '紅色螢光已開啟：在作答區拖曳選取文字即可標記（再選一次可取消）；再按一次按鈕關閉。' : '已關閉紅色螢光。');
+  }
+  function autoHl(){
+    if (!hlArmed || mouseDown) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+    const r = sel.getRangeAt(0);
+    const ed = editorOf(r.commonAncestorContainer);
+    if (!ed) return;
+    lastEditor = ed; lastRange = r.cloneRange();
+    markOp('h');
+    sel.collapseToEnd();
+  }
+  document.addEventListener('mousedown', (e)=>{ if (editorOf(e.target)) mouseDown = true; });
+  document.addEventListener('mouseup', ()=>{
+    if (!mouseDown) return;
+    mouseDown = false;
+    if (hlArmed) setTimeout(autoHl, 0);
+  });
+  document.addEventListener('selectionchange', ()=>{     // touch screens: apply once the selection settles
+    if (!hlArmed || mouseDown) return;
+    clearTimeout(hlTimer);
+    hlTimer = setTimeout(autoHl, 450);
+  });
+  mbHlBtn.addEventListener('mousedown', (e)=> e.preventDefault());
+  mbHlBtn.addEventListener('click', ()=>{
+    const cur = window.getSelection();
+    const hasSel = cur && cur.rangeCount && !cur.isCollapsed && editorOf(cur.getRangeAt(0).commonAncestorContainer);
+    if (hasSel){                       // text already selected: highlight it right away and keep the mode on
+      lastEditor = editorOf(cur.getRangeAt(0).commonAncestorContainer);
+      lastRange = cur.getRangeAt(0).cloneRange();
+      markOp('h');
+      cur.collapseToEnd();
+      if (!hlArmed) setHl(true);
+    } else {
+      setHl(!hlArmed);
+    }
+  });
+
+  [['mbRed','r'], ['mbClear','clear']].forEach(pair=>{
+    const btn = document.getElementById(pair[0]);
+    btn.addEventListener('mousedown', (e)=> e.preventDefault());   // keep the text selection
+    btn.addEventListener('click', ()=> markOp(pair[1]));
+  });
+
+  /* ===================== PRINTING ===================== */
+  const INFO_PREFIX = 'gsat-info:';
+  function loadInfo(k){ try { return localStorage.getItem(INFO_PREFIX+k) || ''; } catch(e){ return ''; } }
+  function saveInfo(k, v){ try { localStorage.setItem(INFO_PREFIX+k, v); } catch(e){} }
+  const piClass = document.getElementById('piClass');
+  const piSeat  = document.getElementById('piSeat');
+  const piName  = document.getElementById('piName');
+  piClass.value = loadInfo('class'); piSeat.value = loadInfo('seat'); piName.value = loadInfo('name');
+  [['class', piClass], ['seat', piSeat], ['name', piName]].forEach(p=>{
+    p[1].addEventListener('input', ()=> saveInfo(p[0], p[1].value));
+  });
+
+  const PART_META = {
+    f:['一、翻譯基礎', 'Translation Foundation'],
+    s:['二、句型主題練習', 'Grammar Topics'],
+    w:['三、寫作篇', 'Writing']
+  };
+
+  function buildPrint(){
+    const area = document.getElementById('printArea');
+    const sheet = document.getElementById('pvSheet');
+    const items = registry.filter(r=>selected.has(r.id));
+    const refOn = selected.has('w-ref');
+    const has = items.length>0 || refOn;
+    document.body.classList.toggle('use-print-area', has);
+    sheet.innerHTML = '';
+    if (!has) return;
+
+    const fld = (v)=> '<span class="f">'+(v ? escHtml(v.trim()) : '&nbsp;')+'</span>';
+    let html =
+      '<table class="pt"><thead><tr><td><div class="pi">' +
+      '<span class="ttl">跟Shirley 杜老師一起備戰英文滿級<small>Translation &amp; Writing Practice</small></span>' +
+      '<span>班級'+fld(piClass.value)+'座號'+fld(piSeat.value)+'姓名'+fld(piName.value)+'</span>' +
+      '</div></td></tr></thead><tbody><tr><td>';
+
+    ['f','s','w'].forEach(p=>{
+      const list = items.filter(r=>r.part===p);
+      const showRef = p==='w' && refOn;
+      if (!list.length && !showRef) return;
+      html += '<section><h2 class="pph">'+PART_META[p][0]+'<small>'+PART_META[p][1]+'</small></h2>';
+
+      if (p==='w'){
+        if (showRef) html += '<div data-refslot></div>';
+        list.forEach(r=>{
+          html += '<div class="pw"><div class="pwt">'+escHtml(r.title)+'</div>';
+          r.paras.forEach(pa=>{
+            const n = countWords(editorText(pa.ed));
+            html += '<div class="pwl"><b>'+pa.name+'（約 '+pa.lo+'–'+pa.hi+' 字）</b>　'+pa.taskZh+'<span class="en">'+pa.taskEn+'</span></div>' +
+                    '<div class="pe">'+editorHtml(pa.ed)+'</div>' +
+                    '<div class="pwc">字數 Words: '+n+'（目標 Target '+pa.lo+'–'+pa.hi+'）</div>';
+          });
+          html += '</div>';
+        });
+      } else {
+        let lastG = null, lastSub = null, lastSet = null;
+        list.forEach(r=>{
+          if (r.groupKey !== lastG){
+            html += '<h3 class="pg">'+escHtml(r.groupTitle)+'<small>'+escHtml(r.groupEn)+'</small></h3>';
+            lastG = r.groupKey; lastSub = null; lastSet = null;
+          }
+          if (r.sub !== lastSub){
+            if (r.sub) html += '<div class="ps">'+escHtml(r.sub)+'</div>';
+            lastSub = r.sub; lastSet = null;
+          }
+          if (r.set !== lastSet){
+            if (r.set) html += '<div class="pset">'+r.set+'</div>';
+            lastSet = r.set;
+          }
+          html += '<div class="pq"><div class="pz"><span class="pn">'+escHtml(String(r.num))+(typeof r.num==='number' ? '.' : '')+'</span><span>'+r.zh+'</span></div>' +
+                  '<div class="pa">'+editorHtml(r.ed)+'</div></div>';
+        });
+      }
+      html += '</section>';
+    });
+    html += '</td></tr></tbody></table>';
+    sheet.innerHTML = html;
+
+    const slot = area.querySelector('[data-refslot]');
+    if (slot){
+      const clone = document.getElementById('writingRef').cloneNode(true);
+      clone.removeAttribute('id');
+      clone.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+      clone.className = 'pref';
+      slot.appendChild(clone);
+    }
+  }
+  window.addEventListener('beforeprint', buildPrint);
+
+  const printDlg = document.getElementById('printDlg');
+  const pdErr = document.getElementById('pdErr');
+  function closeDlg(){ if (printDlg.close) printDlg.close(); else printDlg.removeAttribute('open'); }
+  document.getElementById('openPrintBtn').addEventListener('click', ()=>{
+    pdErr.textContent = '';
+    refreshSel();
+    if (printDlg.showModal) printDlg.showModal(); else printDlg.setAttribute('open', '');
+  });
+  document.getElementById('pdCancel').addEventListener('click', ()=> closeDlg());
+  document.getElementById('pdPrint').addEventListener('click', ()=>{
+    if (!registry.some(r=>selected.has(r.id)) && !selected.has('w-ref')){
+      pdErr.textContent = '請先勾選要列印的題目（頁面中每題前方的方框），或在上方選取整個部分。';
+      return;
+    }
+    pdErr.textContent = '';
+    closeDlg();
+    openPreview();
+  });
+  function openPreview(){
+    buildPrint();
+    document.body.classList.add('previewing');
+    document.getElementById('printArea').scrollTop = 0;
+  }
+  function closePreview(){ document.body.classList.remove('previewing'); }
+  document.getElementById('pvBack').addEventListener('click', closePreview);
+  document.getElementById('pvPrint').addEventListener('click', ()=> window.print());
+  document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && document.body.classList.contains('previewing')) closePreview(); });
+
+  refreshSel();
+
   /* ---------------- reset answers ---------------- */
   document.getElementById('resetBtn').addEventListener('click', ()=>{
-    if (confirm('確定要清除所有已儲存的作答紀錄嗎？此動作無法復原。\nClear all saved answers? This cannot be undone.')){
+    if (confirm('確定要清除所有已儲存的作答、批改標記與列印勾選嗎？此動作無法復原。\nClear all saved answers, marks and print selections? This cannot be undone.')){
       clearAll();
       location.reload();
     }
@@ -1138,6 +1867,7 @@
   const toolBrowseBtn = document.getElementById('toolBrowse');
   const toolPenBtn = document.getElementById('toolPen');
   const toolHighlightBtn = document.getElementById('toolHighlight');
+  const toolHighlightRedBtn = document.getElementById('toolHighlightRed');
   const toolEraserBtn = document.getElementById('toolEraser');
   const undoBtn = document.getElementById('btnUndo');
   const closeAnnotateBtn = document.getElementById('btnCloseAnnotate');
@@ -1158,7 +1888,7 @@
   window.addEventListener('resize', positionAnnotationRail);
 
   const penColors = [
-    {name:'酒紅筆 Wine Pen', color:'#8C2F1D'},
+    {name:'紅筆 Red Pen', color:'#E10600'},
     {name:'墨藍筆 Navy Pen', color:'#2B3E63'},
     {name:'墨黑筆 Ink Pen', color:'#20222B'},
     {name:'松綠筆 Pine Pen', color:'#2F5C3E'}
@@ -1191,7 +1921,7 @@
     allToolButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
   }
-  allToolButtons.push(toolPenBtn, toolHighlightBtn, toolEraserBtn, toolBrowseBtn);
+  allToolButtons.push(toolPenBtn, toolHighlightBtn, toolHighlightRedBtn, toolEraserBtn, toolBrowseBtn);
 
   toolPenBtn.addEventListener('click', ()=>{
     currentTool = {type:'pen', color:selectedPenColor, width:4, alpha:1, composite:'source-over'};
@@ -1204,6 +1934,12 @@
     currentTool = {type:'highlighter', color:'#FFEB3B', width:14, alpha:0.5, composite:'source-over'};
     canvas.style.mixBlendMode = 'multiply';
     setActive(toolHighlightBtn);
+    enableDrawing(true);
+  });
+  toolHighlightRedBtn.addEventListener('click', ()=>{
+    currentTool = {type:'highlighter', color:'#FF3B30', width:14, alpha:0.4, composite:'source-over'};
+    canvas.style.mixBlendMode = 'multiply';
+    setActive(toolHighlightRedBtn);
     enableDrawing(true);
   });
   toolEraserBtn.addEventListener('click', ()=>{
