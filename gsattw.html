@@ -234,6 +234,17 @@
 
   .intro { font-size: 0.92rem; color: var(--ink-soft); margin: 0 0 4px; max-width: 62ch; }
   .intro-en { font-size: 0.8rem; color: var(--ink-faint); font-style: italic; margin: 0 0 22px; max-width: 62ch; }
+  .correction-disclaimer {
+    max-width: 62ch;
+    margin: -10px 0 22px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--amber);
+    background: var(--amber-soft);
+    color: var(--ink-soft);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
 
   .stage-title, .section-title {
     font-family: 'Noto Serif TC', serif;
@@ -297,6 +308,62 @@
     line-height: 1.5;
   }
   .answer:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .correction-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .grade-btn {
+    border: 1px solid var(--red);
+    background: var(--red-soft);
+    color: var(--red);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .grade-btn:hover { background: var(--red); color: #fff; }
+  .grade-note { color: var(--ink-faint); font-size: 0.72rem; }
+  .correction-panel {
+    display: none;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border: 1px solid var(--card-line);
+    border-radius: 7px;
+    background: var(--blue-soft);
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+  .correction-panel.show { display: block; }
+  .correction-panel .title {
+    color: var(--blue);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .correction-panel ul { margin: 5px 0 0 18px; padding: 0; }
+  .correction-panel li { margin: 3px 0; }
+  .revision-label {
+    display: none;
+    margin-top: 8px;
+    color: var(--red);
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .revision-label.show { display: block; }
+  .correction-answer {
+    display: none;
+    margin-top: 4px;
+    color: var(--mk-red);
+    border-color: var(--red);
+    background: var(--red-soft);
+  }
+  .correction-answer.show { display: block; }
+  .correction-answer .mk-red { color: var(--mk-red); }
   .ref-answer {
     margin-top: 8px;
     padding: 8px 10px;
@@ -794,6 +861,7 @@
   <section class="panel active" id="panel-foundation">
     <p class="intro">翻譯基礎：找主幹。每個句子先找出中文的主詞、動詞與受詞，再動手翻成英文。作答會自動儲存在這個瀏覽器裡，離開頁面也不會消失。</p>
     <p class="intro-en">Translation Basics: Find the Backbone. For each sentence, first identify the subject, verb, and object in Chinese, then translate it into English. Your answers are saved automatically in this browser.</p>
+    <p class="correction-disclaimer">僅為本機基礎批改，非AI智慧批改。如有疑問，請諮詢AI工具或Shirley 杜老師。</p>
     <div id="foundationRoot"></div>
   </section>
 
@@ -801,6 +869,7 @@
   <section class="panel" id="panel-structure">
     <p class="intro">共 14 個文法主題，每個主題底下有兩組（題組一 / 題組二）中文句子，練習把兩句話用對應的句構寫成通順的英文。點選主題展開練習。</p>
     <p class="intro-en">There are 14 grammar topics, each with two sentence sets (Set 1 / Set 2). Combine the two Chinese sentences into fluent English using the target structure. Tap a topic to expand it.</p>
+    <p class="correction-disclaimer">僅為本機基礎批改，非AI智慧批改。如有疑問，請諮詢AI工具或Shirley 杜老師。</p>
     <div id="structureRoot"></div>
   </section>
 
@@ -1183,6 +1252,149 @@
     }
   });
 
+  function plainWords(s){
+    return String(s).toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
+  }
+  function uniq(arr){ return Array.from(new Set(arr)); }
+  function lev(a, b){
+    const dp = Array.from({length:a.length+1}, ()=>Array(b.length+1).fill(0));
+    for (let i=0;i<=a.length;i++) dp[i][0] = i;
+    for (let j=0;j<=b.length;j++) dp[0][j] = j;
+    for (let i=1;i<=a.length;i++){
+      for (let j=1;j<=b.length;j++){
+        dp[i][j] = Math.min(
+          dp[i-1][j] + 1,
+          dp[i][j-1] + 1,
+          dp[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)
+        );
+      }
+    }
+    return dp[a.length][b.length];
+  }
+  function nearestWord(word, choices){
+    let best = '', bestD = 99;
+    choices.forEach(c=>{
+      if (Math.abs(c.length - word.length) > 2 || c.length < 3) return;
+      const d = lev(word, c);
+      if (d < bestD){ bestD = d; best = c; }
+    });
+    return bestD <= (word.length <= 5 ? 1 : 2) ? best : '';
+  }
+  function redTextHtml(s){
+    return modelToHtml(Array.from(String(s)).map(c=>({c:c, r:true, h:false})));
+  }
+  function correctionHtml(result){
+    const items = result.issues.length ? result.issues : ['目前沒有偵測到明顯的拼字或基本文法問題。'];
+    return '<div class="title">自動批改結果 Basic Correction</div><ul>' +
+      items.map(x=>'<li>'+escHtml(x)+'</li>').join('') +
+      '</ul>';
+  }
+  function basicCorrect(answer, refText, meta){
+    const issues = [];
+    const trimmed = answer.trim();
+    if (!trimmed){
+      return {issues:['請先輸入你的英文翻譯，再進行自動批改。'], revision:refText || ''};
+    }
+    if (/^[a-z]/.test(trimmed)) issues.push('句首應大寫。');
+    if (!/[.!?]$/.test(trimmed)) issues.push('句尾需要加上適當標點，例如句號、問號或驚嘆號。');
+    if (/\s{2,}/.test(trimmed)) issues.push('有多餘空格，建議整理成單一空格。');
+    if (/\bi\b/.test(trimmed)) issues.push('代名詞 I 應大寫。');
+
+    const common = {
+      alot:'a lot', recieve:'receive', recieved:'received', becuase:'because', goverment:'government',
+      enviroment:'environment', sucess:'success', succesful:'successful', successfuly:'successfully',
+      seperate:'separate', occured:'occurred', untill:'until', definately:'definitely', truely:'truly',
+      wich:'which', thier:'their', freind:'friend', studys:'studies', childs:'children'
+    };
+    plainWords(trimmed).forEach(w=>{
+      if (common[w]) issues.push('拼字可能有誤：「'+w+'」可改為「'+common[w]+'」。');
+    });
+
+    const refWords = uniq(plainWords(refText));
+    const ansWords = uniq(plainWords(trimmed));
+    ansWords.forEach(w=>{
+      if (w.length < 4 || refWords.includes(w) || common[w]) return;
+      const near = nearestWord(w, refWords);
+      if (near) issues.push('拼字可能有誤：「'+w+'」是否要寫成「'+near+'」？');
+    });
+
+    const articles = ['a','an','the'];
+    articles.forEach(a=>{
+      if (refWords.includes(a) && !ansWords.includes(a)) issues.push('冠詞檢查：參考答案使用了「'+a+'」，你的答案可能漏掉冠詞。');
+    });
+    if (/\ba\s+[aeiou]/i.test(trimmed)) issues.push('冠詞檢查：母音開頭的單字前通常使用 an，而不是 a。');
+    if (/\ban\s+[^aeiou\s]/i.test(trimmed)) issues.push('冠詞檢查：子音發音開頭的單字前通常使用 a，而不是 an。');
+
+    const tensePairs = [
+      ['is','was'], ['are','were'], ['do','did'], ['does','did'], ['has','had'], ['have','had'],
+      ['go','went'], ['meet','met'], ['give','gave'], ['choose','chose'], ['rise','rose'],
+      ['begin','began'], ['run','ran'], ['make','made'], ['feel','felt'], ['become','became'],
+      ['bring','brought'], ['write','wrote'], ['sell','sold'], ['leave','left'], ['know','knew']
+    ];
+    tensePairs.forEach(pair=>{
+      const base = pair[0], past = pair[1];
+      if (refWords.includes(past) && ansWords.includes(base)) issues.push('時態檢查：「'+base+'」可能需要依句意改成過去式「'+past+'」。');
+      if (refWords.includes(base) && ansWords.includes(past)) issues.push('時態檢查：「'+past+'」可能與本句時態不一致，請確認是否應使用「'+base+'」。');
+    });
+    if (/\byesterday\b|\blast\b|\bago\b/i.test(trimmed)){
+      const likelyPresent = ansWords.some(w=>/s$/.test(w) && !/(ss|us|is)$/.test(w));
+      if (likelyPresent && !/\b(was|were|did|had|met|gave|chose|rose|began|ran|made|felt|became|brought|wrote|sold|left)\b/i.test(trimmed)){
+        issues.push('時態檢查：句中有 yesterday / last / ago 等過去時間，主要動詞通常要用過去式。');
+      }
+    }
+    if (/\bhas\b|\bhave\b|\bhad\b/i.test(refText) && !/\b(has|have|had)\b/i.test(trimmed)){
+      issues.push('時態檢查：參考答案使用完成式，請確認是否需要 has / have / had + 過去分詞。');
+    }
+
+    const pluralPairs = [
+      ['bird','birds'], ['student','students'], ['child','children'], ['parent','parents'], ['classmate','classmates'],
+      ['villager','villagers'], ['people','people'], ['policy','policies'], ['opportunity','opportunities'],
+      ['problem','problems'], ['skill','skills'], ['passenger','passengers'], ['reader','readers']
+    ];
+    pluralPairs.forEach(pair=>{
+      const singular = pair[0], plural = pair[1];
+      if (refWords.includes(plural) && ansWords.includes(singular)) issues.push('單複數檢查：「'+singular+'」可能需要改為複數「'+plural+'」。');
+      if (refWords.includes(singular) && ansWords.includes(plural)) issues.push('單複數檢查：「'+plural+'」可能需要依句意改為單數「'+singular+'」。');
+    });
+    const pluralCue = trimmed.match(/\b(many|several|few|two|three|all)\s+([a-z]+)\b/i);
+    if (pluralCue && !/s$/i.test(pluralCue[2]) && !['people','children','men','women'].includes(pluralCue[2].toLowerCase())){
+      issues.push('單複數檢查：many / several / few / 數字後面通常接可數名詞複數。');
+    }
+    if (/\b(he|she|it|this|that)\s+(do|have|go|make|feel|need|want|like)\b/i.test(trimmed)){
+      issues.push('主詞動詞一致：第三人稱單數主詞後，現在式動詞通常需要 -s 或使用 does / has。');
+    }
+    if (/\b(they|we|you|i)\s+(is|was)\b/i.test(trimmed)){
+      issues.push('主詞動詞一致：they / we / you / I 後的 be 動詞形式可能不正確。');
+    }
+    if (/\b(he|she|it|this|that)\s+(are|were)\b/i.test(trimmed)){
+      issues.push('主詞動詞一致：he / she / it / this / that 後的 be 動詞形式可能不正確。');
+    }
+
+    const missing = refWords.filter(w=>w.length > 2 && !ansWords.includes(w));
+    const extra = ansWords.filter(w=>w.length > 2 && !refWords.includes(w));
+    if (missing.length) issues.push('可能漏掉關鍵字：' + missing.slice(0, 8).join(', ') + (missing.length > 8 ? '...' : '') + '。');
+    if (extra.length) issues.push('答案中有參考答案未使用的字詞，請確認是否影響語意或文法：' + extra.slice(0, 8).join(', ') + (extra.length > 8 ? '...' : '') + '。');
+
+    const stageTitle = (meta ? [meta.groupTitle, meta.groupEn, meta.sub, meta.set].join(' ') : '').toLowerCase();
+    if (stageTitle.includes('simple') || stageTitle.includes('第一階段')){
+      if (/\b(and|but|or|so|yet|nor)\b/i.test(trimmed) || /\b(when|because|although|if|that|which|who|whom|whose|where|while|since|as long as)\b/i.test(trimmed)){
+        issues.push('本題練習 simple sentence，建議維持單一主幹，避免使用對等連接詞或從屬子句。');
+      }
+    }
+    if (stageTitle.includes('compound') || stageTitle.includes('第二階段')){
+      if (!/\b(and|but|or|so|for|yet|nor)\b/i.test(trimmed)){
+        issues.push('本題練習 compound sentence，建議使用 and / but / or / so 等連接兩個獨立子句。');
+      }
+    }
+    if (stageTitle.includes('complex') || stageTitle.includes('第三階段')){
+      if (!/\b(when|because|although|if|that|which|who|whom|whose|where|while|since|as long as|so that)\b/i.test(trimmed)){
+        issues.push('本題練習 complex sentence，建議使用名詞、形容詞或副詞子句。');
+      }
+    }
+
+    return {issues:uniq(issues), revision:refText || trimmed};
+  }
+
   function makeSentenceCard(id, num, zh, meta){
     totalItems++;
     const card = document.createElement('div');
@@ -1207,6 +1419,46 @@
     syncDone(ta);
 
     const refText = meta && meta.ref ? meta.ref : (typeof REF_ANSWERS !== 'undefined' ? REF_ANSWERS[zh] : '');
+
+    const tools = document.createElement('div');
+    tools.className = 'correction-tools';
+    const gradeBtn = document.createElement('button');
+    gradeBtn.type = 'button';
+    gradeBtn.className = 'grade-btn';
+    gradeBtn.textContent = '自動批改 Auto Correct';
+    tools.appendChild(gradeBtn);
+
+    const feedback = document.createElement('div');
+    feedback.className = 'correction-panel';
+    const storedFeedback = loadVal('fb:'+id);
+    if (storedFeedback){
+      feedback.innerHTML = storedFeedback.replace(/<div class="grade-note">此功能不調用 API，僅根據本機規則與參考答案做基礎檢查。<\/div>/g, '');
+      feedback.classList.add('show');
+    }
+
+    const revisionLabel = document.createElement('div');
+    revisionLabel.className = 'revision-label';
+    revisionLabel.textContent = '修正版 Revised Version';
+    const revision = makeEditor('rev:'+id, 'answer correction-answer', '修正版會在自動批改後出現... / Revised version appears after correction...', null);
+    if (editorText(revision).trim()){
+      revisionLabel.classList.add('show');
+      revision.classList.add('show');
+    }
+
+    gradeBtn.addEventListener('click', ()=>{
+      const result = basicCorrect(editorText(ta), refText, meta);
+      const html = correctionHtml(result);
+      feedback.innerHTML = html;
+      feedback.classList.add('show');
+      saveVal('fb:'+id, html);
+      if (result.revision){
+        renderModel(revision, Array.from(result.revision).map(c=>({c:c, r:true, h:false})));
+        saveVal('h:rev:'+id, editorHtml(revision));
+        revisionLabel.classList.add('show');
+        revision.classList.add('show');
+      }
+    });
+
     let refBox = null;
     if (refText){
       refBox = document.createElement('details');
@@ -1219,10 +1471,14 @@
     foot.innerHTML = '<span class="check">已作答 Done ✓</span>';
     card.appendChild(zhRow);
     card.appendChild(ta);
+    card.appendChild(tools);
+    card.appendChild(feedback);
+    card.appendChild(revisionLabel);
+    card.appendChild(revision);
     if (refBox) card.appendChild(refBox);
     card.appendChild(foot);
 
-    registry.push(Object.assign({id:id, kind:'q', num:num, zh:zh, ed:ta, box:box, ref:refText}, meta));
+    registry.push(Object.assign({id:id, kind:'q', num:num, zh:zh, ed:ta, box:box, ref:refText, feedback:feedback, revision:revision}, meta));
     return card;
   }
 
@@ -1238,7 +1494,7 @@
     '太陽升起了，而且鳥兒開始在樹上唱歌。':'The sun rose, and the birds began to sing in the trees.',
     '他雖然讀了很多書，但依然無法回答這個簡單的問題。':'He read many books, but he still could not answer this simple question.',
     '你可以現在完成這份報告，或者明天早上再交給我。':'You can finish this report now, or you can hand it in to me tomorrow morning.',
-    '天氣非常寒冷，因此我們決定留在室內看電影。':'It was very cold, so we decided to stay indoors and watch a movie.',
+    '天氣非常寒冷，因此我們決定留在室內看電影。':'The weather was very cold, so we decided to stay indoors and watch a movie.',
     '當警車到達現場時，那個偷竊的賊已經逃跑了。':'When the police car arrived at the scene, the thief who had stolen something had already run away.',
     '我不相信那個總是說謊的男孩所說的話。':'I do not believe what the boy who always lies said.',
     '如果你今晚有空的話，我們可以在那家新開的餐廳一起吃晚餐。':'If you are free tonight, we can have dinner together at the newly opened restaurant.',
@@ -1949,8 +2205,12 @@
             if (r.set) html += '<div class="pset">'+r.set+'</div>';
             lastSet = r.set;
           }
+          const fbHtml = r.feedback && r.feedback.classList.contains('show') ? r.feedback.innerHTML : '';
+          const revHtml = r.revision && editorText(r.revision).trim() ? editorHtml(r.revision) : '';
           html += '<div class="pq"><div class="pz"><span class="pn">'+escHtml(String(r.num))+(typeof r.num==='number' ? '.' : '')+'</span><span>'+r.zh+'</span></div>' +
                   '<div class="pa">'+editorHtml(r.ed)+'</div>' +
+                  (fbHtml ? '<div class="pwc">'+fbHtml+'</div>' : '') +
+                  (revHtml ? '<div class="pwc"><b>修正版 Revised Version:</b><div class="pa correction-answer show">'+revHtml+'</div></div>' : '') +
                   (r.ref ? '<details class="pwc"><summary><b>查看參考答案 Show Reference Answer</b></summary>'+escHtml(r.ref)+'</details>' : '') +
                   '</div>';
         });
