@@ -297,6 +297,26 @@
     line-height: 1.5;
   }
   .answer:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+  .ref-answer {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--amber);
+    background: var(--amber-soft);
+    border-radius: 6px;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .ref-answer summary {
+    cursor: pointer;
+    color: var(--red);
+    font-weight: 700;
+    font-size: 0.75rem;
+    list-style-position: outside;
+  }
+  .ref-answer .ref-text {
+    margin-top: 6px;
+  }
   .item-foot { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 5px; font-size: 0.72rem; color: var(--ink-faint); }
   .item-foot .check { color: var(--green); font-weight: 600; display: none; }
   .sentence-card.done .item-foot .check { display: inline; }
@@ -1186,16 +1206,145 @@
     const ta = makeEditor(id, 'answer', '請輸入英文翻譯... / Type your English translation...', (ed)=>{ syncDone(ed); updateProgress(); });
     syncDone(ta);
 
+    const refText = meta && meta.ref ? meta.ref : (typeof REF_ANSWERS !== 'undefined' ? REF_ANSWERS[zh] : '');
+    let refBox = null;
+    if (refText){
+      refBox = document.createElement('details');
+      refBox.className = 'ref-answer';
+      refBox.innerHTML = '<summary>查看參考答案 Show Reference Answer</summary><div class="ref-text">' + escHtml(refText) + '</div>';
+    }
+
     const foot = document.createElement('div');
     foot.className = 'item-foot';
     foot.innerHTML = '<span class="check">已作答 Done ✓</span>';
     card.appendChild(zhRow);
     card.appendChild(ta);
+    if (refBox) card.appendChild(refBox);
     card.appendChild(foot);
 
-    registry.push(Object.assign({id:id, kind:'q', num:num, zh:zh, ed:ta, box:box}, meta));
+    registry.push(Object.assign({id:id, kind:'q', num:num, zh:zh, ed:ta, box:box, ref:refText}, meta));
     return card;
   }
+
+  const REF_ANSWERS = {
+    '鳥兒在空中快樂地飛翔。':'Birds fly happily in the sky.',
+    '那個小女孩笑得很開心。':'The little girl laughed happily.',
+    '我的哥哥每天早上都會喝一杯熱咖啡。':'My brother drinks a cup of hot coffee every morning.',
+    '那個穿紅衣服的男人是一位經驗豐富的醫生。':'The man in red is an experienced doctor.',
+    '我們昨天在圖書館裡遇到了一位老朋友。':'We met an old friend in the library yesterday.',
+    '善良的老師給了哭泣的孩子一顆糖果。':'The kind teacher gave the crying child a piece of candy.',
+    '這項意外的消息讓全班同學感到非常驚訝。':'This unexpected news made the whole class very surprised.',
+    '父母選了他作為這次家庭旅行的負責人。':'His parents chose him as the person in charge of this family trip.',
+    '太陽升起了，而且鳥兒開始在樹上唱歌。':'The sun rose, and the birds began to sing in the trees.',
+    '他雖然讀了很多書，但依然無法回答這個簡單的問題。':'He read many books, but he still could not answer this simple question.',
+    '你可以現在完成這份報告，或者明天早上再交給我。':'You can finish this report now, or you can hand it in to me tomorrow morning.',
+    '天氣非常寒冷，因此我們決定留在室內看電影。':'It was very cold, so we decided to stay indoors and watch a movie.',
+    '當警車到達現場時，那個偷竊的賊已經逃跑了。':'When the police car arrived at the scene, the thief who had stolen something had already run away.',
+    '我不相信那個總是說謊的男孩所說的話。':'I do not believe what the boy who always lies said.',
+    '如果你今晚有空的話，我們可以在那家新開的餐廳一起吃晚餐。':'If you are free tonight, we can have dinner together at the newly opened restaurant.',
+    '那位剛才在台上發表演講的教授是我的叔叔。':'The professor who gave a speech on the stage just now is my uncle.',
+    '大家都知道地球繞著太陽公轉這個事實。':'Everyone knows the fact that the earth moves around the sun.',
+    '儘管外面下著豪雨，孩子們依然在公園裡快樂地踢足球。':'Although it was raining heavily outside, the children were still playing soccer happily in the park.',
+    '那個被大家誤會的年輕人最後證明了自己的清白。':'The young man who had been misunderstood by everyone finally proved his innocence.',
+    '為了能夠順利通過這場高難度的入學考試，他每天晚上都複習功課到深夜。':'In order that he could pass this difficult entrance exam successfully, he reviewed his lessons until late at night every day.',
+
+    '突然間，一陣強風吹過。':'Suddenly, a strong wind blew.',
+    '樹上的葉子紛紛落了下來。':'The leaves on the trees fell one after another.',
+    '太陽緩緩升起。':'The sun rose slowly.',
+    '整個村莊在晨光中醒來。':'The whole village awoke in the morning light.',
+    '這座老舊的木橋看起來不再安全。':'This old wooden bridge no longer looks safe.',
+    '村民們紛紛要求政府儘快維修。':'The villagers demanded immediate repairs from the government.',
+    '經過多年的努力，他終於成為了一名醫生。':'After years of effort, he finally became a doctor.',
+    '他的父母為他的成就感到非常驕傲。':'His parents felt very proud of his achievement.',
+    '政府正在實施一項新政策。':'The government is carrying out a new policy.',
+    '該政策旨在減少塑膠垃圾的產生。':'The policy aims to reduce the production of plastic waste.',
+    '許多現代人面臨著巨大的工作壓力。':'Many modern people face great pressure at work.',
+    '他們需要尋找健康的管道來宣洩情緒。':'They need to find healthy ways to release their emotions.',
+    '這項新政策將會帶給年輕世代更多就業機會。':'This new policy will bring the younger generation more job opportunities.',
+    '專家預期經濟在未來幾年內會復甦。':'Experts expect an economic recovery in the next few years.',
+    '這位慈善家捐給了孤兒院一大筆錢。':'The philanthropist donated a large sum of money to the orphanage.',
+    '他的善舉激勵了社會上的許多人。':'His good deed inspired many people in society.',
+    '持續的努力使他夢想成真。':'Continuous effort made his dream come true.',
+    '他向大眾證明了凡事皆有可能。':'He proved everything possible to the public.',
+    '同學都認為他是大家學習的榜樣。':'His classmates consider him a model for everyone.',
+    '他總是熱心地幫助班上課業落後的同學。':'He always helps classmates behind in their schoolwork enthusiastically.',
+    '許多學生渴望出國留學，但他們往往缺乏足夠的資金。':'Many students long to study abroad, but they often lack enough money.',
+    '因此，申請政府獎學金變得至關重要。':'Therefore, applying for a government scholarship becomes vital, and many students see it as necessary.',
+    '我們必須立即採取行動保護環境，否則地球將面臨嚴重的危機。':'We must take immediate action to protect the environment, or the earth will face a serious crisis.',
+    '每一個人都不能在這場全球災難中置身事外。':'Everyone must face this global disaster, and no one can stay out of it.',
+    '許多人不相信人工智慧會取代大多數的人類工作。':'Many people do not believe that artificial intelligence will replace most human jobs.',
+    '然而，科技發展的速度已經超乎了我們的想像。':'However, the speed at which technology is developing has gone beyond our imagination.',
+    '政府如何應對這場經濟危機仍然是個未知數。':'How the government will deal with this economic crisis remains unknown.',
+    '大眾都在密切關注未來幾週內宣布的政策。':'The public is closely watching the policies that will be announced in the coming weeks.',
+    '那些不能適應快速生活節奏的人往往承受著巨大的壓力。':'People who cannot adapt to the fast pace of life often suffer great pressure.',
+    '他們應該學會適時地放慢腳步來放鬆身心。':'They should learn to slow down at the right time so that they can relax their bodies and minds.',
+    '這是一部探討社群媒體負面影響的電影，其情節引人深思。':'This is a movie that explores the negative effects of social media, and its plot is thought-provoking.',
+    '許多青少年看完後都開始反思自己的網路習慣。':'Many teenagers began to reflect on their online habits after they watched it.',
+    '雖然科技帶來了便利，它同時也引發了嚴重的隱私問題。':'Although technology has brought convenience, it has also caused serious privacy problems.',
+    '當我們享受便利時，不應忽略潛在的風險。':'When we enjoy convenience, we should not ignore potential risks.',
+    '只要我們堅持不懈，就沒有克服不了的障礙。':'As long as we persevere, there is no obstacle that we cannot overcome.',
+    '我們應該保持樂觀，勇敢地面對未來的挑戰。':'We should stay optimistic as we bravely face future challenges.',
+    '缺乏經驗是這個團隊目前面臨的最大障礙。':'A lack of experience is the biggest obstacle that this team is facing now.',
+    '他們需要專家的指導來克服這些困難。':'They need expert guidance to overcome these difficulties.',
+    '網路上充斥著各種資訊，但並非所有資訊都是可靠的。':'The Internet is full of all kinds of information, but not all of it is reliable.',
+    '培養批判性思考的能力能幫助我們辨別真偽。':'Developing the ability to think critically can help us tell truth from falsehood.',
+    '那些熱心參與志工服務的人往往能獲得極大的成就感。':'Those who eagerly take part in volunteer service can often gain a great sense of achievement.',
+    '這種珍貴的經驗對他們未來的發展非常有益。':'This valuable experience is very beneficial to their future development.',
+    '這兩家新創公司在市場上激烈競爭。':'These two start-ups are competing fiercely in the market.',
+    '然而，兩者都沒有在短期內放棄的打算。':'However, neither of them plans to give up in the short term.',
+    '面對日益嚴重的氣候變遷，全球合作是不可或缺的。':'In the face of increasingly serious climate change, global cooperation is indispensable.',
+    '我們必須尋求更環保的替代能源。':'We must seek more environmentally friendly alternative energy sources.',
+    '培養良好的閱讀習慣對大腦發育有顯著的影響。':'Developing good reading habits has a significant effect on brain development.',
+    '這讓學生在邏輯思考上比同儕更具優勢。':'This gives students a greater advantage in logical thinking than their peers.',
+    '人工智慧近年來發展得極為迅速。':'Artificial intelligence has developed extremely rapidly in recent years.',
+    '它已經深刻地改變了我們的日常生活與工作模式。':'It has profoundly changed our daily lives and work patterns.',
+    '幸運地，所有乘客都在這場嚴重的火災中安全逃生。':'Fortunately, all the passengers escaped safely from the serious fire.',
+    '救援人員迅速地控制了現場火勢。':'Rescuers quickly brought the fire at the scene under control.',
+    '自從政府去年調高基本工資以來，物價便持續上漲。':'Prices have continued to rise since the government raised the minimum wage last year.',
+    '許多勞工抱怨他們的薪水根本不夠用。':'Many workers complain that their salaries are simply not enough.',
+    '當科學家抵達偏遠山區時，該罕見物種已經絕種了。':'By the time the scientists arrived in the remote mountain area, the rare species had already become extinct.',
+    '這項發現讓整個研究團隊感到非常遺憾。':'This discovery made the whole research team feel very regretful.',
+    '每天規律運動不僅能強健身體，還能減輕心理壓力。':'Exercising regularly every day can not only strengthen the body but also reduce mental stress.',
+    '保持這個習慣是維持健康生活形態的最佳方法。':'Keeping this habit is the best way to maintain a healthy lifestyle.',
+    '他承認在期末考中作弊，這讓他的父母感到非常失望。':'He admitted cheating on the final exam, which made his parents very disappointed.',
+    '他現在正考慮向老師誠實道歉。':'He is now considering apologizing honestly to his teacher.',
+    '為了提升英語能力，她決定每天背誦二十個單字。':'To improve her English ability, she decided to memorize twenty words every day.',
+    '這個好習慣幫助她成功通過了英文檢定。':'This good habit helped her pass the English proficiency test successfully.',
+    '跨國企業往往傾向於雇用具有國際視野的人才。':'Multinational companies often tend to hire people with an international perspective.',
+    '對年輕人來說，學習獨立思考是很重要的。':'For young people, it is important to learn to think independently.',
+    '看到警察走過來，那名可疑的男子立刻轉身逃跑。':'Seeing the police coming, the suspicious man immediately turned around and ran away.',
+    '目擊者隨後向警方提供了詳細的嫌犯描述。':'The witness later provided the police with a detailed description of the suspect.',
+    '那位站在講台上的教授正在發表一場引人入勝的演講。':'The professor standing on the platform is giving a fascinating speech.',
+    '台下的聽眾都聽得津津有味。':'The audience below the stage listened with great interest.',
+    '被這突如其來的壞消息嚇壞了，她一字也說不出來。':'Frightened by the sudden bad news, she could not say a word.',
+    '她的朋友連忙走過去安慰她。':'Her friend hurried over to comfort her.',
+    '這本由知名作家撰寫的小說在出版後幾天內就售罄了。':'The novel written by a famous writer sold out within a few days after its publication.',
+    '許多讀者正熱切期待著續集的出版。':'Many readers are eagerly looking forward to the publication of the sequel.',
+    '誠實是最佳策略這件事是不可否認的真理。':'That honesty is the best policy is an undeniable truth.',
+    '我們在做任何決定時都應該堅守這個原則。':'We should stick to this principle whenever we make any decision.',
+    '我們無法得知這項新發明何時會商品化。':'We cannot know when this new invention will be commercialized.',
+    '然而，投資大眾已經對它展現了高度的興趣。':'However, investors have already shown great interest in it.',
+    '這座我們去年夏天造訪的歷史小鎮現在成了熱門景點。':'The historic town that we visited last summer has now become a popular attraction.',
+    '當地政府正努力保留其傳統文化。':'The local government is working hard to preserve its traditional culture.',
+    '這位最近獲得國際大獎的青年導演在台灣出生。':'The young director who recently won an international award was born in Taiwan.',
+    '他的成功極大地鼓勵了本地的電影工作者。':'His success has greatly encouraged local filmmakers.',
+    '科技進步得如此神速，以至於我們必須不斷學習新技能。':'Technology is advancing so rapidly that we must keep learning new skills.',
+    '否則，我們很快就會被這個競爭激烈的社會淘汰。':'Otherwise, we will soon be eliminated by this highly competitive society.',
+    '為了準時抵達會場，他一大早就出門了。':'He left home early in the morning so that he could arrive at the venue on time.',
+    '幸好他這麼做了，因為一路上交通非常擁擠。':'Fortunately, he did so because the traffic was very heavy all the way.',
+    '如果當初政府及時採取防疫措施，這場疫情就不會蔓延得這麼快。':'If the government had taken epidemic prevention measures in time, the outbreak would not have spread so quickly.',
+    '遺憾的是，歷史無法重來。':'Unfortunately, history cannot be repeated.',
+    '許多專家強烈建議每個人都應該定期接受健康檢查。':'Many experts strongly suggest that everyone have regular health checkups.',
+    '預防往往勝於治療。':'Prevention is often better than cure.',
+    '這位年輕音樂家的鋼琴演奏是多麼地美妙啊！':'How wonderful this young musician\'s piano performance is!',
+    '全場觀眾都被他精湛的技巧深深打動。':'The whole audience was deeply moved by his excellent skills.',
+    '這真是一個多麼令人振奮的消息啊！':'What exciting news this is!',
+    '整個研究團隊聽到後都不禁歡呼起來。':'The whole research team could not help cheering after hearing it.',
+    '我們絕不能忽視心理健康對青少年發展的重要性。':'Never should we ignore the importance of mental health to teenagers\' development.',
+    '只有透過家庭與學校的合作，問題才能得到解決。':'Only through cooperation between families and schools can the problem be solved.',
+    '他直到失去了健康，才意識到均衡飲食的重要。':'Not until he lost his health did he realize the importance of a balanced diet.',
+    '現在，他開始每天親自下廚準備營養的餐點。':'Now he has begun to cook nutritious meals by himself every day.'
+  };
 
   /* ===================== FOUNDATION DATA ===================== */
   const foundation = [
@@ -1801,7 +1950,9 @@
             lastSet = r.set;
           }
           html += '<div class="pq"><div class="pz"><span class="pn">'+escHtml(String(r.num))+(typeof r.num==='number' ? '.' : '')+'</span><span>'+r.zh+'</span></div>' +
-                  '<div class="pa">'+editorHtml(r.ed)+'</div></div>';
+                  '<div class="pa">'+editorHtml(r.ed)+'</div>' +
+                  (r.ref ? '<details class="pwc"><summary><b>查看參考答案 Show Reference Answer</b></summary>'+escHtml(r.ref)+'</details>' : '') +
+                  '</div>';
         });
       }
       html += '</section>';
